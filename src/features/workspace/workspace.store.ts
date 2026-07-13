@@ -28,7 +28,7 @@ interface WorkspaceState {
 export const useWorkspace = create<WorkspaceState>()(
   persist(
     (set) => ({
-      activeTab: "media",
+      activeTab: "songs",
       visible: { preview: true, textFormat: true, tabs: true },
       textFormatCollapsed: false,
       tabsCollapsed: false,
@@ -46,7 +46,7 @@ export const useWorkspace = create<WorkspaceState>()(
     {
       name: "church-media-workspace",
       storage: createJSONStorage(() => localStorage),
-      version: 3,
+      version: 4,
     },
   ),
 );
