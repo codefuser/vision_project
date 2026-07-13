@@ -10,8 +10,6 @@ export const Route = createFileRoute("/service/$id")({
 function ServiceModeRoute() {
   const { id } = Route.useParams();
   return (
-    <AppShell>
-      <ServiceMode id={id} />
-    </AppShell>
+    <ServiceMode id={id} />
   );
 }

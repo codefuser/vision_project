@@ -10,8 +10,6 @@ export const Route = createFileRoute("/playlists")({
     ],
   }),
   component: () => (
-    <AppShell>
-      <PlaylistsPage />
-    </AppShell>
+    <PlaylistsPage />
   ),
 });

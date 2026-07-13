@@ -31,9 +31,7 @@ const ORDER: { id: ShortcutCategory; label: string; hint: string }[] = [
 
 function ShortcutsPage() {
   return (
-    <AppShell>
-      <ShortcutsBody />
-    </AppShell>
+    <ShortcutsBody />
   );
 }
 

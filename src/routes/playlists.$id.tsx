@@ -10,8 +10,6 @@ export const Route = createFileRoute("/playlists/$id")({
 function PlaylistEditorRoute() {
   const { id } = Route.useParams();
   return (
-    <AppShell>
-      <PlaylistEditor id={id} />
-    </AppShell>
+    <PlaylistEditor id={id} />
   );
 }

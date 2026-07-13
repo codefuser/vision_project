@@ -10,8 +10,6 @@ export const Route = createFileRoute("/library")({
     ],
   }),
   component: () => (
-    <AppShell>
-      <LibraryPage />
-    </AppShell>
+    <LibraryPage />
   ),
 });

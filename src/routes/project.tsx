@@ -22,9 +22,7 @@ function ProjectRoute() {
   });
   if (mode === "popup") return <ProjectionWindow />;
   return (
-    <AppShell>
-      <ProjectionWorkspace />
-    </AppShell>
+    <ProjectionWorkspace />
   );
 }
 

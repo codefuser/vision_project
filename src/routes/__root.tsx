@@ -118,6 +118,8 @@ function RootShell({ children }: { children: ReactNode }) {
   );
 }
 
+import { AppShell } from "@/components/AppShell";
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   // Detect projector popup: skip app-wide shortcut handlers there so the
@@ -130,9 +132,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       {!isProjectorPopup && <GlobalShortcuts />}
       {!isProjectorPopup && <ShortcutsDialog />}
-      <Outlet />
+      {isProjectorPopup ? <Outlet /> : <AppShell><Outlet /></AppShell>}
       <Toaster position="top-right" richColors closeButton />
-
     </QueryClientProvider>
   );
 }
