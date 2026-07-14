@@ -390,7 +390,7 @@ export function BiblePanel() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4 items-start">
+        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3">
           {results.map((dh, i) => {
             const h = dh.hit;
             const pair = dh.pair;
@@ -445,7 +445,7 @@ export function BiblePanel() {
                 </div>
 
                 {/* Footer — favorite + project only */}
-                <div className="flex items-center gap-0.5 border-t border-border/40 bg-muted/20 px-1.5 py-1">
+                <div className="mt-auto flex items-center gap-0.5 border-t border-border/40 bg-muted/20 px-1.5 py-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -484,7 +484,7 @@ export function BiblePanel() {
             <div className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Favorites
             </div>
-            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3 items-start">
+            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
               {favorites.slice(0, 30).map((f) => (
                 <button
                   key={f.id}
