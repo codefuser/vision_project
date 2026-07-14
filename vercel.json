@@ -4,10 +4,5 @@
       "source": "/__l5e/:match*",
       "destination": "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e/:match*"
     }
-  ],
-  "build": {
-    "env": {
-      "NITRO_PRESET": "vercel"
-    }
-  }
+  ]
 }
