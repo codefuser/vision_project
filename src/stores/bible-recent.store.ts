@@ -34,6 +34,6 @@ export const useBibleRecent = create<RecentStore>()(
         }),
       clear: () => set({ items: [] }),
     }),
-    { name: "vision-bible-recent", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-bible-recent", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

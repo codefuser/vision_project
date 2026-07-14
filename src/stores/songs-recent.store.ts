@@ -40,6 +40,6 @@ export const useSongsRecent = create<RecentStore>()(
         }),
       clear: () => set({ items: [], counts: {} }),
     }),
-    { name: "vision-songs-recent", storage: createJSONStorage(() => localStorage), version: 2 },
+    { name: "vision-songs-recent", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 2 },
   ),
 );

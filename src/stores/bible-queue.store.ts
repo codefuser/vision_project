@@ -88,7 +88,7 @@ export const useBibleQueue = create<QueueStore>()(
     }),
     {
       name: "vision-bible-queue",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       partialize: (s) => ({ items: s.items, sermonMode: s.sermonMode }),
       version: 1,
     },

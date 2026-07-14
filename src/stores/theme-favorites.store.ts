@@ -41,6 +41,6 @@ export const useThemeFavorites = create<State>()(
           .slice(0, limit)
           .map(([id]) => id),
     }),
-    { name: "vision-theme-favorites", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-theme-favorites", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

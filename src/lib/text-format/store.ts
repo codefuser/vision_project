@@ -132,7 +132,7 @@ export const useTextFormat = create<TextFormatStore>()(
     }),
     {
       name: "vision-text-format",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       version: 2,
       migrate: (persisted: unknown) => {
         const p = persisted as { style?: TextStyle; groups?: GroupedStyles } | undefined;

@@ -104,7 +104,7 @@ export const useTextItems = create<TextStore>()(
           };
         }),
     }),
-    { name: "vision-text-items", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-text-items", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );
 

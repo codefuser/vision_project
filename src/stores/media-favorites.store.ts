@@ -27,6 +27,6 @@ export const useMediaFavorites = create<MediaFavoritesStore>()(
         ),
       has: (id) => get().ids.includes(id),
     }),
-    { name: "vision-media-favorites", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-media-favorites", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

@@ -59,6 +59,6 @@ export const useCustomTemplates = create<CustomTemplatesStore>()(
       rename: (id, name) =>
         set((s) => ({ templates: s.templates.map((t) => (t.id === id ? { ...t, name } : t)) })),
     }),
-    { name: "vision-custom-templates", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-custom-templates", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

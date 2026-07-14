@@ -43,7 +43,7 @@ export const useWorkspace = create<WorkspaceState>()(
     }),
     {
       name: "church-media-workspace",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       version: 4,
     },
   ),

@@ -20,6 +20,6 @@ export const useFavoritesDock = create<DockStore>()(
       setOpen: (v) => set({ open: v }),
       setGroup: (g) => set({ group: g }),
     }),
-    { name: "vision-favorites-dock", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-favorites-dock", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

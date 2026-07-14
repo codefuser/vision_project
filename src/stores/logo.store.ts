@@ -139,7 +139,7 @@ export const useLogo = create<LogoStore>()(
     }),
     {
       name: "vision-logo",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       version: 1,
     },
   ),

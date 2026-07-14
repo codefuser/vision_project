@@ -45,6 +45,6 @@ export const useBackgroundGallery = create<BgGalleryStore>()(
         }),
       remove: (id) => set((s) => ({ items: s.items.filter((i) => i.id !== id) })),
     }),
-    { name: "vision-bg-gallery", storage: createJSONStorage(() => localStorage), version: 1 },
+    { name: "vision-bg-gallery", storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))), version: 1 },
   ),
 );

@@ -114,7 +114,7 @@ export const useSongsStore = create<SongStore>()(
     }),
     {
       name: "vision-songs-store",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       partialize: (s) => ({ favorites: s.favorites, userSongs: s.userSongs }),
       version: 2,
       onRehydrateStorage: () => (state) => {

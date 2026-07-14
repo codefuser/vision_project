@@ -100,7 +100,7 @@ export const useBibleStore = create<BibleStore>()(
     }),
     {
       name: "vision-bible-store",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => (typeof window !== "undefined" ? window.localStorage : (undefined as unknown as Storage))),
       partialize: (s) => ({ lang: s.lang, displayMode: s.displayMode, favorites: s.favorites }),
       version: 3,
       migrate: (persisted) => {
