@@ -390,7 +390,7 @@ export function BiblePanel() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4 items-start">
           {results.map((dh, i) => {
             const h = dh.hit;
             const pair = dh.pair;
@@ -432,12 +432,12 @@ export function BiblePanel() {
 
                 {/* Verse text */}
                 <div className="flex-1 space-y-1.5 px-2.5 py-2">
-                  <p className="line-clamp-3 text-[12.5px] leading-snug text-foreground/95">
+                  <p className="text-[12.5px] leading-snug text-foreground/95 break-words whitespace-pre-wrap">
                     {h.text}
                   </p>
                   {pair && (
                     <div className="border-t border-dashed border-border/50 pt-1.5">
-                      <p className="line-clamp-2 text-[12px] leading-snug text-muted-foreground">
+                      <p className="text-[12px] leading-snug text-muted-foreground break-words whitespace-pre-wrap">
                         {pair.text}
                       </p>
                     </div>
@@ -484,7 +484,7 @@ export function BiblePanel() {
             <div className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Favorites
             </div>
-            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3 items-start">
               {favorites.slice(0, 30).map((f) => (
                 <button
                   key={f.id}
@@ -492,7 +492,7 @@ export function BiblePanel() {
                   className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left hover:border-primary/40 hover:bg-accent/40"
                 >
                   <div className="text-[11px] font-semibold text-primary">{f.ref}</div>
-                  <div className="line-clamp-2 text-xs text-muted-foreground">{f.text}</div>
+                  <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap">{f.text}</div>
                 </button>
               ))}
             </div>
