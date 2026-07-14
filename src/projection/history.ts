@@ -55,7 +55,6 @@ class HistoryBuffer {
       try {
         fn(this.entries);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("[history] subscriber error", err);
       }
     }

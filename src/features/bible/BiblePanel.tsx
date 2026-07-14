@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { BookOpen, Loader2, Star, Send, Languages, Search, Hash } from "lucide-react";
 import {
-  BookOpen, Loader2, Star, Send, Languages, Search, Hash,
-} from "lucide-react";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { useBibleStore, type DisplayMode } from "@/lib/bible/store";
 import { getBible, type BibleLang } from "@/lib/bible/loader";
@@ -31,9 +33,20 @@ function favKey(book: number, chapter: number, verse: number) {
 
 export function BiblePanel() {
   const {
-    lang, displayMode, query, loading, loaded, error, favorites,
-    setLang, setDisplayMode, setQuery, ensureLoaded, ensureBoth,
-    addFavorite, removeFavorite,
+    lang,
+    displayMode,
+    query,
+    loading,
+    loaded,
+    error,
+    favorites,
+    setLang,
+    setDisplayMode,
+    setQuery,
+    ensureLoaded,
+    ensureBoth,
+    addFavorite,
+    removeFavorite,
   } = useBibleStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const [results, setResults] = useState<DisplayHit[]>([]);
@@ -66,7 +79,8 @@ export function BiblePanel() {
   // Build display list whenever query / lang / mode / data change.
   useEffect(() => {
     const primary: BibleLang = displayMode === "ta" ? "ta" : "en";
-    const other: BibleLang | null = displayMode === "both" ? (primary === "en" ? "ta" : "en") : null;
+    const other: BibleLang | null =
+      displayMode === "both" ? (primary === "en" ? "ta" : "en") : null;
     if (!loaded[primary] || (other && !loaded[other])) return;
 
     const dataPrimary = getBible(primary);
@@ -79,9 +93,13 @@ export function BiblePanel() {
       if (!t) return undefined;
       const meta = BIBLE_BOOKS[h.book];
       return {
-        book: h.book, bookName: meta.name,
+        book: h.book,
+        bookName: meta.name,
         bookNameLocal: other === "ta" ? meta.nameTa : meta.name,
-        chapter: h.chapter, verse: h.verse, text: t, score: 0,
+        chapter: h.chapter,
+        verse: h.verse,
+        text: t,
+        score: 0,
       };
     };
 
@@ -98,23 +116,35 @@ export function BiblePanel() {
         if (!t) continue;
         const meta = BIBLE_BOOKS[r.book];
         const hit: VerseHit = {
-          book: r.book, bookName: meta.name,
+          book: r.book,
+          bookName: meta.name,
           bookNameLocal: primary === "ta" ? meta.nameTa : meta.name,
-          chapter: r.chapter, verse: r.verse, text: t, score: 0,
+          chapter: r.chapter,
+          verse: r.verse,
+          text: t,
+          score: 0,
         };
         out.push({ hit, pair: buildPair(hit) });
         seen.add(favKey(r.book, r.chapter, r.verse));
       }
       if (out.length === 0) {
-        const fHits = [{ b: 42, c: 3, v: 16 }, { b: 18, c: 23, v: 1 }, { b: 0, c: 1, v: 1 }];
+        const fHits = [
+          { b: 42, c: 3, v: 16 },
+          { b: 18, c: 23, v: 1 },
+          { b: 0, c: 1, v: 1 },
+        ];
         for (const f of fHits) {
           const t = dataPrimary[f.b]?.[f.c - 1]?.[f.v - 1];
           if (!t) continue;
           const meta = BIBLE_BOOKS[f.b];
           const hit: VerseHit = {
-            book: f.b, bookName: meta.name,
+            book: f.b,
+            bookName: meta.name,
             bookNameLocal: primary === "ta" ? meta.nameTa : meta.name,
-            chapter: f.c, verse: f.v, text: t, score: 0,
+            chapter: f.c,
+            verse: f.v,
+            text: t,
+            score: 0,
           };
           out.push({ hit, pair: buildPair(hit) });
         }
@@ -122,7 +152,10 @@ export function BiblePanel() {
       setResults(out);
       setSearchMs(null);
       setChapterCtx(null);
-      if (queryChanged) { setActiveIdx(0); selectedKeyRef.current = null; }
+      if (queryChanged) {
+        setActiveIdx(0);
+        selectedKeyRef.current = null;
+      }
       return;
     }
 
@@ -153,9 +186,13 @@ export function BiblePanel() {
 
     if (queryChanged) {
       setActiveIdx(0);
-      selectedKeyRef.current = list[0] ? favKey(list[0].hit.book, list[0].hit.chapter, list[0].hit.verse) : null;
+      selectedKeyRef.current = list[0]
+        ? favKey(list[0].hit.book, list[0].hit.chapter, list[0].hit.verse)
+        : null;
     } else if (selectedKeyRef.current) {
-      const idx = list.findIndex((d) => favKey(d.hit.book, d.hit.chapter, d.hit.verse) === selectedKeyRef.current);
+      const idx = list.findIndex(
+        (d) => favKey(d.hit.book, d.hit.chapter, d.hit.verse) === selectedKeyRef.current,
+      );
       if (idx >= 0) setActiveIdx(idx);
     }
   }, [query, loaded, displayMode, lang, searchMode, recent]);
@@ -164,29 +201,40 @@ export function BiblePanel() {
   const project = (dh: DisplayHit) => {
     const h = dh.hit;
     const pair = dh.pair;
-    const primaryLabel = displayMode === "ta" || (displayMode === "both" && lang === "ta") ? "தமிழ்" : "KJV";
+    const primaryLabel =
+      displayMode === "ta" || (displayMode === "both" && lang === "ta") ? "தமிழ்" : "KJV";
     const metaPrimary = BIBLE_BOOKS[h.book];
     const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
     const refSecondary = pair ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}` : null;
-    const reference = displayMode === "both" && refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary;
+    const reference =
+      displayMode === "both" && refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary;
     const refEn = `${metaPrimary.name} ${h.chapter}:${h.verse}`;
     const refTa = `${metaPrimary.nameTa} ${h.chapter}:${h.verse}`;
     const primary: BibleLang = displayMode === "ta" ? "ta" : "en";
     const enTxt = primary === "en" ? h.text : (pair?.text ?? "");
     const taTxt = primary === "ta" ? h.text : (pair?.text ?? "");
     projectVerse({
-      reference, text: h.text, translation: primaryLabel,
+      reference,
+      text: h.text,
+      translation: primaryLabel,
       subtext: pair?.text,
       subtranslation: pair ? (primaryLabel === "KJV" ? "தமிழ்" : "KJV") : undefined,
-      referenceEn: refEn, referenceTa: refTa,
-      textEn: enTxt, textTa: taTxt,
-      mode: displayMode === "both" ? "both" : (primary === "ta" ? "ta" : "en"),
-      book: h.book, chapter: h.chapter, verse: h.verse,
+      referenceEn: refEn,
+      referenceTa: refTa,
+      textEn: enTxt,
+      textTa: taTxt,
+      mode: displayMode === "both" ? "both" : primary === "ta" ? "ta" : "en",
+      book: h.book,
+      chapter: h.chapter,
+      verse: h.verse,
     });
     selectedKeyRef.current = favKey(h.book, h.chapter, h.verse);
     pushRecent({
-      book: h.book, chapter: h.chapter, verse: h.verse,
-      ref: `${metaPrimary.name} ${h.chapter}:${h.verse}`, text: h.text,
+      book: h.book,
+      chapter: h.chapter,
+      verse: h.verse,
+      ref: `${metaPrimary.name} ${h.chapter}:${h.verse}`,
+      text: h.text,
     });
     toast.success(`Projecting ${metaPrimary.name} ${h.chapter}:${h.verse}`);
   };
@@ -217,26 +265,34 @@ export function BiblePanel() {
     const projected = useProjection.getState().state?.textOverlay;
     if (projected?.kind === "bible_verse") {
       const cur = results[activeIdx]?.hit;
-      let book = cur?.book, chapter = cur?.chapter, verse = cur?.verse;
+      let book = cur?.book,
+        chapter = cur?.chapter,
+        verse = cur?.verse;
       if (book == null || chapter == null || verse == null) {
-        if (chapterCtx) { book = chapterCtx.book; chapter = chapterCtx.chapter; verse = 1; }
+        if (chapterCtx) {
+          book = chapterCtx.book;
+          chapter = chapterCtx.chapter;
+          verse = 1;
+        }
       }
       if (book != null && chapter != null && verse != null) {
         const meta = BIBLE_BOOKS[book];
-        const chData = getBible((displayMode === "ta" ? "ta" : "en"))?.[book]?.[chapter - 1];
+        const chData = getBible(displayMode === "ta" ? "ta" : "en")?.[book]?.[chapter - 1];
         if (meta && chData) {
           let nv = verse + delta;
           let nc = chapter;
           if (nv < 1) {
             nc = Math.max(1, chapter - 1);
-            const prevCh = getBible((displayMode === "ta" ? "ta" : "en"))?.[book]?.[nc - 1];
+            const prevCh = getBible(displayMode === "ta" ? "ta" : "en")?.[book]?.[nc - 1];
             nv = prevCh?.length ?? 1;
           } else if (nv > chData.length) {
             nc = Math.min(meta.chapters, chapter + 1);
             nv = 1;
           }
           if (projectVerseAt({ book, chapter: nc, verse: nv })) {
-            const idx = results.findIndex((r) => r.hit.book === book && r.hit.chapter === nc && r.hit.verse === nv);
+            const idx = results.findIndex(
+              (r) => r.hit.book === book && r.hit.chapter === nc && r.hit.verse === nv,
+            );
             if (idx >= 0) selectIdx(idx);
           }
           return;
@@ -248,63 +304,140 @@ export function BiblePanel() {
 
   // ───────── keyboard shortcuts ─────────
   useShortcut({
-    id: "bible.focus-search", label: "Focus Bible search", category: "bible",
-    keys: ["/"], scope: "bible", handler: () => { inputRef.current?.focus(); },
+    id: "bible.focus-search",
+    label: "Focus Bible search",
+    category: "bible",
+    keys: ["/"],
+    scope: "bible",
+    handler: () => {
+      inputRef.current?.focus();
+    },
   });
   useShortcut({
-    id: "bible.next-verse", label: "Next verse in list", category: "bible",
-    keys: ["ArrowDown"], scope: "bible", allowInInput: true, priority: 20,
+    id: "bible.next-verse",
+    label: "Next verse in list",
+    category: "bible",
+    keys: ["ArrowDown"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 20,
     handler: () => selectIdx(Math.min(activeIdx + 1, Math.max(0, results.length - 1))),
   });
   useShortcut({
-    id: "bible.prev-verse", label: "Previous verse in list", category: "bible",
-    keys: ["ArrowUp"], scope: "bible", allowInInput: true, priority: 20,
+    id: "bible.prev-verse",
+    label: "Previous verse in list",
+    category: "bible",
+    keys: ["ArrowUp"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 20,
     handler: () => selectIdx(Math.max(0, activeIdx - 1)),
   });
   useShortcut({
-    id: "bible.next", label: "Next (chapter)", category: "bible",
-    keys: ["ArrowRight"], scope: "bible", allowInInput: true, priority: 20,
+    id: "bible.next",
+    label: "Next (chapter)",
+    category: "bible",
+    keys: ["ArrowRight"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 20,
     handler: () => navigateVerse(+1),
   });
   useShortcut({
-    id: "bible.prev", label: "Previous (chapter)", category: "bible",
-    keys: ["ArrowLeft"], scope: "bible", allowInInput: true, priority: 20,
+    id: "bible.prev",
+    label: "Previous (chapter)",
+    category: "bible",
+    keys: ["ArrowLeft"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 20,
     handler: () => navigateVerse(-1),
   });
   useShortcut({
-    id: "bible.project-selected", label: "Project selected verse",
-    category: "bible", keys: ["Enter"], scope: "bible", allowInInput: true, priority: 20,
-    handler: () => { if (results.length > 0) projectAt(activeIdx); },
+    id: "bible.project-selected",
+    label: "Project selected verse",
+    category: "bible",
+    keys: ["Enter"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 20,
+    handler: () => {
+      if (results.length > 0) projectAt(activeIdx);
+    },
   });
   useShortcut({
-    id: "bible.reproject", label: "Re-project current verse", category: "bible",
-    keys: ["Space"], scope: "bible", allowInInput: false, priority: 20,
+    id: "bible.reproject",
+    label: "Re-project current verse",
+    category: "bible",
+    keys: ["Space"],
+    scope: "bible",
+    allowInInput: false,
+    priority: 20,
     handler: () => projectAt(activeIdx),
   });
   useShortcut({
-    id: "bible.lang.tamil", label: "Switch to Tamil", category: "bible",
-    keys: ["Alt+T"], scope: "bible", allowInInput: true, priority: 15,
-    handler: () => { void setDisplayMode("ta"); void setLang("ta"); },
+    id: "bible.lang.tamil",
+    label: "Switch to Tamil",
+    category: "bible",
+    keys: ["Alt+T"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      void setDisplayMode("ta");
+      void setLang("ta");
+    },
   });
   useShortcut({
-    id: "bible.lang.english", label: "Switch to English", category: "bible",
-    keys: ["Alt+E"], scope: "bible", allowInInput: true, priority: 15,
-    handler: () => { void setDisplayMode("en"); void setLang("en"); },
+    id: "bible.lang.english",
+    label: "Switch to English",
+    category: "bible",
+    keys: ["Alt+E"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      void setDisplayMode("en");
+      void setLang("en");
+    },
   });
   useShortcut({
-    id: "bible.lang.bilingual", label: "Switch to Bilingual", category: "bible",
-    keys: ["Alt+B"], scope: "bible", allowInInput: true, priority: 15,
-    handler: () => { void setDisplayMode("both"); },
+    id: "bible.lang.bilingual",
+    label: "Switch to Bilingual",
+    category: "bible",
+    keys: ["Alt+B"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      void setDisplayMode("both");
+    },
   });
   useShortcut({
-    id: "bible.mode.reference", label: "Reference search mode", category: "bible",
-    keys: ["Alt+R"], scope: "bible", allowInInput: true, priority: 15,
-    handler: () => { setSearchMode("reference"); inputRef.current?.focus(); },
+    id: "bible.mode.reference",
+    label: "Reference search mode",
+    category: "bible",
+    keys: ["Alt+R"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      setSearchMode("reference");
+      inputRef.current?.focus();
+    },
   });
   useShortcut({
-    id: "bible.mode.verse", label: "Verse content search mode", category: "bible",
-    keys: ["Alt+F"], scope: "bible", allowInInput: true, priority: 15,
-    handler: () => { setSearchMode("verse"); inputRef.current?.focus(); },
+    id: "bible.mode.verse",
+    label: "Verse content search mode",
+    category: "bible",
+    keys: ["Alt+F"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      setSearchMode("verse");
+      inputRef.current?.focus();
+    },
   });
 
   const fav = useMemo(
@@ -325,8 +458,12 @@ export function BiblePanel() {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="reference"><Hash className="mr-2 inline h-3 w-3" /> Reference</SelectItem>
-            <SelectItem value="verse"><Search className="mr-2 inline h-3 w-3" /> Verse Text</SelectItem>
+            <SelectItem value="reference">
+              <Hash className="mr-2 inline h-3 w-3" /> Reference
+            </SelectItem>
+            <SelectItem value="verse">
+              <Search className="mr-2 inline h-3 w-3" /> Verse Text
+            </SelectItem>
           </SelectContent>
         </Select>
         <Input
@@ -351,9 +488,13 @@ export function BiblePanel() {
               }}
               className={cn(
                 "cursor-pointer px-2 py-1 transition",
-                displayMode === m ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent",
+                displayMode === m
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent",
               )}
-              title={m === "en" ? "English (Alt+E)" : m === "ta" ? "Tamil (Alt+T)" : "Bilingual (Alt+B)"}
+              title={
+                m === "en" ? "English (Alt+E)" : m === "ta" ? "Tamil (Alt+T)" : "Bilingual (Alt+B)"
+              }
             >
               {m === "en" ? "EN" : m === "ta" ? "தமிழ்" : "EN+தமிழ்"}
             </button>
@@ -375,7 +516,9 @@ export function BiblePanel() {
           {displayMode === "both" ? "Bilingual" : primaryLang === "en" ? "KJV" : "தமிழ்"}
         </span>
       </div>
-      {error && <div className="border-b border-border px-2 py-1 text-[11px] text-destructive">{error}</div>}
+      {error && (
+        <div className="border-b border-border px-2 py-1 text-[11px] text-destructive">{error}</div>
+      )}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {loading && (
@@ -397,13 +540,18 @@ export function BiblePanel() {
             const stableKey = favKey(h.book, h.chapter, h.verse);
             const isFav = fav.has(stableKey);
             const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
-            const refSecondary = pair ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}` : null;
+            const refSecondary = pair
+              ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}`
+              : null;
             const isProjected = (projectedRef ?? "").includes(refPrimary);
             const isActive = activeIdx === i;
             return (
               <div
                 key={stableKey + ":" + i}
-                onClick={() => { selectIdx(i); project(dh); }}
+                onClick={() => {
+                  selectIdx(i);
+                  project(dh);
+                }}
                 className={cn(
                   "group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
                   "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
@@ -452,8 +600,12 @@ export function BiblePanel() {
                       if (isFav) removeFavorite(stableKey);
                       else
                         addFavorite({
-                          lang: primaryLang, book: h.book, chapter: h.chapter, verse: h.verse,
-                          ref: `${h.bookName} ${h.chapter}:${h.verse}`, text: h.text,
+                          lang: primaryLang,
+                          book: h.book,
+                          chapter: h.chapter,
+                          verse: h.verse,
+                          ref: `${h.bookName} ${h.chapter}:${h.verse}`,
+                          text: h.text,
                         });
                     }}
                     className={cn(
@@ -467,7 +619,11 @@ export function BiblePanel() {
                     <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); selectIdx(i); project(dh); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      selectIdx(i);
+                      project(dh);
+                    }}
                     className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground transition hover:opacity-90"
                     title="Project verse (Enter)"
                   >
@@ -488,11 +644,15 @@ export function BiblePanel() {
               {favorites.slice(0, 30).map((f) => (
                 <button
                   key={f.id}
-                  onClick={() => projectVerseAt({ book: f.book, chapter: f.chapter, verse: f.verse })}
+                  onClick={() =>
+                    projectVerseAt({ book: f.book, chapter: f.chapter, verse: f.verse })
+                  }
                   className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left hover:border-primary/40 hover:bg-accent/40"
                 >
                   <div className="text-[11px] font-semibold text-primary">{f.ref}</div>
-                  <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap">{f.text}</div>
+                  <div className="text-xs text-muted-foreground break-words whitespace-pre-wrap">
+                    {f.text}
+                  </div>
                 </button>
               ))}
             </div>

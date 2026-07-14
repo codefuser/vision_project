@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Group, Panel, Separator, type Layout, type PanelImperativeHandle } from "react-resizable-panels";
+import {
+  Group,
+  Panel,
+  Separator,
+  type Layout,
+  type PanelImperativeHandle,
+} from "react-resizable-panels";
 import { ChevronUp, ChevronDown, MonitorPlay, Type as TypeIcon, LayoutGrid } from "lucide-react";
 import { LivePreviewPanel } from "./LivePreviewPanel";
 import { TextFormattingPanel } from "./TextFormattingPanel";
@@ -87,7 +93,9 @@ export function ProjectionWorkspace() {
   const setTextFormatCollapsed = useWorkspace((s) => s.setTextFormatCollapsed);
   const tabsCollapsed = useWorkspace((s) => s.tabsCollapsed);
   const [resetNonce, setResetNonce] = useState(0);
-  const [leftWidthDefault, setLeftWidthDefault] = useState(() => readSavedLeftWidth() ?? LEFT_DEFAULT_WIDTH);
+  const [leftWidthDefault, setLeftWidthDefault] = useState(
+    () => readSavedLeftWidth() ?? LEFT_DEFAULT_WIDTH,
+  );
   const [isDraggingHorizontal, setIsDraggingHorizontal] = useState(false);
   const workspaceRef = useRef<HTMLDivElement | null>(null);
 
@@ -143,7 +151,8 @@ export function ProjectionWorkspace() {
       const workspace = workspaceRef.current;
       if (!workspace) return;
       const bounds = workspace.getBoundingClientRect();
-      const reservedRightWidth = visible.tabs && tabsCollapsed ? TABS_COLLAPSED_WIDTH : visible.tabs ? RIGHT_MIN_WIDTH : 0;
+      const reservedRightWidth =
+        visible.tabs && tabsCollapsed ? TABS_COLLAPSED_WIDTH : visible.tabs ? RIGHT_MIN_WIDTH : 0;
       const maxLeftWidth = Math.max(LEFT_MIN_WIDTH, bounds.width - reservedRightWidth);
       const nextWidth = Math.min(Math.max(clientX - bounds.left, LEFT_MIN_WIDTH), maxLeftWidth);
       setLeftWidthDefault(nextWidth);
@@ -169,9 +178,6 @@ export function ProjectionWorkspace() {
     window.addEventListener("pointercancel", stopDragging, { once: true });
   };
 
-
-
-
   const resetLayout = () => {
     try {
       localStorage.removeItem(LAYOUT_KEYS.leftWidth);
@@ -195,9 +201,24 @@ export function ProjectionWorkspace() {
       <div className="flex h-full min-h-0 flex-col bg-background">
         {/* Workspace dock controls — original inline toolbar (Preview / Text / Tabs). */}
         <div className="flex h-10 shrink-0 items-center gap-1 border-b border-border bg-muted/20 px-2 pr-44">
-          <DockButton label="Preview" icon={MonitorPlay} active={visible.preview} onClick={() => togglePanel("preview")} />
-          <DockButton label="Text" icon={TypeIcon} active={visible.textFormat} onClick={() => togglePanel("textFormat")} />
-          <DockButton label="Tabs" icon={LayoutGrid} active={visible.tabs} onClick={() => togglePanel("tabs")} />
+          <DockButton
+            label="Preview"
+            icon={MonitorPlay}
+            active={visible.preview}
+            onClick={() => togglePanel("preview")}
+          />
+          <DockButton
+            label="Text"
+            icon={TypeIcon}
+            active={visible.textFormat}
+            onClick={() => togglePanel("textFormat")}
+          />
+          <DockButton
+            label="Tabs"
+            icon={LayoutGrid}
+            active={visible.tabs}
+            onClick={() => togglePanel("tabs")}
+          />
           <div className="ml-auto">
             <button
               onClick={resetLayout}
@@ -209,20 +230,19 @@ export function ProjectionWorkspace() {
           </div>
         </div>
 
-
         <div className="min-h-0 flex-1">
           {allHidden ? (
             <EmptyDock onShow={showPanel} visible={visible} />
           ) : (
-            <div
-              key={outerKey}
-              ref={workspaceRef}
-              className="flex h-full min-w-0 overflow-hidden"
-            >
+            <div key={outerKey} ref={workspaceRef} className="flex h-full min-w-0 overflow-hidden">
               {leftVisible && (
                 <div
                   data-workspace-left-panel
-                  style={visible.tabs ? { width: leftWidthDefault, minWidth: LEFT_MIN_WIDTH } : { minWidth: LEFT_MIN_WIDTH }}
+                  style={
+                    visible.tabs
+                      ? { width: leftWidthDefault, minWidth: LEFT_MIN_WIDTH }
+                      : { minWidth: LEFT_MIN_WIDTH }
+                  }
                   className={cn("min-h-0 min-w-0", visible.tabs ? "shrink-0" : "flex-1")}
                 >
                   <Group
@@ -234,7 +254,6 @@ export function ProjectionWorkspace() {
                       if (visible.preview && visible.textFormat) writeLayout(LAYOUT_KEYS.left, l);
                     }}
                   >
-
                     {visible.preview && (
                       <Panel id="preview" defaultSize={60} minSize={8} className="min-h-0">
                         <LivePreviewPanel />
@@ -247,7 +266,11 @@ export function ProjectionWorkspace() {
                         panelRef={(handle) => {
                           textFormatPanelRef.current = handle as typeof textFormatPanelRef.current;
                         }}
-                        defaultSize={textFormatCollapsed ? TEXT_FORMAT_COLLAPSED_SIZE : TEXT_FORMAT_DEFAULT_SIZE}
+                        defaultSize={
+                          textFormatCollapsed
+                            ? TEXT_FORMAT_COLLAPSED_SIZE
+                            : TEXT_FORMAT_DEFAULT_SIZE
+                        }
                         minSize={6}
                         collapsible
                         collapsedSize={TEXT_FORMAT_COLLAPSED_SIZE}
@@ -265,17 +288,25 @@ export function ProjectionWorkspace() {
                   </Group>
                 </div>
               )}
-              {leftVisible && visible.tabs && <HHandle onPointerDown={startHorizontalDrag} active={isDraggingHorizontal} />}
+              {leftVisible && visible.tabs && (
+                <HHandle onPointerDown={startHorizontalDrag} active={isDraggingHorizontal} />
+              )}
               {visible.tabs && (
                 <div
                   data-workspace-right-panel
-                  style={rightWidth ? { width: rightWidth, minWidth: rightWidth } : { minWidth: RIGHT_MIN_WIDTH }}
-                  className={cn("min-h-0 min-w-0 overflow-hidden", rightWidth ? "shrink-0" : "flex-1")}
+                  style={
+                    rightWidth
+                      ? { width: rightWidth, minWidth: rightWidth }
+                      : { minWidth: RIGHT_MIN_WIDTH }
+                  }
+                  className={cn(
+                    "min-h-0 min-w-0 overflow-hidden",
+                    rightWidth ? "shrink-0" : "flex-1",
+                  )}
                 >
                   <WorkspaceTabsPanel />
                 </div>
               )}
-
             </div>
           )}
         </div>
@@ -308,12 +339,22 @@ function DockButton({
     >
       <Icon className="h-3 w-3" />
       {label}
-      {active ? <ChevronUp className="h-3 w-3 opacity-60" /> : <ChevronDown className="h-3 w-3 opacity-60" />}
+      {active ? (
+        <ChevronUp className="h-3 w-3 opacity-60" />
+      ) : (
+        <ChevronDown className="h-3 w-3 opacity-60" />
+      )}
     </button>
   );
 }
 
-function HHandle({ onPointerDown, active }: { onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void; active: boolean }) {
+function HHandle({
+  onPointerDown,
+  active,
+}: {
+  onPointerDown: (event: React.PointerEvent<HTMLDivElement>) => void;
+  active: boolean;
+}) {
   return (
     <div
       role="separator"
@@ -336,23 +377,38 @@ function VHandle() {
   );
 }
 
-function EmptyDock({ onShow, visible }: { onShow: (k: keyof PanelVisibility) => void; visible: PanelVisibility }) {
+function EmptyDock({
+  onShow,
+  visible,
+}: {
+  onShow: (k: keyof PanelVisibility) => void;
+  visible: PanelVisibility;
+}) {
   return (
     <div className="flex h-full flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
       <div>All panels are collapsed.</div>
       <div className="flex flex-wrap justify-center gap-2">
         {!visible.preview && (
-          <button onClick={() => onShow("preview")} className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90">
+          <button
+            onClick={() => onShow("preview")}
+            className="cursor-pointer rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90"
+          >
             Show Preview
           </button>
         )}
         {!visible.textFormat && (
-          <button onClick={() => onShow("textFormat")} className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">
+          <button
+            onClick={() => onShow("textFormat")}
+            className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent"
+          >
             Show Text Formatting
           </button>
         )}
         {!visible.tabs && (
-          <button onClick={() => onShow("tabs")} className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent">
+          <button
+            onClick={() => onShow("tabs")}
+            className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-xs hover:bg-accent"
+          >
             Show Workspace Tabs
           </button>
         )}

@@ -33,10 +33,8 @@ export const useWorkspace = create<WorkspaceState>()(
       textFormatCollapsed: false,
       tabsCollapsed: false,
       setActiveTab: (t) => set({ activeTab: t }),
-      togglePanel: (key) =>
-        set((s) => ({ visible: { ...s.visible, [key]: !s.visible[key] } })),
-      showPanel: (key) =>
-        set((s) => ({ visible: { ...s.visible, [key]: true } })),
+      togglePanel: (key) => set((s) => ({ visible: { ...s.visible, [key]: !s.visible[key] } })),
+      showPanel: (key) => set((s) => ({ visible: { ...s.visible, [key]: true } })),
       setTextFormatCollapsed: (v) => set({ textFormatCollapsed: v }),
       toggleTextFormatCollapsed: () =>
         set((s) => ({ textFormatCollapsed: !s.textFormatCollapsed })),
@@ -50,4 +48,3 @@ export const useWorkspace = create<WorkspaceState>()(
     },
   ),
 );
-

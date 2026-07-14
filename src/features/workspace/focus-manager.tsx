@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 /**
  * Lightweight focus manager for the workspace.
@@ -13,7 +21,10 @@ export type FocusZone = "preview" | "text-format" | "media" | "bible" | "songs" 
 interface FocusContextValue {
   active: FocusZone;
   focus: (zone: FocusZone) => void;
-  registerHandler: (zone: Exclude<FocusZone, null>, handler: (e: KeyboardEvent) => void) => () => void;
+  registerHandler: (
+    zone: Exclude<FocusZone, null>,
+    handler: (e: KeyboardEvent) => void,
+  ) => () => void;
 }
 
 const FocusContext = createContext<FocusContextValue | null>(null);
@@ -33,7 +44,10 @@ export function FocusManagerProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  const value = useMemo<FocusContextValue>(() => ({ active, focus, registerHandler }), [active, focus, registerHandler]);
+  const value = useMemo<FocusContextValue>(
+    () => ({ active, focus, registerHandler }),
+    [active, focus, registerHandler],
+  );
   return <FocusContext.Provider value={value}>{children}</FocusContext.Provider>;
 }
 

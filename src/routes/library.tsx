@@ -9,7 +9,5 @@ export const Route = createFileRoute("/library")({
       { name: "description", content: "Manage images, posters, and videos for projection." },
     ],
   }),
-  component: () => (
-    <LibraryPage />
-  ),
+  component: () => <LibraryPage />,
 });

@@ -24,12 +24,18 @@ export function Thumb({ media, className }: { media: MediaRecord; className?: st
   }, [media.thumbBlobId, media.blobId]);
 
   return (
-    <div className={`relative flex items-center justify-center overflow-hidden bg-muted ${className ?? ""}`}>
+    <div
+      className={`relative flex items-center justify-center overflow-hidden bg-muted ${className ?? ""}`}
+    >
       {url ? (
         <img src={url} alt={media.name} className="h-full w-full object-cover" loading="lazy" />
       ) : (
         <div className="text-muted-foreground">
-          {media.type === "video" ? <Film className="h-6 w-6" /> : <ImageIcon className="h-6 w-6" />}
+          {media.type === "video" ? (
+            <Film className="h-6 w-6" />
+          ) : (
+            <ImageIcon className="h-6 w-6" />
+          )}
         </div>
       )}
       {media.type === "video" && (

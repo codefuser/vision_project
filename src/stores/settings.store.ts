@@ -28,6 +28,7 @@ export function applyTheme(mode: AppSettings["theme"]) {
   if (typeof document === "undefined") return;
   const root = document.documentElement;
   const dark =
-    mode === "dark" || (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    mode === "dark" ||
+    (mode === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
   root.classList.toggle("dark", dark);
 }

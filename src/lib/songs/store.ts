@@ -83,11 +83,10 @@ export const useSongsStore = create<SongStore>()(
             ...s.favorites.filter((f) => f.id !== fav.id),
           ].slice(0, 500),
         })),
-      removeFavorite: (id) =>
-        set((s) => ({ favorites: s.favorites.filter((f) => f.id !== id) })),
+      removeFavorite: (id) => set((s) => ({ favorites: s.favorites.filter((f) => f.id !== id) })),
       selectSong: (id) => set({ selectedSongId: id }),
       addUserSong: (s) => {
-        const id = (get().userSongs.reduce((m, x) => Math.max(m, x.id), USER_ID_BASE)) + 1;
+        const id = get().userSongs.reduce((m, x) => Math.max(m, x.id), USER_ID_BASE) + 1;
         const next = [...get().userSongs, { ...s, id }];
         set({ userSongs: next });
         syncUserSongs(next);

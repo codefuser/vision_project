@@ -13,8 +13,14 @@ import { ThemeGalleryDialog } from "./ThemeGalleryDialog";
 import { cn } from "@/lib/utils";
 
 const QUICK_IDS = [
-  "cw-navy", "mw-indigo", "pr-candle", "ys-violet",
-  "bs-scholar", "rv-glory", "an-clouds", "mn-dark",
+  "cw-navy",
+  "mw-indigo",
+  "pr-candle",
+  "ys-violet",
+  "bs-scholar",
+  "rv-glory",
+  "an-clouds",
+  "mn-dark",
 ];
 
 export function TemplatesStrip() {
@@ -25,7 +31,10 @@ export function TemplatesStrip() {
   const customCount = useCustomTemplates((s) => s.templates.length);
 
   const quick = useMemo(
-    () => QUICK_IDS.map((id) => TEMPLATE_PRESETS.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => !!t),
+    () =>
+      QUICK_IDS.map((id) => TEMPLATE_PRESETS.find((t) => t.id === id)).filter(
+        (t): t is NonNullable<typeof t> => !!t,
+      ),
     [],
   );
 
@@ -44,7 +53,8 @@ export function TemplatesStrip() {
         <Sparkles className="h-3.5 w-3.5 text-primary" />
         <span>Themes</span>
         <span className="ml-1 rounded bg-muted px-1 text-[9px] normal-case tracking-normal">
-          {TEMPLATE_PRESETS.length}{customCount > 0 ? ` +${customCount}` : ""}
+          {TEMPLATE_PRESETS.length}
+          {customCount > 0 ? ` +${customCount}` : ""}
         </span>
         {active && (
           <span className="ml-2 truncate text-[10px] font-medium normal-case tracking-normal text-primary">
@@ -67,20 +77,31 @@ export function TemplatesStrip() {
               return (
                 <button
                   key={t.id}
-                  onClick={() => { applyTemplate(t.id); setActive(t.id); }}
+                  onClick={() => {
+                    applyTemplate(t.id);
+                    setActive(t.id);
+                  }}
                   title={`${t.name} — ${t.description}`}
                   className={cn(
                     "group relative flex w-[112px] shrink-0 cursor-pointer flex-col overflow-hidden rounded-md border text-left transition",
-                    isActive ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/60",
+                    isActive
+                      ? "border-primary ring-2 ring-primary/40"
+                      : "border-border hover:border-primary/60",
                   )}
                 >
                   <div className="relative flex h-12 items-center justify-center" style={bgStyle}>
                     {t.background.animation && t.background.animation !== "none" && (
-                      <div className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${t.background.animation}`} />
+                      <div
+                        className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${t.background.animation}`}
+                      />
                     )}
                     <span
                       className="relative z-10 text-[18px] font-bold leading-none"
-                      style={{ color: textColor, fontFamily: t.text.fontFamily, textShadow: t.text.shadow ? "0 1px 3px rgba(0,0,0,.6)" : undefined }}
+                      style={{
+                        color: textColor,
+                        fontFamily: t.text.fontFamily,
+                        textShadow: t.text.shadow ? "0 1px 3px rgba(0,0,0,.6)" : undefined,
+                      }}
                     >
                       Aa
                     </span>
@@ -110,7 +131,13 @@ export function TemplatesStrip() {
           </div>
         </div>
       )}
-      <ThemeGalleryDialog open={galleryOpen} onOpenChange={(v) => { setGalleryOpen(v); if (!v) setActive(activeTemplateId()); }} />
+      <ThemeGalleryDialog
+        open={galleryOpen}
+        onOpenChange={(v) => {
+          setGalleryOpen(v);
+          if (!v) setActive(activeTemplateId());
+        }}
+      />
     </div>
   );
 }

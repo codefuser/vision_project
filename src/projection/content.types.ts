@@ -20,14 +20,7 @@ export type ProjectionContentType =
   | "service_item";
 
 export type SourceModule =
-  | "media"
-  | "bible"
-  | "songs"
-  | "text"
-  | "announcements"
-  | "sermon"
-  | "service"
-  | "system";
+  "media" | "bible" | "songs" | "text" | "announcements" | "sermon" | "service" | "system";
 
 export interface ProjectionStyle {
   background?: string;

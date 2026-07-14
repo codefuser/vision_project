@@ -22,7 +22,9 @@ import { getMedia } from "@/db/repo";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import { useBackground } from "@/stores/background.store";
 
-interface Props { background: BackgroundConfig; }
+interface Props {
+  background: BackgroundConfig;
+}
 
 interface Resolved {
   kind: BackgroundConfig["kind"];
@@ -83,25 +85,36 @@ export function BackgroundLayer({ background }: Props) {
 
   useEffect(() => {
     let cancelled = false;
-    if (bg.kind !== "media" || !bg.mediaId) { setMedia(null); return; }
+    if (bg.kind !== "media" || !bg.mediaId) {
+      setMedia(null);
+      return;
+    }
     (async () => {
       const m = await getMedia(bg.mediaId!);
       if (!cancelled) setMedia(m ?? null);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [bg.kind, bg.mediaId]);
 
   useEffect(() => {
     let cancelled = false;
     let key: string | null = null;
     (async () => {
-      if (!media) { setUrl(null); return; }
+      if (!media) {
+        setUrl(null);
+        return;
+      }
       const rec = await db().blobs.get(media.blobId);
       if (!rec || cancelled) return;
       key = media.blobId;
       setUrl(acquireUrl(key, rec.blob));
     })();
-    return () => { cancelled = true; if (key) releaseUrl(key); };
+    return () => {
+      cancelled = true;
+      if (key) releaseUrl(key);
+    };
   }, [media]);
 
   // Live-apply video controls without reloading the element.
@@ -117,17 +130,31 @@ export function BackgroundLayer({ background }: Props) {
 
   const animationKind: BackgroundAnimation = (() => {
     if (!motionEnabled) return "none";
-    const isParticle = bg.animation === "particles" || bg.animation === "golden-particles"
-      || bg.animation === "sparkles" || bg.animation === "floating-dust" || bg.animation === "star-field";
+    const isParticle =
+      bg.animation === "particles" ||
+      bg.animation === "golden-particles" ||
+      bg.animation === "sparkles" ||
+      bg.animation === "floating-dust" ||
+      bg.animation === "star-field";
     if (isParticle && !particlesEnabled) return "none";
     return bg.animation;
   })();
 
-  const overlay = bg.overlayOpacity > 0 ? (
-    <div className="pointer-events-none absolute inset-0" style={{ background: bg.overlayColor, opacity: bg.overlayOpacity }} />
-  ) : null;
+  const overlay =
+    bg.overlayOpacity > 0 ? (
+      <div
+        className="pointer-events-none absolute inset-0"
+        style={{ background: bg.overlayColor, opacity: bg.overlayOpacity }}
+      />
+    ) : null;
 
-  if (bg.kind === "none") return <>{overlay}<AnimationOverlay kind={animationKind} /></>;
+  if (bg.kind === "none")
+    return (
+      <>
+        {overlay}
+        <AnimationOverlay kind={animationKind} />
+      </>
+    );
 
   if (bg.kind === "color" || !media || !url) {
     return (
@@ -165,7 +192,13 @@ export function BackgroundLayer({ background }: Props) {
           playsInline
         />
       ) : (
-        <img src={url} alt="" className="absolute inset-0 h-full w-full" style={style} draggable={false} />
+        <img
+          src={url}
+          alt=""
+          className="absolute inset-0 h-full w-full"
+          style={style}
+          draggable={false}
+        />
       )}
       {overlay}
       <AnimationOverlay kind={animationKind} />
@@ -175,6 +208,10 @@ export function BackgroundLayer({ background }: Props) {
 
 function AnimationOverlay({ kind }: { kind: BackgroundAnimation }) {
   if (!kind || kind === "none") return null;
-  return <div className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${kind}`} aria-hidden />;
+  return (
+    <div
+      className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${kind}`}
+      aria-hidden
+    />
+  );
 }
-

@@ -134,10 +134,7 @@ export function PlaylistsPage() {
             toast.success("Playlist deleted");
           }}
         />
-        <PlaylistPreviewDialog
-          playlist={previewTarget}
-          onClose={() => setPreviewTarget(null)}
-        />
+        <PlaylistPreviewDialog playlist={previewTarget} onClose={() => setPreviewTarget(null)} />
       </div>
     </div>
   );

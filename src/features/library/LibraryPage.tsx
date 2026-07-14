@@ -1,11 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, Filter, Trash2, FolderInput, Copy, ListPlus, Pencil, Info, Eye, PanelLeftClose, FolderTree as FolderTreeIcon, Star } from "lucide-react";
+import {
+  Search,
+  Filter,
+  Trash2,
+  FolderInput,
+  Copy,
+  ListPlus,
+  Pencil,
+  Info,
+  Eye,
+  PanelLeftClose,
+  FolderTree as FolderTreeIcon,
+  Star,
+} from "lucide-react";
 import { FolderTree } from "@/components/FolderTree";
 import { Dropzone } from "@/components/Dropzone";
 import { Thumb } from "@/components/Thumb";
 import { useLibrary, filterMedia, type LibraryFilter } from "@/stores/library.store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
-import { addMediaToPlaylist, deleteMedia, duplicateMedia, listPlaylists, moveMedia, renameMedia } from "@/db/repo";
+import {
+  addMediaToPlaylist,
+  deleteMedia,
+  duplicateMedia,
+  listPlaylists,
+  moveMedia,
+  renameMedia,
+} from "@/db/repo";
 import type { MediaRecord, PlaylistRecord } from "@/db/schema";
 import { formatBytes, formatDuration } from "@/lib/files";
 import { toast } from "sonner";
@@ -57,7 +77,14 @@ export function LibraryPage() {
     return window.localStorage.getItem("church-media-folders-collapsed-v1") === "1";
   });
   useEffect(() => {
-    try { window.localStorage.setItem("church-media-folders-collapsed-v1", foldersCollapsed ? "1" : "0"); } catch { /* ignore */ }
+    try {
+      window.localStorage.setItem(
+        "church-media-folders-collapsed-v1",
+        foldersCollapsed ? "1" : "0",
+      );
+    } catch {
+      /* ignore */
+    }
   }, [foldersCollapsed]);
 
   const anchorIndexRef = useRef<number | null>(null);
@@ -180,7 +207,12 @@ export function LibraryPage() {
       if (day === today) label = "Today";
       else if (day === yesterday) label = "Yesterday";
       else if (day >= lastWeekStart) label = "Last Week";
-      else label = new Date(day).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+      else
+        label = new Date(day).toLocaleDateString(undefined, {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
       if (!groups.has(label)) {
         groups.set(label, []);
         order.push(label);
@@ -264,7 +296,9 @@ export function LibraryPage() {
             className={cn(
               "absolute right-1.5 inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md bg-background/90 shadow-sm backdrop-blur transition hover:bg-background",
               m.type === "video" ? "top-9" : "top-1.5",
-              favSet.has(m.id) ? "text-amber-500 opacity-100" : "text-muted-foreground opacity-0 group-hover:opacity-100",
+              favSet.has(m.id)
+                ? "text-amber-500 opacity-100"
+                : "text-muted-foreground opacity-0 group-hover:opacity-100",
             )}
           >
             <Star className={cn("h-3.5 w-3.5", favSet.has(m.id) && "fill-current")} />
@@ -297,23 +331,25 @@ export function LibraryPage() {
           <div className="mt-1 flex items-center justify-between gap-2 text-[10.5px] text-muted-foreground">
             {m.type === "video" ? (
               <>
-                <span className="rounded bg-muted px-1 text-[9px] font-bold uppercase tracking-wide">Video</span>
+                <span className="rounded bg-muted px-1 text-[9px] font-bold uppercase tracking-wide">
+                  Video
+                </span>
                 <span className="tabular-nums">{formatDuration(m.durationMs)}</span>
                 <span className="tabular-nums">{formatBytes(m.size)}</span>
               </>
             ) : (
               <>
-                <span className="rounded bg-muted px-1 text-[9px] font-bold uppercase tracking-wide">Image</span>
+                <span className="rounded bg-muted px-1 text-[9px] font-bold uppercase tracking-wide">
+                  Image
+                </span>
                 <span className="tabular-nums">{formatBytes(m.size)}</span>
               </>
             )}
           </div>
         </div>
-
       </div>
     );
   };
-
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -335,7 +371,9 @@ export function LibraryPage() {
               onClick={() => setFilter(f.value)}
               className={cn(
                 "cursor-pointer rounded px-2.5 py-1 text-xs font-medium transition",
-                filter === f.value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                filter === f.value
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {f.label}
@@ -382,13 +420,22 @@ export function LibraryPage() {
                   Selection mode
                 </span>
               </span>
-              <button onClick={onAddToPlaylist} className="ml-3 inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent">
+              <button
+                onClick={onAddToPlaylist}
+                className="ml-3 inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent"
+              >
                 <ListPlus className="h-3.5 w-3.5" /> Add to playlist
               </button>
-              <button onClick={() => setShowMove(true)} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent">
+              <button
+                onClick={() => setShowMove(true)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent"
+              >
                 <FolderInput className="h-3.5 w-3.5" /> Move
               </button>
-              <button onClick={onDuplicate} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent">
+              <button
+                onClick={onDuplicate}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2.5 py-1 hover:bg-accent"
+              >
                 <Copy className="h-3.5 w-3.5" /> Duplicate
               </button>
               {selectedIds.length === 1 && (
@@ -402,7 +449,10 @@ export function LibraryPage() {
                   <Pencil className="h-3.5 w-3.5" /> Rename
                 </button>
               )}
-              <button onClick={requestDeleteSelection} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive hover:bg-destructive/20">
+              <button
+                onClick={requestDeleteSelection}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1 text-destructive hover:bg-destructive/20"
+              >
                 <Trash2 className="h-3.5 w-3.5" /> Delete
               </button>
               <button
@@ -463,11 +513,15 @@ export function LibraryPage() {
                       <section key={g.label} className="mb-5">
                         <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
                           {g.label}
-                          <span className="ml-2 text-[10px] font-normal opacity-70">{g.items.length}</span>
+                          <span className="ml-2 text-[10px] font-normal opacity-70">
+                            {g.items.length}
+                          </span>
                         </h3>
                         <div
                           className="grid gap-3"
-                          style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))" }}
+                          style={{
+                            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
+                          }}
                         >
                           {g.items.map((m) => renderCard(m, visible.indexOf(m)))}
                         </div>
@@ -476,7 +530,9 @@ export function LibraryPage() {
                   ) : (
                     <div
                       className="grid gap-3"
-                      style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))" }}
+                      style={{
+                        gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
+                      }}
                     >
                       {visible.map((m, idx) => renderCard(m, idx))}
                     </div>
@@ -593,11 +649,19 @@ function AddToPlaylistDialog({
   onDone: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-lg border border-border bg-card p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md rounded-lg border border-border bg-card p-4"
+      >
         <h3 className="text-base font-semibold">Add {mediaIds.length} item(s) to playlist</h3>
         <div className="mt-3 max-h-72 space-y-1 overflow-y-auto">
-          {playlists.length === 0 && <p className="text-sm text-muted-foreground">No playlists yet. Create one first.</p>}
+          {playlists.length === 0 && (
+            <p className="text-sm text-muted-foreground">No playlists yet. Create one first.</p>
+          )}
           {playlists.map((p) => (
             <button
               key={p.id}
@@ -614,7 +678,10 @@ function AddToPlaylistDialog({
           ))}
         </div>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-accent">
+          <button
+            onClick={onClose}
+            className="cursor-pointer rounded-md border border-border bg-background px-3 py-1.5 text-sm hover:bg-accent"
+          >
             Cancel
           </button>
         </div>

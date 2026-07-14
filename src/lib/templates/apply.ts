@@ -69,14 +69,25 @@ export function applyTemplate(id: string, opts: ApplyTemplateOpts = {}): Templat
   }
 
   if (typeof window !== "undefined") {
-    try { window.localStorage.setItem("vision-active-template", id); } catch { /* ignore */ }
-    try { useThemeFavorites.getState().pushRecent(id); } catch { /* ignore */ }
+    try {
+      window.localStorage.setItem("vision-active-template", id);
+    } catch {
+      /* ignore */
+    }
+    try {
+      useThemeFavorites.getState().pushRecent(id);
+    } catch {
+      /* ignore */
+    }
   }
   return preset;
 }
 
-
 export function activeTemplateId(): string | null {
   if (typeof window === "undefined") return null;
-  try { return window.localStorage.getItem("vision-active-template"); } catch { return null; }
+  try {
+    return window.localStorage.getItem("vision-active-template");
+  } catch {
+    return null;
+  }
 }

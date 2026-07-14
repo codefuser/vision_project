@@ -284,11 +284,7 @@ function bounded(a: string, b: string, max: number): number {
     let rowMin = curr[0];
     for (let j = 1; j <= bl; j++) {
       const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
-      curr[j] = Math.min(
-        prev[j] + 1,
-        curr[j - 1] + 1,
-        prev[j - 1] + cost,
-      );
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
       if (curr[j] < rowMin) rowMin = curr[j];
     }
     if (rowMin > max) return Infinity;

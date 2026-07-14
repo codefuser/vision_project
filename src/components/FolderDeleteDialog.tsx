@@ -17,7 +17,12 @@ interface FolderDeleteDialogProps {
   onConfirm: (mode: FolderDeleteMode) => void | Promise<void>;
 }
 
-export function FolderDeleteDialog({ open, folderName, onCancel, onConfirm }: FolderDeleteDialogProps) {
+export function FolderDeleteDialog({
+  open,
+  folderName,
+  onCancel,
+  onConfirm,
+}: FolderDeleteDialogProps) {
   const [mode, setMode] = useState<FolderDeleteMode>("folder-only");
   const [busy, setBusy] = useState(false);
 
@@ -42,9 +47,7 @@ export function FolderDeleteDialog({ open, folderName, onCancel, onConfirm }: Fo
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>Delete Folder</DialogTitle>
-          <DialogDescription>
-            "{folderName}" — choose what to delete.
-          </DialogDescription>
+          <DialogDescription>"{folderName}" — choose what to delete.</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-2">

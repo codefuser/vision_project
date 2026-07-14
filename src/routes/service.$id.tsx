@@ -9,7 +9,5 @@ export const Route = createFileRoute("/service/$id")({
 
 function ServiceModeRoute() {
   const { id } = Route.useParams();
-  return (
-    <ServiceMode id={id} />
-  );
+  return <ServiceMode id={id} />;
 }

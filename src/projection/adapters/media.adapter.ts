@@ -9,12 +9,7 @@
  */
 import type { MediaRecord, PlaylistRecord } from "@/db/schema";
 import { getPlaylist, touchMedia, getMedia, getSettings } from "@/db/repo";
-import type {
-  ImageBody,
-  ProjectionContent,
-  ProjectionStyle,
-  VideoBody,
-} from "../content.types";
+import type { ImageBody, ProjectionContent, ProjectionStyle, VideoBody } from "../content.types";
 import { projectionEngine } from "../engine";
 
 function styleFromMedia(media: MediaRecord, override?: Partial<ProjectionStyle>): ProjectionStyle {

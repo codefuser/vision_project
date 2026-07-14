@@ -52,8 +52,7 @@ export const useBibleCollections = create<CollectionsStore>()(
         set((s) => ({
           collections: s.collections.map((c) => (c.id === id ? { ...c, name } : c)),
         })),
-      remove: (id) =>
-        set((s) => ({ collections: s.collections.filter((c) => c.id !== id) })),
+      remove: (id) => set((s) => ({ collections: s.collections.filter((c) => c.id !== id) })),
       addVerse: (collectionId, v) =>
         set((s) => ({
           collections: s.collections.map((c) => {

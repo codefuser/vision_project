@@ -50,7 +50,12 @@ export function projectSongSlide(input: ProjectSlideInput): ProjectionContent<So
     title: `${input.title} (slide ${input.slideIndex + 1})`,
     source: { module: "songs" },
     metadata: { songId: input.songId, slideIndex: input.slideIndex },
-    style: { background: style.background, color: style.color, align: style.align, vAlign: style.vAlign },
+    style: {
+      background: style.background,
+      color: style.color,
+      align: style.align,
+      vAlign: style.vAlign,
+    },
     body: { songId: String(input.songId), slideIndex: input.slideIndex, lines },
     createdAt: now,
     updatedAt: now,

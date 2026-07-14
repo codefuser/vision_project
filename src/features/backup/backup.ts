@@ -1,5 +1,12 @@
 import { zip, unzip, strToU8, strFromU8 } from "fflate";
-import { db, DEFAULT_SETTINGS, type FolderRecord, type MediaRecord, type PlaylistRecord, type SettingsRecord } from "@/db/schema";
+import {
+  db,
+  DEFAULT_SETTINGS,
+  type FolderRecord,
+  type MediaRecord,
+  type PlaylistRecord,
+  type SettingsRecord,
+} from "@/db/schema";
 import { useSongsStore } from "@/lib/songs/store";
 
 const BACKUP_VERSION = 2;
@@ -78,34 +85,50 @@ export async function importBackup(file: Blob, opts: { mode: "merge" | "replace"
   const manifestRaw = entries["manifest.json"];
   if (!manifestRaw) throw new Error("Invalid backup: missing manifest.json");
   const manifest = JSON.parse(strFromU8(manifestRaw)) as Manifest;
-  if (manifest.version > BACKUP_VERSION) throw new Error(`Backup version ${manifest.version} is newer than supported (${BACKUP_VERSION})`);
+  if (manifest.version > BACKUP_VERSION)
+    throw new Error(
+      `Backup version ${manifest.version} is newer than supported (${BACKUP_VERSION})`,
+    );
 
-  await db().transaction("rw", [db().folders, db().media, db().blobs, db().playlists, db().settings], async () => {
-    if (opts.mode === "replace") {
-      await db().folders.clear();
-      await db().media.clear();
-      await db().blobs.clear();
-      await db().playlists.clear();
-    }
-    // folders
-    for (const f of manifest.folders) await db().folders.put(f);
-    // media + blobs
-    for (const m of manifest.media) {
-      if (m.blobFile && entries[m.blobFile]) {
-        const u8 = entries[m.blobFile];
-        await db().blobs.put({ id: m.blobId, blob: new Blob([u8.buffer as ArrayBuffer], { type: m.mime }), kind: "original" });
+  await db().transaction(
+    "rw",
+    [db().folders, db().media, db().blobs, db().playlists, db().settings],
+    async () => {
+      if (opts.mode === "replace") {
+        await db().folders.clear();
+        await db().media.clear();
+        await db().blobs.clear();
+        await db().playlists.clear();
       }
-      if (m.thumbBlobId && m.thumbFile && entries[m.thumbFile]) {
-        const u8 = entries[m.thumbFile];
-        await db().blobs.put({ id: m.thumbBlobId, blob: new Blob([u8.buffer as ArrayBuffer], { type: "image/webp" }), kind: "thumb" });
+      // folders
+      for (const f of manifest.folders) await db().folders.put(f);
+      // media + blobs
+      for (const m of manifest.media) {
+        if (m.blobFile && entries[m.blobFile]) {
+          const u8 = entries[m.blobFile];
+          await db().blobs.put({
+            id: m.blobId,
+            blob: new Blob([u8.buffer as ArrayBuffer], { type: m.mime }),
+            kind: "original",
+          });
+        }
+        if (m.thumbBlobId && m.thumbFile && entries[m.thumbFile]) {
+          const u8 = entries[m.thumbFile];
+          await db().blobs.put({
+            id: m.thumbBlobId,
+            blob: new Blob([u8.buffer as ArrayBuffer], { type: "image/webp" }),
+            kind: "thumb",
+          });
+        }
+        const { blobFile: _b, thumbFile: _t, ...clean } = m;
+        void _b;
+        void _t;
+        await db().media.put(clean as MediaRecord);
       }
-      const { blobFile: _b, thumbFile: _t, ...clean } = m;
-      void _b; void _t;
-      await db().media.put(clean as MediaRecord);
-    }
-    for (const p of manifest.playlists) await db().playlists.put(p);
-    await db().settings.put({ key: "app", value: manifest.settings });
-  });
+      for (const p of manifest.playlists) await db().playlists.put(p);
+      await db().settings.put({ key: "app", value: manifest.settings });
+    },
+  );
 
   // User songs live in localStorage via zustand-persist — restore them
   // outside the Dexie transaction.

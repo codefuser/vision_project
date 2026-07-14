@@ -18,7 +18,8 @@ export function SermonStatusBar() {
 
   const current = items[currentIndex] ?? null;
   const prev = currentIndex > 0 ? items[currentIndex - 1] : null;
-  const next = currentIndex >= 0 && currentIndex < items.length - 1 ? items[currentIndex + 1] : null;
+  const next =
+    currentIndex >= 0 && currentIndex < items.length - 1 ? items[currentIndex + 1] : null;
 
   const go = (delta: number) => {
     const ni = currentIndex + delta;

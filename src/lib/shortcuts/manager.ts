@@ -22,7 +22,8 @@ export type ShortcutCategory =
   | "favorites";
 
 /** Logical scope under which a shortcut is active. */
-export type ShortcutScope = "global" | "workspace" | "playlist-editor" | "service-mode" | "bible" | "songs";
+export type ShortcutScope =
+  "global" | "workspace" | "playlist-editor" | "service-mode" | "bible" | "songs";
 
 export interface ShortcutDef {
   /** Stable id, e.g. "tabs.media". */
@@ -73,7 +74,14 @@ function normaliseKey(k: string): string {
 
 function parseCombo(combo: string): ParsedCombo {
   const parts = combo.split("+").map((p) => p.trim());
-  const out: ParsedCombo = { key: "", ctrl: false, meta: false, mod: false, alt: false, shift: false };
+  const out: ParsedCombo = {
+    key: "",
+    ctrl: false,
+    meta: false,
+    mod: false,
+    alt: false,
+    shift: false,
+  };
   for (const p of parts) {
     const lp = p.toLowerCase();
     if (lp === "ctrl" || lp === "control") out.ctrl = true;

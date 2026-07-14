@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Download, Upload as UploadIcon, Trash2 } from "lucide-react";
 import { useSettings } from "@/stores/settings.store";
-import { DEFAULT_SETTINGS, type AppSettings, type TransitionType, type LoopMode, type ThemeMode } from "@/db/schema";
+import {
+  DEFAULT_SETTINGS,
+  type AppSettings,
+  type TransitionType,
+  type LoopMode,
+  type ThemeMode,
+} from "@/db/schema";
 import { exportBackup, importBackup } from "@/features/backup/backup";
 import { toast } from "sonner";
 import { db } from "@/db/schema";
@@ -13,7 +19,12 @@ const LOOPS: LoopMode[] = ["none", "single", "playlist"];
 export function SettingsPage() {
   const { settings, update, load, loaded } = useSettings();
   const [busy, setBusy] = useState<string | null>(null);
-  const [stats, setStats] = useState<{ media: number; folders: number; playlists: number; blobsMB: number } | null>(null);
+  const [stats, setStats] = useState<{
+    media: number;
+    folders: number;
+    playlists: number;
+    blobsMB: number;
+  } | null>(null);
 
   useEffect(() => {
     if (!loaded) void load();
@@ -81,12 +92,24 @@ export function SettingsPage() {
 
         <Section title="General">
           <Field label="Theme">
-            <select value={settings.theme} onChange={(e) => set({ theme: e.target.value as ThemeMode })} className="select">
-              {THEMES.map((t) => <option key={t} value={t}>{t}</option>)}
+            <select
+              value={settings.theme}
+              onChange={(e) => set({ theme: e.target.value as ThemeMode })}
+              className="select"
+            >
+              {THEMES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Language">
-            <select value={settings.language} onChange={(e) => set({ language: e.target.value })} className="select">
+            <select
+              value={settings.language}
+              onChange={(e) => set({ language: e.target.value })}
+              className="select"
+            >
               <option value="en">English</option>
             </select>
           </Field>
@@ -95,20 +118,40 @@ export function SettingsPage() {
         <Section title="Projection Defaults">
           <Field label="Default image duration (seconds)">
             <input
-              type="number" min={1} max={3600}
+              type="number"
+              min={1}
+              max={3600}
               value={Math.round(settings.defaultImageDurationMs / 1000)}
-              onChange={(e) => set({ defaultImageDurationMs: Math.max(1, Number(e.target.value)) * 1000 })}
+              onChange={(e) =>
+                set({ defaultImageDurationMs: Math.max(1, Number(e.target.value)) * 1000 })
+              }
               className="input w-28"
             />
           </Field>
           <Field label="Default transition">
-            <select value={settings.defaultTransition} onChange={(e) => set({ defaultTransition: e.target.value as TransitionType })} className="select">
-              {TRANSITIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+            <select
+              value={settings.defaultTransition}
+              onChange={(e) => set({ defaultTransition: e.target.value as TransitionType })}
+              className="select"
+            >
+              {TRANSITIONS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </Field>
           <Field label="Default loop mode">
-            <select value={settings.defaultLoopMode} onChange={(e) => set({ defaultLoopMode: e.target.value as LoopMode })} className="select">
-              {LOOPS.map((t) => <option key={t} value={t}>{t}</option>)}
+            <select
+              value={settings.defaultLoopMode}
+              onChange={(e) => set({ defaultLoopMode: e.target.value as LoopMode })}
+              className="select"
+            >
+              {LOOPS.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
             </select>
           </Field>
         </Section>
@@ -116,18 +159,33 @@ export function SettingsPage() {
         <Section title="Video Defaults">
           <Field label="Default volume">
             <input
-              type="range" min={0} max={1} step={0.05}
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
               value={settings.defaultVolume}
               onChange={(e) => set({ defaultVolume: Number(e.target.value) })}
               className="w-48 accent-primary"
             />
-            <span className="ml-2 text-sm text-muted-foreground">{Math.round(settings.defaultVolume * 100)}%</span>
+            <span className="ml-2 text-sm text-muted-foreground">
+              {Math.round(settings.defaultVolume * 100)}%
+            </span>
           </Field>
           <Field label="Autoplay videos">
-            <input type="checkbox" checked={settings.autoplayVideo} onChange={(e) => set({ autoplayVideo: e.target.checked })} className="h-4 w-4 accent-primary" />
+            <input
+              type="checkbox"
+              checked={settings.autoplayVideo}
+              onChange={(e) => set({ autoplayVideo: e.target.checked })}
+              className="h-4 w-4 accent-primary"
+            />
           </Field>
           <Field label="Mute on start">
-            <input type="checkbox" checked={settings.muteOnStart} onChange={(e) => set({ muteOnStart: e.target.checked })} className="h-4 w-4 accent-primary" />
+            <input
+              type="checkbox"
+              checked={settings.muteOnStart}
+              onChange={(e) => set({ muteOnStart: e.target.checked })}
+              className="h-4 w-4 accent-primary"
+            />
           </Field>
         </Section>
 
@@ -141,9 +199,12 @@ export function SettingsPage() {
               <Download className="h-4 w-4" /> {busy === "export" ? "Exporting…" : "Export Backup"}
             </button>
             <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-accent">
-              <UploadIcon className="h-4 w-4" /> {busy === "import" ? "Importing…" : "Import Backup"}
+              <UploadIcon className="h-4 w-4" />{" "}
+              {busy === "import" ? "Importing…" : "Import Backup"}
               <input
-                type="file" accept=".zip,application/zip" hidden
+                type="file"
+                accept=".zip,application/zip"
+                hidden
                 onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
               />
             </label>
@@ -181,7 +242,9 @@ export function SettingsPage() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">{title}</h2>
+      <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+        {title}
+      </h2>
       <div className="space-y-3">{children}</div>
     </div>
   );

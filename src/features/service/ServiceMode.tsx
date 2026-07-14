@@ -154,7 +154,11 @@ export function ServiceMode({ id }: { id: string }) {
   }, [playlist, mediaMap, cursor]);
 
   if (!playlist) {
-    return <div className="flex h-full items-center justify-center text-sm text-muted-foreground">Loading service…</div>;
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Loading service…
+      </div>
+    );
   }
 
   if (!playlist.items.length) {
@@ -193,7 +197,8 @@ export function ServiceMode({ id }: { id: string }) {
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold">{playlist.name}</div>
             <div className="text-[11px] text-muted-foreground">
-              Cue {cursor + 1} of {playlist.items.length} · est. remaining {formatDuration(remainingMs)}
+              Cue {cursor + 1} of {playlist.items.length} · est. remaining{" "}
+              {formatDuration(remainingMs)}
             </div>
           </div>
         </div>
@@ -211,12 +216,7 @@ export function ServiceMode({ id }: { id: string }) {
         {/* Live + Next + Transport */}
         <div className="flex min-h-0 flex-col gap-4">
           <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-            <CuePanel
-              title="ON SCREEN"
-              accent="primary"
-              item={currentItem}
-              media={currentMedia}
-            />
+            <CuePanel title="ON SCREEN" accent="primary" item={currentItem} media={currentMedia} />
             <CuePanel
               title="NEXT UP"
               accent="muted"
@@ -227,7 +227,11 @@ export function ServiceMode({ id }: { id: string }) {
           </div>
 
           <div className="grid grid-cols-2 items-stretch gap-2 sm:grid-cols-5">
-            <ControlButton onClick={goPrev} disabled={cursor === 0} icon={<ChevronLeft className="h-5 w-5" />}>
+            <ControlButton
+              onClick={goPrev}
+              disabled={cursor === 0}
+              icon={<ChevronLeft className="h-5 w-5" />}
+            >
               Prev
             </ControlButton>
             <ControlButton
@@ -279,14 +283,20 @@ export function ServiceMode({ id }: { id: string }) {
                         ? "border-primary/30 bg-accent/40"
                         : "border-transparent hover:bg-accent/40",
                   )}
-                  title={it.notes || (it.label || m?.name)}
+                  title={it.notes || it.label || m?.name}
                 >
                   <div className="w-5 shrink-0 text-center text-[11px] tabular-nums text-muted-foreground">
                     {idx + 1}
                   </div>
-                  {m ? <Thumb media={m} className="h-10 w-16 shrink-0 rounded" /> : <div className="h-10 w-16 shrink-0 rounded bg-muted" />}
+                  {m ? (
+                    <Thumb media={m} className="h-10 w-16 shrink-0 rounded" />
+                  ) : (
+                    <div className="h-10 w-16 shrink-0 rounded bg-muted" />
+                  )}
                   <div className="min-w-0 flex-1">
-                    <div className="truncate text-xs font-medium">{it.label || m?.name || "Missing"}</div>
+                    <div className="truncate text-xs font-medium">
+                      {it.label || m?.name || "Missing"}
+                    </div>
                     <div className="truncate text-[10px] text-muted-foreground">
                       {m?.type === "video"
                         ? `Video · ${formatDuration(m.durationMs)}`
@@ -332,13 +342,17 @@ function CuePanel({
     <div
       className={cn(
         "flex min-h-0 flex-col overflow-hidden rounded-lg border bg-card",
-        accent === "primary" ? "border-primary/60 shadow-[0_0_0_1px_rgba(0,0,0,0)]" : "border-border",
+        accent === "primary"
+          ? "border-primary/60 shadow-[0_0_0_1px_rgba(0,0,0,0)]"
+          : "border-border",
       )}
     >
       <div
         className={cn(
           "shrink-0 px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest",
-          accent === "primary" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground",
+          accent === "primary"
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted text-muted-foreground",
         )}
       >
         {title}

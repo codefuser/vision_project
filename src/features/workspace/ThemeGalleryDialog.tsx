@@ -22,18 +22,31 @@ import { Input } from "@/components/ui/input";
 import { Trash2, Save, Check, X, Sparkles, Star, Copy, Search } from "lucide-react";
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import {
-  DEFAULT_TAMIL_STYLE, DEFAULT_ENGLISH_STYLE, DEFAULT_REFERENCE_STYLE,
-  DEFAULT_BACKGROUND, DEFAULT_TEXT_STYLE,
-  type GroupedStyles, type LogoBroadcast, type TextOverlay,
+  DEFAULT_TAMIL_STYLE,
+  DEFAULT_ENGLISH_STYLE,
+  DEFAULT_REFERENCE_STYLE,
+  DEFAULT_BACKGROUND,
+  DEFAULT_TEXT_STYLE,
+  type GroupedStyles,
+  type LogoBroadcast,
+  type TextOverlay,
 } from "@/lib/broadcast";
-import { TEMPLATE_PRESETS, TEMPLATE_CATEGORIES, type TemplatePreset, type TemplateCategory } from "@/lib/templates/presets";
+import {
+  TEMPLATE_PRESETS,
+  TEMPLATE_CATEGORIES,
+  type TemplatePreset,
+  type TemplateCategory,
+} from "@/lib/templates/presets";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useThemeFavorites } from "@/stores/theme-favorites.store";
 import { applyTemplate, activeTemplateId } from "@/lib/templates/apply";
 import { useLogo } from "@/stores/logo.store";
 import { cn } from "@/lib/utils";
 
-interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
+interface Props {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}
 
 type Bucket = "All" | "Favorites" | "Recents" | "Most Used" | "Custom" | TemplateCategory;
 
@@ -53,14 +66,18 @@ function presetToGroups(preset: TemplatePreset): GroupedStyles {
     tamil: { ...DEFAULT_TAMIL_STYLE, ...baseText, ...(preset.perGroup?.tamil ?? {}) },
     english: { ...DEFAULT_ENGLISH_STYLE, ...baseText, ...(preset.perGroup?.english ?? {}) },
     background: {
-      ...DEFAULT_BACKGROUND, ...preset.background,
+      ...DEFAULT_BACKGROUND,
+      ...preset.background,
       animation: preset.background.animation ?? "none",
       gradient: preset.background.gradient ?? null,
     },
   };
 }
 
-function presetToLogo(preset: TemplatePreset, fallback: ReturnType<typeof useLogo.getState>): LogoBroadcast {
+function presetToLogo(
+  preset: TemplatePreset,
+  fallback: ReturnType<typeof useLogo.getState>,
+): LogoBroadcast {
   if (preset.logo) {
     return {
       enabled: preset.logo.enabled,
@@ -98,16 +115,20 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     let list: TemplatePreset[];
     if (bucket === "All") list = all;
     else if (bucket === "Custom") list = custom;
-    else if (bucket === "Favorites") list = favorites.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
-    else if (bucket === "Recents") list = recents.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
-    else if (bucket === "Most Used") list = mostUsedIds.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
+    else if (bucket === "Favorites")
+      list = favorites.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
+    else if (bucket === "Recents")
+      list = recents.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
+    else if (bucket === "Most Used")
+      list = mostUsedIds.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
     else list = all.filter((t) => t.category === bucket);
     const q = query.trim().toLowerCase();
     if (!q) return list;
-    return list.filter((t) =>
-      t.name.toLowerCase().includes(q) ||
-      t.category.toLowerCase().includes(q) ||
-      t.description.toLowerCase().includes(q),
+    return list.filter(
+      (t) =>
+        t.name.toLowerCase().includes(q) ||
+        t.category.toLowerCase().includes(q) ||
+        t.description.toLowerCase().includes(q),
     );
   }, [bucket, all, custom, favorites, recents, mostUsedIds, byId, query]);
 
@@ -132,7 +153,11 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     { key: "Recents", label: "Recents", count: recents.length },
     { key: "Most Used", label: "Most Used", count: mostUsedIds.length },
     { key: "Custom", label: "Custom", count: custom.length },
-    ...TEMPLATE_CATEGORIES.map((c) => ({ key: c as Bucket, label: c, count: all.filter((t) => t.category === c).length })),
+    ...TEMPLATE_CATEGORIES.map((c) => ({
+      key: c as Bucket,
+      label: c,
+      count: all.filter((t) => t.category === c).length,
+    })),
   ];
 
   return (
@@ -177,7 +202,14 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
                 )}
               >
                 <span className="truncate">{label}</span>
-                <span className={cn("ml-1 rounded px-1 text-[10px]", bucket === key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground")}>{count}</span>
+                <span
+                  className={cn(
+                    "ml-1 rounded px-1 text-[10px]",
+                    bucket === key ? "bg-primary-foreground/20" : "bg-muted text-muted-foreground",
+                  )}
+                >
+                  {count}
+                </span>
               </button>
             ))}
           </aside>
@@ -186,11 +218,15 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
           <div className="flex-1 overflow-y-auto p-3">
             {bucketList.length === 0 ? (
               <div className="grid h-full place-items-center text-sm text-muted-foreground">
-                {bucket === "Custom" ? "No saved themes yet. Use “Save Current as Template”."
-                  : bucket === "Favorites" ? "No favourite themes yet. Tap ★ on any theme."
-                  : bucket === "Recents" ? "No recently applied themes yet."
-                  : bucket === "Most Used" ? "No usage data yet."
-                  : "No themes match this filter."}
+                {bucket === "Custom"
+                  ? "No saved themes yet. Use “Save Current as Template”."
+                  : bucket === "Favorites"
+                    ? "No favourite themes yet. Tap ★ on any theme."
+                    : bucket === "Recents"
+                      ? "No recently applied themes yet."
+                      : bucket === "Most Used"
+                        ? "No usage data yet."
+                        : "No themes match this filter."}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -204,7 +240,10 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
                     onClick={() => setPreviewing(preset)}
                     onToggleFavorite={() => toggleFavorite(preset.id)}
                     onDuplicate={() => duplicateCustom(preset)}
-                    onDelete={() => { removeCustom(preset.id); if (appliedId === preset.id) setAppliedId(null); }}
+                    onDelete={() => {
+                      removeCustom(preset.id);
+                      if (appliedId === preset.id) setAppliedId(null);
+                    }}
                     logoBase={logo}
                   />
                 ))}
@@ -222,7 +261,10 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
                   <DialogTitle className="text-base">{previewing.name}</DialogTitle>
                   <p className="text-xs text-muted-foreground">{previewing.description}</p>
                 </DialogHeader>
-                <div className="overflow-hidden rounded-lg border border-border bg-black" style={{ aspectRatio: "16 / 9" }}>
+                <div
+                  className="overflow-hidden rounded-lg border border-border bg-black"
+                  style={{ aspectRatio: "16 / 9" }}
+                >
                   <ProjectionTextStage
                     overlay={SAMPLE_OVERLAY}
                     textStyle={DEFAULT_TEXT_STYLE}
@@ -259,14 +301,21 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               placeholder="Theme name (e.g. Sunday Worship)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") onSave(); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onSave();
+              }}
             />
             <p className="text-[11px] text-muted-foreground">
-              Captures current Reference / Tamil / English styles, background, animation and logo settings.
+              Captures current Reference / Tamil / English styles, background, animation and logo
+              settings.
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
-              <Button onClick={onSave} disabled={!newName.trim()}><Save className="h-3.5 w-3.5" /> Save</Button>
+              <Button variant="outline" onClick={() => setSaveOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={onSave} disabled={!newName.trim()}>
+                <Save className="h-3.5 w-3.5" /> Save
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -276,7 +325,15 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
 }
 
 function ThumbCard({
-  preset, isActive, isCustom, isFavorite, onClick, onToggleFavorite, onDuplicate, onDelete, logoBase,
+  preset,
+  isActive,
+  isCustom,
+  isFavorite,
+  onClick,
+  onToggleFavorite,
+  onDuplicate,
+  onDelete,
+  logoBase,
 }: {
   preset: TemplatePreset;
   isActive: boolean;
@@ -298,7 +355,11 @@ function ThumbCard({
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (e.isIntersecting) { setVisible(true); io.disconnect(); break; }
+          if (e.isIntersecting) {
+            setVisible(true);
+            io.disconnect();
+            break;
+          }
         }
       },
       { root: null, rootMargin: "200px", threshold: 0.01 },
@@ -308,7 +369,10 @@ function ThumbCard({
   }, [visible]);
 
   const groups = useMemo(() => (visible ? presetToGroups(preset) : null), [visible, preset]);
-  const logo = useMemo(() => (visible ? presetToLogo(preset, logoBase) : null), [visible, preset, logoBase]);
+  const logo = useMemo(
+    () => (visible ? presetToLogo(preset, logoBase) : null),
+    [visible, preset, logoBase],
+  );
   const placeholderBg = preset.background.gradient ?? preset.background.color ?? "#000";
 
   return (
@@ -316,13 +380,16 @@ function ThumbCard({
       ref={ref}
       className={cn(
         "group relative cursor-pointer overflow-hidden rounded-lg border bg-card transition",
-        isActive ? "border-primary ring-2 ring-primary/40" : "border-border hover:border-primary/60",
+        isActive
+          ? "border-primary ring-2 ring-primary/40"
+          : "border-border hover:border-primary/60",
       )}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "240px 180px" } as React.CSSProperties}
+      style={
+        { contentVisibility: "auto", containIntrinsicSize: "240px 180px" } as React.CSSProperties
+      }
       onClick={onClick}
     >
       <div className="relative" style={{ aspectRatio: "16 / 9" }}>
-
         {visible && groups && logo ? (
           <ProjectionTextStage
             overlay={SAMPLE_OVERLAY}
@@ -343,17 +410,25 @@ function ThumbCard({
         {/* Top-left actions */}
         <div className="absolute left-1.5 top-1.5 z-10 flex items-center gap-1">
           <button
-            onClick={(e) => { e.stopPropagation(); onToggleFavorite(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFavorite();
+            }}
             title={isFavorite ? "Remove from favourites" : "Add to favourites"}
             className={cn(
               "inline-flex h-5 w-5 items-center justify-center rounded bg-black/60 transition hover:bg-black/80",
-              isFavorite ? "text-yellow-300 opacity-100" : "text-white opacity-0 group-hover:opacity-100",
+              isFavorite
+                ? "text-yellow-300 opacity-100"
+                : "text-white opacity-0 group-hover:opacity-100",
             )}
           >
             <Star className={cn("h-3 w-3", isFavorite && "fill-current")} />
           </button>
           <button
-            onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
             title="Duplicate as custom theme"
             className="inline-flex h-5 w-5 items-center justify-center rounded bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-black/80"
           >
@@ -361,7 +436,10 @@ function ThumbCard({
           </button>
           {isCustom && (
             <button
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
               title="Delete custom theme"
               className="inline-flex h-5 w-5 items-center justify-center rounded bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-destructive"
             >
@@ -377,7 +455,9 @@ function ThumbCard({
             {isCustom ? "Custom" : preset.category}
           </span>
         </div>
-        <div className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{preset.description}</div>
+        <div className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+          {preset.description}
+        </div>
       </div>
     </div>
   );

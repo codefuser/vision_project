@@ -11,8 +11,12 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Music, Loader2, Star, Send, Search, Plus, Pencil, Trash2, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { useSongsStore } from "@/lib/songs/store";
@@ -42,7 +46,10 @@ function matchedLineOf(song: Song, query: string): string | null {
   if (!q) return null;
   const tokens = q.toLowerCase().split(/\s+/).filter(Boolean);
   const qStem = songStem(q);
-  const lines = (song.content ?? "").split("\n").map((l) => l.trim()).filter(Boolean);
+  const lines = (song.content ?? "")
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
   const titleLine = song.title.trim();
   for (const line of lines) {
     if (line === titleLine) continue;
@@ -71,10 +78,19 @@ const FILTER_LABELS: Record<SongFilter, string> = {
 
 export function SongsPanel() {
   const {
-    query, loading, loaded, error, favorites,
-    selectedSongId, userSongs,
-    setQuery, ensureLoaded, addFavorite, removeFavorite,
-    selectSong, removeUserSong,
+    query,
+    loading,
+    loaded,
+    error,
+    favorites,
+    selectedSongId,
+    userSongs,
+    setQuery,
+    ensureLoaded,
+    addFavorite,
+    removeFavorite,
+    selectSong,
+    removeUserSong,
   } = useSongsStore();
   const inputRef = useRef<HTMLInputElement>(null);
   const [results, setResults] = useState<SongHit[]>([]);
@@ -90,7 +106,9 @@ export function SongsPanel() {
   const counts = useSongsRecent((s) => s.counts);
   const pushRecent = useSongsRecent((s) => s.push);
 
-  useEffect(() => { void ensureLoaded(); }, [ensureLoaded]);
+  useEffect(() => {
+    void ensureLoaded();
+  }, [ensureLoaded]);
 
   // Distinct author list (built from the loaded library + user songs).
   const authors = useMemo(() => {
@@ -132,9 +150,10 @@ export function SongsPanel() {
         seen.add(s.id);
       };
       if (filter === "all" || filter === "mine" || filter === "added") {
-        const list = filter === "added"
-          ? [...userSongs].sort((a, b) => b.id - a.id) // higher id = newer
-          : userSongs;
+        const list =
+          filter === "added"
+            ? [...userSongs].sort((a, b) => b.id - a.id) // higher id = newer
+            : userSongs;
         for (const u of list) {
           const s = songs.find((x) => x.id === u.id);
           if (s) push(s);
@@ -174,14 +193,15 @@ export function SongsPanel() {
       return;
     }
     const t0 = performance.now();
-    const hits = searchSongs(q, songs, 200).filter((h) => applyFilter(h.song)).slice(0, 120);
+    const hits = searchSongs(q, songs, 200)
+      .filter((h) => applyFilter(h.song))
+      .slice(0, 120);
     setSearchMs(performance.now() - t0);
     setResults(hits);
     setActiveIdx(0);
   }, [query, loaded, recent, userSongs, favorites, filter, authorFilter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
-
 
   const selectedSong: Song | null = useMemo(() => {
     if (!selectedSongId) return null;
@@ -210,29 +230,94 @@ export function SongsPanel() {
 
   // ── shortcuts ── (skipped while the editor dialog is open so the textarea
   // behaves like a plain editor — Enter / Arrow / Esc are all owned by it).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const guarded = <T extends (...a: any[]) => any>(fn: T) =>
-    ((...a: Parameters<T>) => { if (editorOpen) return false; return fn(...a); }) as T;
-  useShortcut({ id: "songs.focus-search", label: "Focus song search", category: "songs", keys: ["/"], scope: "songs", handler: guarded(() => inputRef.current?.focus()) });
-  useShortcut({ id: "songs.next", label: "Next song", category: "songs", keys: ["ArrowDown"], scope: "songs", allowInInput: true, priority: 20, handler: guarded(() => setActiveIdx((i) => Math.min(i + 1, Math.max(0, results.length - 1)))) });
-  useShortcut({ id: "songs.prev", label: "Previous song", category: "songs", keys: ["ArrowUp"], scope: "songs", allowInInput: true, priority: 20, handler: guarded(() => setActiveIdx((i) => Math.max(0, i - 1))) });
-  useShortcut({ id: "songs.open", label: "Open selected song", category: "songs", keys: ["Enter"], scope: "songs", allowInInput: true, priority: 20, handler: guarded(() => {
-    const h = results[activeIdx]; if (!h) return;
-    if (selectedSongId === h.song.id) project(h.song, activeSlideById[h.song.id] ?? 0);
-    else openSong(h.song);
-  }) });
-  useShortcut({ id: "songs.next-slide", label: "Next slide", category: "songs", keys: ["ArrowRight"], scope: "songs", allowInInput: true, priority: 20, handler: guarded(() => {
-    if (!selectedSong) return;
-    const cur = activeSlideById[selectedSong.id] ?? 0;
-    const next = Math.min(cur + 1, selectedSong.slides.length - 1);
-    if (next !== cur) project(selectedSong, next);
-  }) });
-  useShortcut({ id: "songs.prev-slide", label: "Previous slide", category: "songs", keys: ["ArrowLeft"], scope: "songs", allowInInput: true, priority: 20, handler: guarded(() => {
-    if (!selectedSong) return;
-    const cur = activeSlideById[selectedSong.id] ?? 0;
-    const prev = Math.max(0, cur - 1);
-    if (prev !== cur) project(selectedSong, prev);
-  }) });
-  useShortcut({ id: "songs.close", label: "Close song", category: "songs", keys: ["Escape"], scope: "songs", allowInInput: true, handler: guarded(() => selectSong(null)) });
+    ((...a: Parameters<T>) => {
+      if (editorOpen) return false;
+      return fn(...a);
+    }) as T;
+  useShortcut({
+    id: "songs.focus-search",
+    label: "Focus song search",
+    category: "songs",
+    keys: ["/"],
+    scope: "songs",
+    handler: guarded(() => inputRef.current?.focus()),
+  });
+  useShortcut({
+    id: "songs.next",
+    label: "Next song",
+    category: "songs",
+    keys: ["ArrowDown"],
+    scope: "songs",
+    allowInInput: true,
+    priority: 20,
+    handler: guarded(() => setActiveIdx((i) => Math.min(i + 1, Math.max(0, results.length - 1)))),
+  });
+  useShortcut({
+    id: "songs.prev",
+    label: "Previous song",
+    category: "songs",
+    keys: ["ArrowUp"],
+    scope: "songs",
+    allowInInput: true,
+    priority: 20,
+    handler: guarded(() => setActiveIdx((i) => Math.max(0, i - 1))),
+  });
+  useShortcut({
+    id: "songs.open",
+    label: "Open selected song",
+    category: "songs",
+    keys: ["Enter"],
+    scope: "songs",
+    allowInInput: true,
+    priority: 20,
+    handler: guarded(() => {
+      const h = results[activeIdx];
+      if (!h) return;
+      if (selectedSongId === h.song.id) project(h.song, activeSlideById[h.song.id] ?? 0);
+      else openSong(h.song);
+    }),
+  });
+  useShortcut({
+    id: "songs.next-slide",
+    label: "Next slide",
+    category: "songs",
+    keys: ["ArrowRight"],
+    scope: "songs",
+    allowInInput: true,
+    priority: 20,
+    handler: guarded(() => {
+      if (!selectedSong) return;
+      const cur = activeSlideById[selectedSong.id] ?? 0;
+      const next = Math.min(cur + 1, selectedSong.slides.length - 1);
+      if (next !== cur) project(selectedSong, next);
+    }),
+  });
+  useShortcut({
+    id: "songs.prev-slide",
+    label: "Previous slide",
+    category: "songs",
+    keys: ["ArrowLeft"],
+    scope: "songs",
+    allowInInput: true,
+    priority: 20,
+    handler: guarded(() => {
+      if (!selectedSong) return;
+      const cur = activeSlideById[selectedSong.id] ?? 0;
+      const prev = Math.max(0, cur - 1);
+      if (prev !== cur) project(selectedSong, prev);
+    }),
+  });
+  useShortcut({
+    id: "songs.close",
+    label: "Close song",
+    category: "songs",
+    keys: ["Escape"],
+    scope: "songs",
+    allowInInput: true,
+    handler: guarded(() => selectSong(null)),
+  });
 
   const favSet = useMemo(() => new Set(favorites.map((f) => f.id)), [favorites]);
 
@@ -262,16 +347,23 @@ export function SongsPanel() {
               )}
             >
               <Filter className="h-3.5 w-3.5" />
-              <span className="hidden max-w-[140px] truncate @sm:inline">{filter === "author" && authorFilter ? authorFilter : FILTER_LABELS[filter]}</span>
+              <span className="hidden max-w-[140px] truncate @sm:inline">
+                {filter === "author" && authorFilter ? authorFilter : FILTER_LABELS[filter]}
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">Filters</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+              Filters
+            </DropdownMenuLabel>
             <DropdownMenuSeparator />
             {(["all", "favorites", "recent", "added", "most", "mine"] as SongFilter[]).map((f) => (
               <DropdownMenuItem
                 key={f}
-                onClick={() => { setFilter(f); setAuthorFilter(null); }}
+                onClick={() => {
+                  setFilter(f);
+                  setAuthorFilter(null);
+                }}
                 className={cn("text-xs", filter === f && "bg-accent font-semibold text-primary")}
               >
                 {FILTER_LABELS[f]}
@@ -287,8 +379,16 @@ export function SongsPanel() {
             {authors.slice(0, 200).map((a) => (
               <DropdownMenuItem
                 key={a}
-                onClick={() => { setFilter("author"); setAuthorFilter(a); }}
-                className={cn("text-xs", filter === "author" && authorFilter === a && "bg-accent font-semibold text-primary")}
+                onClick={() => {
+                  setFilter("author");
+                  setAuthorFilter(a);
+                }}
+                className={cn(
+                  "text-xs",
+                  filter === "author" &&
+                    authorFilter === a &&
+                    "bg-accent font-semibold text-primary",
+                )}
               >
                 <span className="truncate">{a}</span>
               </DropdownMenuItem>
@@ -296,7 +396,10 @@ export function SongsPanel() {
           </DropdownMenuContent>
         </DropdownMenu>
         <button
-          onClick={() => { setEditingId(null); setEditorOpen(true); }}
+          onClick={() => {
+            setEditingId(null);
+            setEditorOpen(true);
+          }}
           title="New song"
           className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
         >
@@ -315,7 +418,9 @@ export function SongsPanel() {
         </span>
         <span>தமிழ் • Tanglish · fuzzy · sound-alike</span>
       </div>
-      {error && <div className="border-b border-border px-2 py-1 text-[11px] text-destructive">{error}</div>}
+      {error && (
+        <div className="border-b border-border px-2 py-1 text-[11px] text-destructive">{error}</div>
+      )}
 
       {/* Body — always split: search results on the left, slide preview on the right. */}
       <div className="min-h-0 flex-1 overflow-hidden">
@@ -338,7 +443,10 @@ export function SongsPanel() {
               activeSlideById={activeSlideById}
               selectedId={selectedSong?.id ?? null}
               userSongs={userSongs}
-              onEdit={(id) => { setEditingId(id); setEditorOpen(true); }}
+              onEdit={(id) => {
+                setEditingId(id);
+                setEditorOpen(true);
+              }}
               onDelete={removeUserSong}
               query={query}
               compact
@@ -349,7 +457,10 @@ export function SongsPanel() {
                 activeSlide={activeSlideById[selectedSong.id] ?? 0}
                 onSelect={(i) => setActiveSlideById((m) => ({ ...m, [selectedSong.id]: i }))}
                 onProject={(i) => project(selectedSong, i)}
-                onEdit={() => { setEditingId(selectedSong.id); setEditorOpen(true); }}
+                onEdit={() => {
+                  setEditingId(selectedSong.id);
+                  setEditorOpen(true);
+                }}
                 projectedText={projectedRef}
               />
             ) : (
@@ -358,7 +469,6 @@ export function SongsPanel() {
           </div>
         )}
       </div>
-
 
       <SongEditorDialog open={editorOpen} onOpenChange={setEditorOpen} editingId={editingId} />
     </div>
@@ -410,7 +520,8 @@ function SongList(p: ListProps) {
             const slide = song.slides[slideIdx] ?? song.content;
             const isSelected = p.selectedId === song.id;
             const isActive = p.activeIdx === i;
-            const isProjected = !!p.projectedText && slide && p.projectedText.startsWith(slide.slice(0, 24));
+            const isProjected =
+              !!p.projectedText && slide && p.projectedText.startsWith(slide.slice(0, 24));
             const isFav = p.favSet.has(song.id);
             const isMine = userIds.has(song.id);
             const first = firstLineOf(song);
@@ -419,8 +530,14 @@ function SongList(p: ListProps) {
             return (
               <li
                 key={song.id}
-                onClick={() => { p.setActiveIdx(i); p.onOpen(song); }}
-                onDoubleClick={(e) => { e.stopPropagation(); p.onProject(song); }}
+                onClick={() => {
+                  p.setActiveIdx(i);
+                  p.onOpen(song);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  p.onProject(song);
+                }}
                 className={cn(
                   "group relative flex cursor-pointer flex-col gap-1 px-3 py-2 transition hover:bg-accent/60",
                   isSelected
@@ -431,39 +548,81 @@ function SongList(p: ListProps) {
                 )}
               >
                 <div className="flex min-w-0 items-center gap-1.5">
-                  <span className={cn("truncate text-[13px] font-semibold leading-tight", isSelected ? "text-primary" : "text-foreground")}>
+                  <span
+                    className={cn(
+                      "truncate text-[13px] font-semibold leading-tight",
+                      isSelected ? "text-primary" : "text-foreground",
+                    )}
+                  >
                     {song.title}
                   </span>
-                  {isMine && <span className="shrink-0 rounded bg-emerald-500/15 px-1 text-[9px] font-bold text-emerald-500">MINE</span>}
+                  {isMine && (
+                    <span className="shrink-0 rounded bg-emerald-500/15 px-1 text-[9px] font-bold text-emerald-500">
+                      MINE
+                    </span>
+                  )}
                   {isFav && <Star className="h-3 w-3 shrink-0 fill-amber-500 text-amber-500" />}
                   {isProjected && (
                     <span className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-1.5 py-px text-[9px] font-bold uppercase text-primary-foreground">
-                      <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" /> Live
+                      <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />{" "}
+                      Live
                     </span>
                   )}
                 </div>
-                <div className="truncate text-[11.5px] leading-snug text-foreground/80">{first}</div>
+                <div className="truncate text-[11.5px] leading-snug text-foreground/80">
+                  {first}
+                </div>
                 {showMatch && (
                   <div className="truncate text-[11px] leading-snug text-primary/90">
-                    <span className="opacity-60">…</span>{match}<span className="opacity-60">…</span>
+                    <span className="opacity-60">…</span>
+                    {match}
+                    <span className="opacity-60">…</span>
                   </div>
                 )}
                 <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                  <span>{song.slides.length || 1} slide{song.slides.length === 1 ? "" : "s"}</span>
-                  {song.artist && <><span>·</span><span className="truncate">{song.artist}</span></>}
+                  <span>
+                    {song.slides.length || 1} slide{song.slides.length === 1 ? "" : "s"}
+                  </span>
+                  {song.artist && (
+                    <>
+                      <span>·</span>
+                      <span className="truncate">{song.artist}</span>
+                    </>
+                  )}
                   <div className="ml-auto flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                     <button
-                      onClick={(e) => { e.stopPropagation(); isFav ? p.removeFav(song.id) : p.addFav({ id: song.id, title: song.title }); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isFav) p.removeFav(song.id);
+                        else p.addFav({ id: song.id, title: song.title });
+                      }}
                       title={isFav ? "Unfavorite" : "Favorite"}
-                      className={cn("inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded transition", isFav ? "text-amber-500" : "text-muted-foreground hover:bg-accent")}
+                      className={cn(
+                        "inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded transition",
+                        isFav ? "text-amber-500" : "text-muted-foreground hover:bg-accent",
+                      )}
                     >
                       <Star className={cn("h-3 w-3", isFav && "fill-current")} />
                     </button>
-                    <button onClick={(e) => { e.stopPropagation(); p.onEdit(song.id); }} title="Edit lyrics" className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        p.onEdit(song.id);
+                      }}
+                      title="Edit lyrics"
+                      className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
+                    >
                       <Pencil className="h-3 w-3" />
                     </button>
                     {isMine && (
-                      <button onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${song.title}"?`)) p.onDelete(song.id); }} title="Delete" className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-destructive hover:bg-destructive/10">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete "${song.title}"?`)) p.onDelete(song.id);
+                        }}
+                        title="Delete"
+                        className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-destructive hover:bg-destructive/10"
+                      >
                         <Trash2 className="h-3 w-3" />
                       </button>
                     )}
@@ -477,7 +636,6 @@ function SongList(p: ListProps) {
     );
   }
 
-
   // Full mode → wider responsive cards. Stay single-column longer so each
   // card has enough width to show first line + matched lyric line without
   // truncation. Snap to 2 columns only on very wide containers.
@@ -490,7 +648,8 @@ function SongList(p: ListProps) {
           const slide = song.slides[slideIdx] ?? song.content;
           const isSelected = p.selectedId === song.id;
           const isActive = p.activeIdx === i;
-          const isProjected = !!p.projectedText && slide && p.projectedText.startsWith(slide.slice(0, 24));
+          const isProjected =
+            !!p.projectedText && slide && p.projectedText.startsWith(slide.slice(0, 24));
           const isFav = p.favSet.has(song.id);
           const isMine = userIds.has(song.id);
           const first = firstLineOf(song);
@@ -499,30 +658,50 @@ function SongList(p: ListProps) {
           return (
             <div
               key={song.id}
-              onClick={() => { p.setActiveIdx(i); p.onOpen(song); }}
-              onDoubleClick={(e) => { e.stopPropagation(); p.onProject(song); }}
+              onClick={() => {
+                p.setActiveIdx(i);
+                p.onOpen(song);
+              }}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                p.onProject(song);
+              }}
               className={cn(
                 "group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border bg-card/80 p-3 transition-all",
                 "hover:-translate-y-px hover:border-primary/60 hover:shadow-md",
-                isProjected ? "border-primary ring-2 ring-primary/40"
-                  : isSelected ? "border-primary/60 bg-primary/5"
-                  : isActive ? "border-accent" : "border-border",
+                isProjected
+                  ? "border-primary ring-2 ring-primary/40"
+                  : isSelected
+                    ? "border-primary/60 bg-primary/5"
+                    : isActive
+                      ? "border-accent"
+                      : "border-border",
               )}
             >
               {/* Header — title + meta */}
               <div className="mb-1.5 flex min-w-0 items-start gap-1.5">
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5">
-                    <span className={cn("truncate text-[14px] font-semibold leading-tight", isSelected ? "text-primary" : "text-foreground")}>
+                    <span
+                      className={cn(
+                        "truncate text-[14px] font-semibold leading-tight",
+                        isSelected ? "text-primary" : "text-foreground",
+                      )}
+                    >
                       {song.title}
                     </span>
-                    {isMine && <span className="shrink-0 rounded bg-emerald-500/15 px-1 text-[9px] font-bold text-emerald-500">MINE</span>}
+                    {isMine && (
+                      <span className="shrink-0 rounded bg-emerald-500/15 px-1 text-[9px] font-bold text-emerald-500">
+                        MINE
+                      </span>
+                    )}
                     {isFav && <Star className="h-3 w-3 shrink-0 fill-amber-500 text-amber-500" />}
                   </div>
                 </div>
                 {isProjected && (
                   <span className="inline-flex shrink-0 items-center gap-1 rounded bg-primary px-1 py-px text-[9px] font-bold uppercase text-primary-foreground">
-                    <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" /> Live
+                    <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />{" "}
+                    Live
                   </span>
                 )}
               </div>
@@ -533,26 +712,49 @@ function SongList(p: ListProps) {
               {/* Search match preview — only when query matched a non-title line */}
               {showMatch && (
                 <div className="mt-1 rounded-sm border-l-2 border-primary/60 bg-primary/5 px-2 py-1 text-[11.5px] leading-snug text-primary/90">
-                  <span className="mr-1 text-[9px] font-bold uppercase tracking-wide opacity-70">Match</span>
-                  <span className="opacity-60">…</span>{match}<span className="opacity-60">…</span>
+                  <span className="mr-1 text-[9px] font-bold uppercase tracking-wide opacity-70">
+                    Match
+                  </span>
+                  <span className="opacity-60">…</span>
+                  {match}
+                  <span className="opacity-60">…</span>
                 </div>
               )}
 
               {/* Footer — slide count + actions */}
               <div className="mt-2 flex items-center gap-2 text-[10.5px] text-muted-foreground">
-                <span className="font-medium">{song.slides.length || 1} Slide{song.slides.length === 1 ? "" : "s"}</span>
-                {song.artist && <><span>·</span><span className="truncate">{song.artist}</span></>}
-                {song.scale && <span className="rounded bg-muted px-1 text-[9px]">{song.scale}</span>}
+                <span className="font-medium">
+                  {song.slides.length || 1} Slide{song.slides.length === 1 ? "" : "s"}
+                </span>
+                {song.artist && (
+                  <>
+                    <span>·</span>
+                    <span className="truncate">{song.artist}</span>
+                  </>
+                )}
+                {song.scale && (
+                  <span className="rounded bg-muted px-1 text-[9px]">{song.scale}</span>
+                )}
                 <div className="ml-auto flex items-center gap-0.5">
                   <button
-                    onClick={(e) => { e.stopPropagation(); isFav ? p.removeFav(song.id) : p.addFav({ id: song.id, title: song.title }); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (isFav) p.removeFav(song.id);
+                      else p.addFav({ id: song.id, title: song.title });
+                    }}
                     title={isFav ? "Unfavorite" : "Favorite"}
-                    className={cn("inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded transition", isFav ? "text-amber-500" : "text-muted-foreground hover:bg-accent")}
+                    className={cn(
+                      "inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded transition",
+                      isFav ? "text-amber-500" : "text-muted-foreground hover:bg-accent",
+                    )}
                   >
                     <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
                   </button>
                   <button
-                    onClick={(e) => { e.stopPropagation(); p.onEdit(song.id); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      p.onEdit(song.id);
+                    }}
                     title="Edit lyrics"
                     className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
                   >
@@ -560,7 +762,10 @@ function SongList(p: ListProps) {
                   </button>
                   {isMine && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); if (confirm(`Delete "${song.title}"?`)) p.onDelete(song.id); }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Delete "${song.title}"?`)) p.onDelete(song.id);
+                      }}
                       title="Delete"
                       className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded text-destructive hover:bg-destructive/10"
                     >
@@ -568,7 +773,10 @@ function SongList(p: ListProps) {
                     </button>
                   )}
                   <button
-                    onClick={(e) => { e.stopPropagation(); p.onProject(song); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      p.onProject(song);
+                    }}
                     title="Project"
                     className="ml-1 inline-flex h-7 items-center gap-1 rounded bg-primary px-2.5 text-[11px] font-semibold text-primary-foreground transition hover:opacity-90"
                   >
@@ -583,7 +791,6 @@ function SongList(p: ListProps) {
     </div>
   );
 }
-
 
 /* ───────── Slide pane ───────── */
 
@@ -638,19 +845,29 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
             return (
               <div
                 key={i}
-                onClick={() => { onSelect(i); onProject(i); }}
+                onClick={() => {
+                  onSelect(i);
+                  onProject(i);
+                }}
                 className={cn(
                   "group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-card/80 transition-all",
                   "hover:-translate-y-px hover:border-primary/70 hover:shadow-md",
-                  isProjected ? "border-primary ring-2 ring-primary/40" : isActive ? "border-primary/60" : "border-border",
+                  isProjected
+                    ? "border-primary ring-2 ring-primary/40"
+                    : isActive
+                      ? "border-primary/60"
+                      : "border-border",
                 )}
               >
                 <div className="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                   <span>Slide {i + 1}</span>
-                  <span className="text-muted-foreground/60">· {lines} line{lines === 1 ? "" : "s"}</span>
+                  <span className="text-muted-foreground/60">
+                    · {lines} line{lines === 1 ? "" : "s"}
+                  </span>
                   {isProjected && (
                     <span className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-1.5 py-px text-[9px] text-primary-foreground">
-                      <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" /> Live
+                      <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />{" "}
+                      Live
                     </span>
                   )}
                 </div>
@@ -660,7 +877,10 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
                 </pre>
                 <div className="flex items-center justify-end border-t border-border/40 bg-muted/20 px-2 py-1">
                   <button
-                    onClick={(e) => { e.stopPropagation(); onProject(i); }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onProject(i);
+                    }}
                     className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90"
                   >
                     <Send className="h-3 w-3" /> Project

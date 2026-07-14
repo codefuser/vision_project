@@ -1,5 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { FolderTree, ListVideo, MonitorPlay, Settings as SettingsIcon, Moon, Sun, Monitor, PanelLeftClose, Keyboard } from "lucide-react";
+import {
+  FolderTree,
+  ListVideo,
+  MonitorPlay,
+  Settings as SettingsIcon,
+  Moon,
+  Sun,
+  Monitor,
+  PanelLeftClose,
+  Keyboard,
+} from "lucide-react";
 import { type ReactNode, useEffect, useState } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
@@ -15,7 +25,12 @@ const PRIMARY_NAV = [
   { to: "/shortcuts", label: "Shortcuts", icon: Keyboard, shortcutId: "nav.shortcuts" },
 ] as const;
 
-const SETTINGS_NAV = { to: "/settings", label: "Settings", icon: SettingsIcon, shortcutId: "nav.settings" } as const;
+const SETTINGS_NAV = {
+  to: "/settings",
+  label: "Settings",
+  icon: SettingsIcon,
+  shortcutId: "nav.settings",
+} as const;
 
 const SIDEBAR_KEY = "church-media-sidebar-collapsed-v2";
 
@@ -48,12 +63,16 @@ export function AppShell({ children }: { children: ReactNode }) {
     void update({ theme: next });
   };
 
-  const renderNavItem = (item: { to: string; label: string; icon: typeof FolderTree; shortcutId?: string }) => {
+  const renderNavItem = (item: {
+    to: string;
+    label: string;
+    icon: typeof FolderTree;
+    shortcutId?: string;
+  }) => {
     const active = pathname === item.to || pathname.startsWith(item.to + "/");
     const Icon = item.icon;
     return <NavItem key={item.to} item={item} active={active} icon={Icon} collapsed={collapsed} />;
   };
-
 
   return (
     <div className="flex h-screen bg-background text-foreground">
@@ -117,18 +136,26 @@ export function AppShell({ children }: { children: ReactNode }) {
         </div>
       </aside>
 
-
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Integrated top bar — projector + theme controls. Compact, anchored, not floating. */}
         <header className="flex h-10 shrink-0 items-center justify-end gap-1 border-b border-border bg-background px-3">
-          <ProjectorToggleButton projectorOpen={projectorOpen} onToggle={projectorOpen ? closeProjector : openProjector} />
+          <ProjectorToggleButton
+            projectorOpen={projectorOpen}
+            onToggle={projectorOpen ? closeProjector : openProjector}
+          />
           <button
             onClick={cycleTheme}
             className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
             aria-label="Toggle theme"
             title={`Theme: ${settings.theme}`}
           >
-            {settings.theme === "dark" ? <Moon className="h-4 w-4" /> : settings.theme === "light" ? <Sun className="h-4 w-4" /> : <Monitor className="h-4 w-4" />}
+            {settings.theme === "dark" ? (
+              <Moon className="h-4 w-4" />
+            ) : settings.theme === "light" ? (
+              <Sun className="h-4 w-4" />
+            ) : (
+              <Monitor className="h-4 w-4" />
+            )}
           </button>
         </header>
         <main className="flex-1 overflow-hidden">{children}</main>
@@ -175,8 +202,17 @@ function NavItem({
   );
 }
 
-function ProjectorToggleButton({ projectorOpen, onToggle }: { projectorOpen: boolean; onToggle: () => void }) {
-  const tooltip = useShortcutTooltip("projector.toggle", projectorOpen ? "Close Projector" : "Open Projector");
+function ProjectorToggleButton({
+  projectorOpen,
+  onToggle,
+}: {
+  projectorOpen: boolean;
+  onToggle: () => void;
+}) {
+  const tooltip = useShortcutTooltip(
+    "projector.toggle",
+    projectorOpen ? "Close Projector" : "Open Projector",
+  );
   return (
     <button
       onClick={onToggle}
@@ -190,7 +226,9 @@ function ProjectorToggleButton({ projectorOpen, onToggle }: { projectorOpen: boo
       )}
     >
       <MonitorPlay className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">{projectorOpen ? "Close Projector" : "Open Projector"}</span>
+      <span className="hidden sm:inline">
+        {projectorOpen ? "Close Projector" : "Open Projector"}
+      </span>
     </button>
   );
 }

@@ -41,12 +41,7 @@ import {
   renameMedia,
   updatePlaylistItems,
 } from "@/db/repo";
-import type {
-  MediaRecord,
-  PlaylistItem,
-  PlaylistRecord,
-  TransitionType,
-} from "@/db/schema";
+import type { MediaRecord, PlaylistItem, PlaylistRecord, TransitionType } from "@/db/schema";
 import { Thumb } from "@/components/Thumb";
 import { MediaAdapter } from "@/projection";
 import { useProjection } from "@/stores/projection.store";
@@ -66,11 +61,19 @@ function storageKey(playlistId: string, k: string) {
 }
 function loadString(key: string, fallback: string): string {
   if (typeof window === "undefined") return fallback;
-  try { return window.localStorage.getItem(key) ?? fallback; } catch { return fallback; }
+  try {
+    return window.localStorage.getItem(key) ?? fallback;
+  } catch {
+    return fallback;
+  }
 }
 function saveString(key: string, value: string) {
   if (typeof window === "undefined") return;
-  try { window.localStorage.setItem(key, value); } catch { /* ignore */ }
+  try {
+    window.localStorage.setItem(key, value);
+  } catch {
+    /* ignore */
+  }
 }
 
 export function PlaylistEditor({ id }: { id: string }) {
@@ -82,32 +85,60 @@ export function PlaylistEditor({ id }: { id: string }) {
 
   // Persisted UI state — restored from localStorage per playlist.
   const [libSearch, setLibSearch] = useState(() => loadString(storageKey(id, "libSearch"), ""));
-  const [libFilter, setLibFilter] = useState<Filter>(() => (loadString(storageKey(id, "libFilter"), "all") as Filter));
+  const [libFilter, setLibFilter] = useState<Filter>(
+    () => loadString(storageKey(id, "libFilter"), "all") as Filter,
+  );
   const [tlSearch, setTlSearch] = useState(() => loadString(storageKey(id, "tlSearch"), ""));
-  const [tlFilter, setTlFilter] = useState<Filter>(() => (loadString(storageKey(id, "tlFilter"), "all") as Filter));
-  const [showInfo, setShowInfo] = useState(() => loadString(storageKey(id, "showInfo"), "1") === "1");
-  const [showLibrary, setShowLibrary] = useState(() => loadString(storageKey(id, "showLibrary"), "1") === "1");
+  const [tlFilter, setTlFilter] = useState<Filter>(
+    () => loadString(storageKey(id, "tlFilter"), "all") as Filter,
+  );
+  const [showInfo, setShowInfo] = useState(
+    () => loadString(storageKey(id, "showInfo"), "1") === "1",
+  );
+  const [showLibrary, setShowLibrary] = useState(
+    () => loadString(storageKey(id, "showLibrary"), "1") === "1",
+  );
 
-  useEffect(() => { saveString(storageKey(id, "libSearch"), libSearch); }, [id, libSearch]);
-  useEffect(() => { saveString(storageKey(id, "libFilter"), libFilter); }, [id, libFilter]);
-  useEffect(() => { saveString(storageKey(id, "tlSearch"), tlSearch); }, [id, tlSearch]);
-  useEffect(() => { saveString(storageKey(id, "tlFilter"), tlFilter); }, [id, tlFilter]);
-  useEffect(() => { saveString(storageKey(id, "showInfo"), showInfo ? "1" : "0"); }, [id, showInfo]);
-  useEffect(() => { saveString(storageKey(id, "showLibrary"), showLibrary ? "1" : "0"); }, [id, showLibrary]);
+  useEffect(() => {
+    saveString(storageKey(id, "libSearch"), libSearch);
+  }, [id, libSearch]);
+  useEffect(() => {
+    saveString(storageKey(id, "libFilter"), libFilter);
+  }, [id, libFilter]);
+  useEffect(() => {
+    saveString(storageKey(id, "tlSearch"), tlSearch);
+  }, [id, tlSearch]);
+  useEffect(() => {
+    saveString(storageKey(id, "tlFilter"), tlFilter);
+  }, [id, tlFilter]);
+  useEffect(() => {
+    saveString(storageKey(id, "showInfo"), showInfo ? "1" : "0");
+  }, [id, showInfo]);
+  useEffect(() => {
+    saveString(storageKey(id, "showLibrary"), showLibrary ? "1" : "0");
+  }, [id, showLibrary]);
 
   // Selection — a Set of PlaylistItem ids; persisted per playlist.
   const [selection, setSelection] = useState<Set<string>>(() => {
     const raw = loadString(storageKey(id, "selection"), "");
     if (!raw) return new Set();
-    try { return new Set(JSON.parse(raw) as string[]); } catch { return new Set(); }
+    try {
+      return new Set(JSON.parse(raw) as string[]);
+    } catch {
+      return new Set();
+    }
   });
   useEffect(() => {
     saveString(storageKey(id, "selection"), JSON.stringify(Array.from(selection)));
   }, [id, selection]);
 
   // Focused row for keyboard nav (also acts as the shift-click anchor).
-  const [focusId, setFocusId] = useState<string | null>(() => loadString(storageKey(id, "focusId"), "") || null);
-  useEffect(() => { saveString(storageKey(id, "focusId"), focusId ?? ""); }, [id, focusId]);
+  const [focusId, setFocusId] = useState<string | null>(
+    () => loadString(storageKey(id, "focusId"), "") || null,
+  );
+  useEffect(() => {
+    saveString(storageKey(id, "focusId"), focusId ?? "");
+  }, [id, focusId]);
 
   const [renameTarget, setRenameTarget] = useState<MediaRecord | null>(null);
   const [previewTarget, setPreviewTarget] = useState<MediaRecord | null>(null);
@@ -123,7 +154,9 @@ export function PlaylistEditor({ id }: { id: string }) {
     setAllMedia(await listAllMedia());
   }, [id]);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const mediaMap = useMemo(() => new Map(allMedia.map((m) => [m.id, m])), [allMedia]);
 
@@ -173,7 +206,7 @@ export function PlaylistEditor({ id }: { id: string }) {
         newItems.push({
           id: uid(),
           mediaId: mid,
-          durationMs: m.type === "video" ? m.durationMs ?? 5000 : 5000,
+          durationMs: m.type === "video" ? (m.durationMs ?? 5000) : 5000,
           transition: "fade",
         });
       }
@@ -224,9 +257,7 @@ export function PlaylistEditor({ id }: { id: string }) {
   const moveSelection = async (dir: -1 | 1) => {
     if (!playlist) return;
     const items = playlist.items.slice();
-    const indices = items
-      .map((it, i) => (selection.has(it.id) ? i : -1))
-      .filter((i) => i >= 0);
+    const indices = items.map((it, i) => (selection.has(it.id) ? i : -1)).filter((i) => i >= 0);
     if (!indices.length) return;
     if (dir === -1) {
       if (indices[0] === 0) return;
@@ -332,7 +363,9 @@ export function PlaylistEditor({ id }: { id: string }) {
     try {
       const ids = JSON.parse(raw) as string[];
       await addMedia(ids);
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   };
 
   // ───────── keyboard shortcuts (editor-scoped) ─────────
@@ -356,7 +389,10 @@ export function PlaylistEditor({ id }: { id: string }) {
         void duplicateItems(Array.from(selection));
         return;
       }
-      if (e.key === "ArrowDown") {
+      if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        e.preventDefault();
+        void moveSelection(e.key === "ArrowDown" ? 1 : -1);
+      } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const n = Math.min(ids.length - 1, cur < 0 ? 0 : cur + 1);
         if (ids[n]) {
@@ -372,9 +408,6 @@ export function PlaylistEditor({ id }: { id: string }) {
           if (!e.shiftKey) setSelection(new Set([ids[n]]));
           else setSelection((prev) => new Set(prev).add(ids[n]));
         }
-      } else if ((e.altKey) && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        e.preventDefault();
-        void moveSelection(e.key === "ArrowDown" ? 1 : -1);
       } else if (e.key === "Enter" && cur >= 0) {
         e.preventDefault();
         const realIdx = p.items.findIndex((it) => it.id === ids[cur]);
@@ -392,7 +425,11 @@ export function PlaylistEditor({ id }: { id: string }) {
   // ───────── derived stats ─────────
   const stats = useMemo(() => {
     if (!playlist) return null;
-    let videos = 0, images = 0, totalMs = 0, videoMs = 0, largestSize = 0;
+    let videos = 0,
+      images = 0,
+      totalMs = 0,
+      videoMs = 0,
+      largestSize = 0;
     let largest: MediaRecord | null = null;
     for (const it of playlist.items) {
       const m = mediaMap.get(it.mediaId);
@@ -438,7 +475,11 @@ export function PlaylistEditor({ id }: { id: string }) {
       {/* Top bar */}
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3">
         <div className="flex min-w-0 items-center gap-3">
-          <Link to="/playlists" className="rounded-md p-1.5 hover:bg-accent" title="Back to playlists">
+          <Link
+            to="/playlists"
+            className="rounded-md p-1.5 hover:bg-accent"
+            title="Back to playlists"
+          >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="min-w-0">
@@ -455,7 +496,9 @@ export function PlaylistEditor({ id }: { id: string }) {
             onClick={() => setShowLibrary((v) => !v)}
             className={cn(
               "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs",
-              showLibrary ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-background hover:bg-accent",
+              showLibrary
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border bg-background hover:bg-accent",
             )}
             title="Toggle media library"
           >
@@ -465,7 +508,9 @@ export function PlaylistEditor({ id }: { id: string }) {
             onClick={() => setShowInfo((v) => !v)}
             className={cn(
               "inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md border px-2.5 text-xs",
-              showInfo ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-background hover:bg-accent",
+              showInfo
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border bg-background hover:bg-accent",
             )}
             title="Toggle info panel"
           >
@@ -487,7 +532,8 @@ export function PlaylistEditor({ id }: { id: string }) {
           </button>
           <button
             onClick={() => {
-              if (!playlist.items.length) return toast.error("Add at least one cue before starting Service Mode");
+              if (!playlist.items.length)
+                return toast.error("Add at least one cue before starting Service Mode");
               navigate({ to: "/service/$id", params: { id: playlist.id } });
             }}
             className="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 text-xs font-medium text-primary-foreground hover:opacity-90"
@@ -540,7 +586,9 @@ export function PlaylistEditor({ id }: { id: string }) {
                   onClick={() => setTlFilter(f)}
                   className={cn(
                     "cursor-pointer rounded px-2 py-0.5 text-[11px] font-medium capitalize",
-                    tlFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                    tlFilter === f
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground",
                   )}
                 >
                   {f === "all" ? "All" : f + "s"}
@@ -549,30 +597,54 @@ export function PlaylistEditor({ id }: { id: string }) {
             </div>
             <div className="ml-auto text-[11px] text-muted-foreground">
               {visibleItems.length} of {playlist.items.length} shown
-              {tlSearch && <button onClick={() => setTlSearch("")} className="ml-2 cursor-pointer underline">clear</button>}
+              {tlSearch && (
+                <button onClick={() => setTlSearch("")} className="ml-2 cursor-pointer underline">
+                  clear
+                </button>
+              )}
             </div>
           </div>
 
           {/* Bulk action bar */}
           {selectionCount > 0 && (
             <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-accent/40 px-4 py-2 text-xs">
-              <span className="font-medium">{selectionCount} item{selectionCount === 1 ? "" : "s"} selected</span>
-              <button onClick={() => moveSelection(-1)} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent">
+              <span className="font-medium">
+                {selectionCount} item{selectionCount === 1 ? "" : "s"} selected
+              </span>
+              <button
+                onClick={() => moveSelection(-1)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent"
+              >
                 <ChevronUp className="h-3 w-3" /> Move up
               </button>
-              <button onClick={() => moveSelection(1)} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent">
+              <button
+                onClick={() => moveSelection(1)}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent"
+              >
                 <ChevronDown className="h-3 w-3" /> Move down
               </button>
-              <button onClick={() => duplicateItems(Array.from(selection))} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent">
+              <button
+                onClick={() => duplicateItems(Array.from(selection))}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent"
+              >
                 <CopyIcon className="h-3 w-3" /> Duplicate
               </button>
-              <button onClick={projectSelected} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent">
+              <button
+                onClick={projectSelected}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-2 py-1 hover:bg-accent"
+              >
                 <Play className="h-3 w-3" /> Project selected
               </button>
-              <button onClick={() => removeItems(Array.from(selection))} className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-destructive hover:bg-destructive/20">
+              <button
+                onClick={() => removeItems(Array.from(selection))}
+                className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-destructive hover:bg-destructive/20"
+              >
                 <Trash2 className="h-3 w-3" /> Remove
               </button>
-              <button onClick={() => setSelection(new Set())} className="ml-auto cursor-pointer text-muted-foreground hover:text-foreground">
+              <button
+                onClick={() => setSelection(new Set())}
+                className="ml-auto cursor-pointer text-muted-foreground hover:text-foreground"
+              >
                 Clear selection
               </button>
             </div>
@@ -587,15 +659,23 @@ export function PlaylistEditor({ id }: { id: string }) {
           >
             {playlist.items.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
-                Drag media from the library on the left, or click <Plus className="inline h-3.5 w-3.5" /> on any item to add it.
+                Drag media from the library on the left, or click{" "}
+                <Plus className="inline h-3.5 w-3.5" /> on any item to add it.
               </div>
             ) : visibleItems.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border p-12 text-center text-sm text-muted-foreground">
                 No cues match the current search or filter.
               </div>
             ) : (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={visibleItems.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={onDragEnd}
+              >
+                <SortableContext
+                  items={visibleItems.map((i) => i.id)}
+                  strategy={verticalListSortingStrategy}
+                >
                   <div className="space-y-1.5">
                     {visibleItems.map((item) => {
                       const realIdx = playlist.items.findIndex((it) => it.id === item.id);
@@ -720,7 +800,9 @@ function LibraryPanel({
               onClick={() => setFilter(f)}
               className={cn(
                 "flex-1 cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-medium capitalize",
-                filter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                filter === f
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               {f === "all" ? "All" : f + "s"}
@@ -737,14 +819,18 @@ function LibraryPanel({
               <div
                 key={m.id}
                 draggable
-                onDragStart={(e) => e.dataTransfer.setData("application/x-media-ids", JSON.stringify([m.id]))}
+                onDragStart={(e) =>
+                  e.dataTransfer.setData("application/x-media-ids", JSON.stringify([m.id]))
+                }
                 onDoubleClick={() => onAdd([m.id])}
                 className="group flex cursor-grab items-center gap-2 rounded-md border border-transparent p-1 hover:border-border hover:bg-accent/50"
                 title="Drag into timeline or double-click to add"
               >
                 <Thumb media={m} className="h-9 w-14 shrink-0 rounded" />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-[11px] font-medium" title={m.name}>{m.name}</div>
+                  <div className="truncate text-[11px] font-medium" title={m.name}>
+                    {m.name}
+                  </div>
                   <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                     {m.type === "video" ? (
                       <>
@@ -760,7 +846,10 @@ function LibraryPanel({
                   </div>
                 </div>
                 <button
-                  onClick={(e) => { e.stopPropagation(); onAdd([m.id]); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAdd([m.id]);
+                  }}
                   className="invisible inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground group-hover:visible"
                   title="Add to playlist"
                   aria-label="Add"
@@ -799,10 +888,14 @@ function InfoPanel({
 }) {
   const items = playlist.items;
   const current = currentIndex >= 0 ? items[currentIndex] : null;
-  const next = currentIndex >= 0 ? items[currentIndex + 1] : items[0] ?? null;
-  const upcoming = currentIndex >= 0 ? items[currentIndex + 2] : items[1] ?? null;
+  const next = currentIndex >= 0 ? items[currentIndex + 1] : (items[0] ?? null);
+  const upcoming = currentIndex >= 0 ? items[currentIndex + 2] : (items[1] ?? null);
 
-  const renderCueRow = (label: string, item: PlaylistItem | null, tone: "live" | "next" | "upcoming") => {
+  const renderCueRow = (
+    label: string,
+    item: PlaylistItem | null,
+    tone: "live" | "next" | "upcoming",
+  ) => {
     const m = item ? mediaMap.get(item.mediaId) : null;
     return (
       <div
@@ -829,7 +922,9 @@ function InfoPanel({
             <div className="min-w-0">
               <div className="truncate text-[12px] font-medium">{item.label || m.name}</div>
               <div className="text-[10px] text-muted-foreground">
-                {m.type === "video" ? `Video · ${formatDuration(m.durationMs)}` : `Image · ${Math.round(item.durationMs / 1000)}s`}
+                {m.type === "video"
+                  ? `Video · ${formatDuration(m.durationMs)}`
+                  : `Image · ${Math.round(item.durationMs / 1000)}s`}
               </div>
             </div>
           </div>
@@ -844,7 +939,9 @@ function InfoPanel({
     <aside className="flex w-72 shrink-0 flex-col overflow-hidden border-l border-border bg-card/30">
       <div className="space-y-3 overflow-y-auto p-3">
         <section>
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Up Now</div>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Up Now
+          </div>
           <div className="space-y-1.5">
             {renderCueRow("Current", current, "live")}
             {renderCueRow("Next", next, "next")}
@@ -853,14 +950,31 @@ function InfoPanel({
         </section>
 
         <section>
-          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Statistics</div>
+          <div className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+            Statistics
+          </div>
           <div className="grid grid-cols-2 gap-1.5 text-[11px]">
             <StatTile label="Total items" value={String(stats.total)} />
             <StatTile label="Total duration" value={formatDuration(stats.totalMs)} />
-            <StatTile label="Videos" value={String(stats.videos)} icon={<Film className="h-3 w-3" />} />
-            <StatTile label="Images" value={String(stats.images)} icon={<ImageIcon className="h-3 w-3" />} />
-            <StatTile label="Avg video" value={stats.avgVideoMs ? formatDuration(stats.avgVideoMs) : "—"} />
-            <StatTile label="Largest file" value={stats.largest ? formatBytes(stats.largest.size) : "—"} title={stats.largest?.name} />
+            <StatTile
+              label="Videos"
+              value={String(stats.videos)}
+              icon={<Film className="h-3 w-3" />}
+            />
+            <StatTile
+              label="Images"
+              value={String(stats.images)}
+              icon={<ImageIcon className="h-3 w-3" />}
+            />
+            <StatTile
+              label="Avg video"
+              value={stats.avgVideoMs ? formatDuration(stats.avgVideoMs) : "—"}
+            />
+            <StatTile
+              label="Largest file"
+              value={stats.largest ? formatBytes(stats.largest.size) : "—"}
+              title={stats.largest?.name}
+            />
           </div>
         </section>
 
@@ -873,7 +987,17 @@ function InfoPanel({
   );
 }
 
-function StatTile({ label, value, icon, title }: { label: string; value: string; icon?: React.ReactNode; title?: string }) {
+function StatTile({
+  label,
+  value,
+  icon,
+  title,
+}: {
+  label: string;
+  value: string;
+  icon?: React.ReactNode;
+  title?: string;
+}) {
   return (
     <div className="rounded-md border border-border bg-background p-2" title={title}>
       <div className="flex items-center gap-1 text-[9px] uppercase tracking-wide text-muted-foreground">
@@ -925,8 +1049,14 @@ function SortableRow({
   onRemove: () => void;
   onToggleNotes: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 };
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: item.id,
+  });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
 
   return (
     <div
@@ -958,10 +1088,16 @@ function SortableRow({
         <div className="w-6 shrink-0 text-center text-[11px] font-medium tabular-nums text-muted-foreground">
           {index + 1}
         </div>
-        {media ? <Thumb media={media} className="h-10 w-16 shrink-0 rounded" /> : <div className="h-10 w-16 shrink-0 rounded bg-muted" />}
+        {media ? (
+          <Thumb media={media} className="h-10 w-16 shrink-0 rounded" />
+        ) : (
+          <div className="h-10 w-16 shrink-0 rounded bg-muted" />
+        )}
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center gap-1.5">
-            <div className="truncate text-[13px] font-medium">{item.label || media?.name || "Missing media"}</div>
+            <div className="truncate text-[13px] font-medium">
+              {item.label || media?.name || "Missing media"}
+            </div>
             {isCurrent && (
               <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-primary-foreground">
                 Currently Projecting
@@ -981,7 +1117,9 @@ function SortableRow({
           <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
             {media?.type === "video" ? (
               <>
-                <span className="inline-flex items-center gap-0.5"><Film className="h-3 w-3" /> Video</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <Film className="h-3 w-3" /> Video
+                </span>
                 <span>·</span>
                 <span className="tabular-nums">{formatDuration(media.durationMs)}</span>
                 <span>·</span>
@@ -989,7 +1127,9 @@ function SortableRow({
               </>
             ) : media?.type === "image" ? (
               <>
-                <span className="inline-flex items-center gap-0.5"><ImageIcon className="h-3 w-3" /> Image</span>
+                <span className="inline-flex items-center gap-0.5">
+                  <ImageIcon className="h-3 w-3" /> Image
+                </span>
                 <span>·</span>
                 <span>{formatBytes(media.size)}</span>
               </>
@@ -1001,7 +1141,10 @@ function SortableRow({
         </div>
 
         {media?.type === "image" && (
-          <label className="hidden items-center gap-1 text-[10px] text-muted-foreground sm:flex" onClick={(e) => e.stopPropagation()}>
+          <label
+            className="hidden items-center gap-1 text-[10px] text-muted-foreground sm:flex"
+            onClick={(e) => e.stopPropagation()}
+          >
             <input
               type="number"
               min={1}
@@ -1021,33 +1164,79 @@ function SortableRow({
           onClick={(e) => e.stopPropagation()}
           className="hidden h-7 rounded border border-input bg-background px-1.5 text-[11px] md:block"
         >
-          {TRANSITIONS.map((t) => <option key={t} value={t}>{t}</option>)}
+          {TRANSITIONS.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
         </select>
 
         <div className="flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
-          <RowAction label="Preview" onClick={(e) => { e.stopPropagation(); onPreview(); }}>
+          <RowAction
+            label="Preview"
+            onClick={(e) => {
+              e.stopPropagation();
+              onPreview();
+            }}
+          >
             <Eye className="h-3.5 w-3.5" />
           </RowAction>
-          <RowAction label="Project" onClick={(e) => { e.stopPropagation(); onProject(); }} variant="primary">
+          <RowAction
+            label="Project"
+            onClick={(e) => {
+              e.stopPropagation();
+              onProject();
+            }}
+            variant="primary"
+          >
             <Play className="h-3.5 w-3.5" />
           </RowAction>
-          <RowAction label="Notes" onClick={(e) => { e.stopPropagation(); onToggleNotes(); }} active={notesOpen || !!item.notes}>
+          <RowAction
+            label="Notes"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleNotes();
+            }}
+            active={notesOpen || !!item.notes}
+          >
             <StickyNote className="h-3.5 w-3.5" />
           </RowAction>
-          <RowAction label="Rename" onClick={(e) => { e.stopPropagation(); onRename(); }}>
+          <RowAction
+            label="Rename"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRename();
+            }}
+          >
             <Pencil className="h-3.5 w-3.5" />
           </RowAction>
-          <RowAction label="Duplicate" onClick={(e) => { e.stopPropagation(); onDuplicate(); }}>
+          <RowAction
+            label="Duplicate"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDuplicate();
+            }}
+          >
             <CopyIcon className="h-3.5 w-3.5" />
           </RowAction>
-          <RowAction label="Remove" onClick={(e) => { e.stopPropagation(); onRemove(); }} variant="danger">
+          <RowAction
+            label="Remove"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            variant="danger"
+          >
             <X className="h-3.5 w-3.5" />
           </RowAction>
         </div>
       </div>
 
       {notesOpen && (
-        <div className="mt-1.5 space-y-1.5 border-t border-border pt-1.5" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="mt-1.5 space-y-1.5 border-t border-border pt-1.5"
+          onClick={(e) => e.stopPropagation()}
+        >
           <input
             type="text"
             value={item.label ?? ""}

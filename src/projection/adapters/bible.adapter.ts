@@ -57,7 +57,12 @@ export function projectVerse(input: ProjectVerseInput): ProjectionContent<BibleV
     title: `${input.reference} (${input.translation})`,
     source: { module: "bible" },
     metadata: { book: input.book, chapter: input.chapter, verse: input.verse },
-    style: { background: style.background, color: style.color, align: style.align, vAlign: style.vAlign },
+    style: {
+      background: style.background,
+      color: style.color,
+      align: style.align,
+      vAlign: style.vAlign,
+    },
     body: { reference: input.reference, text: input.text, translation: input.translation },
     createdAt: now,
     updatedAt: now,

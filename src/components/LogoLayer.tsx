@@ -31,10 +31,22 @@ export function LogoLayer({ logo }: Props) {
   };
   // Position presets vs custom (% from top-left).
   switch (s.position) {
-    case "top-left":     style.top = "3%"; style.left = "3%"; break;
-    case "top-right":    style.top = "3%"; style.right = "3%"; break;
-    case "bottom-left":  style.bottom = "3%"; style.left = "3%"; break;
-    case "bottom-right": style.bottom = "3%"; style.right = "3%"; break;
+    case "top-left":
+      style.top = "3%";
+      style.left = "3%";
+      break;
+    case "top-right":
+      style.top = "3%";
+      style.right = "3%";
+      break;
+    case "bottom-left":
+      style.bottom = "3%";
+      style.left = "3%";
+      break;
+    case "bottom-right":
+      style.bottom = "3%";
+      style.right = "3%";
+      break;
     case "custom":
       style.left = `${s.xPct}%`;
       style.top = `${s.yPct}%`;

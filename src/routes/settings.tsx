@@ -4,7 +4,5 @@ import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({ meta: [{ title: "Settings — Church Media" }] }),
-  component: () => (
-    <SettingsPage />
-  ),
+  component: () => <SettingsPage />,
 });

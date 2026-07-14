@@ -25,7 +25,14 @@ interface MoveMediaDialogProps {
  * Windows Explorer-style folder picker. Lists every folder + an "All Media"
  * (root) option. Selection is visual — no typing required.
  */
-export function MoveMediaDialog({ open, count, folders, currentFolderId, onCancel, onConfirm }: MoveMediaDialogProps) {
+export function MoveMediaDialog({
+  open,
+  count,
+  folders,
+  currentFolderId,
+  onCancel,
+  onConfirm,
+}: MoveMediaDialogProps) {
   const [target, setTarget] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -51,7 +58,9 @@ export function MoveMediaDialog({ open, count, folders, currentFolderId, onCance
     <Dialog open={open} onOpenChange={(o) => !o && !busy && onCancel()}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Move {count} {count === 1 ? "file" : "files"}</DialogTitle>
+          <DialogTitle>
+            Move {count} {count === 1 ? "file" : "files"}
+          </DialogTitle>
           <DialogDescription>Select a destination folder.</DialogDescription>
         </DialogHeader>
 

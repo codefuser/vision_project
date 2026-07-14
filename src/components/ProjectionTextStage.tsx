@@ -39,7 +39,10 @@ export function ProjectionTextStage({
   return (
     <div
       ref={hostRef}
-      className={cn("relative flex h-full w-full items-center justify-center overflow-hidden bg-black", className)}
+      className={cn(
+        "relative flex h-full w-full items-center justify-center overflow-hidden bg-black",
+        className,
+      )}
     >
       <div
         className="relative shrink-0 overflow-hidden bg-black"
@@ -89,7 +92,11 @@ function useFittedStage(ref: RefObject<HTMLDivElement | null>, aspect: number) {
         width = height * aspect;
       }
       setSize((current) => {
-        if (current && Math.abs(current.width - width) < 0.5 && Math.abs(current.height - height) < 0.5) {
+        if (
+          current &&
+          Math.abs(current.width - width) < 0.5 &&
+          Math.abs(current.height - height) < 0.5
+        ) {
           return current;
         }
         return { width, height };

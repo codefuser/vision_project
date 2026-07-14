@@ -11,13 +11,27 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-  Type, Plus, Star, Trash2, Copy, Send, Search, FileText, Filter, Languages, Check,
+  Type,
+  Plus,
+  Star,
+  Trash2,
+  Copy,
+  Send,
+  Search,
+  FileText,
+  Filter,
+  Languages,
+  Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-  DropdownMenuLabel, DropdownMenuSeparator,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useTextItems, splitTextSlides, type TextItem } from "@/stores/text-items.store";
 import { projectTextSlide } from "@/projection/adapters/text.adapter";
@@ -61,7 +75,10 @@ function formatAgo(ts: number): string {
 
 const STARTER_SAMPLES = [
   { title: "Welcome", content: "Welcome to our service\n\nMay God bless you abundantly" },
-  { title: "Prayer Points", content: "Pray for the sick\n\nPray for the nation\n\nPray for revival" },
+  {
+    title: "Prayer Points",
+    content: "Pray for the sick\n\nPray for the nation\n\nPray for revival",
+  },
 ];
 
 export function TextPanel() {
@@ -98,8 +115,7 @@ export function TextPanel() {
     }
     const tailFromCaret = next.length - caret;
     const justTypedBoundary =
-      caret > 0 && BOUNDARY_RE.test(next.charAt(caret - 1)) &&
-      next.length >= draftContent.length;
+      caret > 0 && BOUNDARY_RE.test(next.charAt(caret - 1)) && next.length >= draftContent.length;
     if (!justTypedBoundary) {
       setDraftContent(next);
       return;
@@ -218,7 +234,9 @@ export function TextPanel() {
     keys: ["Ctrl+Enter", "Meta+Enter"],
     scope: "workspace",
     allowInInput: true,
-    handler: () => { if (selected && slides.length) project(activeSlide); },
+    handler: () => {
+      if (selected && slides.length) project(activeSlide);
+    },
   });
   useShortcut({
     id: "text.project-all",
@@ -227,7 +245,9 @@ export function TextPanel() {
     keys: ["Ctrl+Shift+Enter", "Meta+Shift+Enter"],
     scope: "workspace",
     allowInInput: true,
-    handler: () => { void projectAll(); },
+    handler: () => {
+      void projectAll();
+    },
   });
   useShortcut({
     id: "text.duplicate",
@@ -236,7 +256,9 @@ export function TextPanel() {
     keys: ["Ctrl+D", "Meta+D"],
     scope: "workspace",
     allowInInput: true,
-    handler: () => { if (selected) handleDuplicate(); },
+    handler: () => {
+      if (selected) handleDuplicate();
+    },
   });
 
   const saveLabel = !selected
@@ -330,38 +352,63 @@ export function TextPanel() {
                       onClick={() => setSelectedId(it.id)}
                       className={cn(
                         "group cursor-pointer px-3 py-2 transition hover:bg-accent/60",
-                        isSel ? "bg-primary/10 border-l-[3px] border-l-primary pl-[9px]"
+                        isSel
+                          ? "bg-primary/10 border-l-[3px] border-l-primary pl-[9px]"
                           : "border-l-[3px] border-l-transparent",
                       )}
                     >
                       <div className="flex items-center gap-1.5">
-                        <span className={cn("truncate text-[13px] font-semibold", isSel ? "text-primary" : "text-foreground")}>
+                        <span
+                          className={cn(
+                            "truncate text-[13px] font-semibold",
+                            isSel ? "text-primary" : "text-foreground",
+                          )}
+                        >
                           {it.title}
                         </span>
-                        {it.favorite && <Star className="h-3 w-3 shrink-0 fill-amber-500 text-amber-500" />}
+                        {it.favorite && (
+                          <Star className="h-3 w-3 shrink-0 fill-amber-500 text-amber-500" />
+                        )}
                       </div>
                       <div className="truncate text-[11px] text-muted-foreground">
                         {it.content.split("\n").find((l) => l.trim()) ?? "Empty"}
                       </div>
                       <div className="mt-0.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                        <span>{slidesCount} slide{slidesCount === 1 ? "" : "s"}</span>
+                        <span>
+                          {slidesCount} slide{slidesCount === 1 ? "" : "s"}
+                        </span>
                         <div className="ml-auto flex items-center gap-0.5 opacity-0 transition group-hover:opacity-100">
                           <button
-                            onClick={(e) => { e.stopPropagation(); toggleFavorite(it.id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleFavorite(it.id);
+                            }}
                             title={it.favorite ? "Unfavorite" : "Favorite"}
-                            className={cn("inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded", it.favorite ? "text-amber-500" : "text-muted-foreground hover:bg-accent")}
+                            className={cn(
+                              "inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded",
+                              it.favorite
+                                ? "text-amber-500"
+                                : "text-muted-foreground hover:bg-accent",
+                            )}
                           >
                             <Star className={cn("h-3 w-3", it.favorite && "fill-current")} />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); const id = duplicate(it.id); if (id) setSelectedId(id); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              const id = duplicate(it.id);
+                              if (id) setSelectedId(id);
+                            }}
                             title="Duplicate"
                             className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-muted-foreground hover:bg-accent"
                           >
                             <Copy className="h-3 w-3" />
                           </button>
                           <button
-                            onClick={(e) => { e.stopPropagation(); handleDelete(it); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(it);
+                            }}
                             title="Delete"
                             className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded text-destructive hover:bg-destructive/10"
                           >
@@ -389,7 +436,10 @@ export function TextPanel() {
                 <div className="flex items-center gap-2 border-b border-border bg-muted/20 px-2 py-1.5">
                   <Input
                     value={draftTitle}
-                    onChange={(e) => { setDraftTitle(e.target.value); setSavingPending(true); }}
+                    onChange={(e) => {
+                      setDraftTitle(e.target.value);
+                      setSavingPending(true);
+                    }}
                     placeholder="Title"
                     className="h-8 flex-1 text-sm font-semibold"
                   />
@@ -399,7 +449,8 @@ export function TextPanel() {
                         title={`Typing mode: ${MODE_LABELS[typingMode]}`}
                         className={cn(
                           "inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2 text-[11px] font-semibold transition hover:bg-accent",
-                          typingMode === "tanglish" && "border-primary/60 bg-primary/10 text-primary",
+                          typingMode === "tanglish" &&
+                            "border-primary/60 bg-primary/10 text-primary",
                         )}
                       >
                         <Languages className="h-3.5 w-3.5" />
@@ -415,11 +466,16 @@ export function TextPanel() {
                         <DropdownMenuItem
                           key={m}
                           onClick={() => setTypingMode(m)}
-                          className={cn("text-xs", typingMode === m && "bg-accent font-semibold text-primary")}
+                          className={cn(
+                            "text-xs",
+                            typingMode === m && "bg-accent font-semibold text-primary",
+                          )}
                         >
                           {MODE_LABELS[m]}
                           {m === "tanglish" && (
-                            <span className="ml-auto text-[10px] text-muted-foreground">auto-convert</span>
+                            <span className="ml-auto text-[10px] text-muted-foreground">
+                              auto-convert
+                            </span>
                           )}
                         </DropdownMenuItem>
                       ))}
@@ -444,7 +500,9 @@ export function TextPanel() {
                     title={selected.favorite ? "Unfavorite" : "Favorite"}
                     className={cn(
                       "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md",
-                      selected.favorite ? "text-amber-500" : "text-muted-foreground hover:bg-accent",
+                      selected.favorite
+                        ? "text-amber-500"
+                        : "text-muted-foreground hover:bg-accent",
                     )}
                   >
                     <Star className={cn("h-3.5 w-3.5", selected.favorite && "fill-current")} />
@@ -471,12 +529,19 @@ export function TextPanel() {
                 </div>
 
                 <div className="flex items-center gap-x-3 border-t border-border bg-muted/10 px-2 py-1 text-[10px] text-muted-foreground">
-                  <span><b className="text-foreground/80">{slides.length}</b> slide{slides.length === 1 ? "" : "s"}</span>
+                  <span>
+                    <b className="text-foreground/80">{slides.length}</b> slide
+                    {slides.length === 1 ? "" : "s"}
+                  </span>
                   {saveLabel && (
-                    <span className={cn(
-                      "ml-auto inline-flex items-center gap-1 rounded px-1.5 py-px",
-                      savingPending ? "bg-amber-500/10 text-amber-500" : "bg-emerald-500/10 text-emerald-600",
-                    )}>
+                    <span
+                      className={cn(
+                        "ml-auto inline-flex items-center gap-1 rounded px-1.5 py-px",
+                        savingPending
+                          ? "bg-amber-500/10 text-amber-500"
+                          : "bg-emerald-500/10 text-emerald-600",
+                      )}
+                    >
                       {!savingPending && <Check className="h-3 w-3" />}
                       {saveLabel}
                     </span>
@@ -509,20 +574,29 @@ export function TextPanel() {
                     return (
                       <div
                         key={i}
-                        onClick={() => { setActiveSlide(i); project(i); }}
+                        onClick={() => {
+                          setActiveSlide(i);
+                          project(i);
+                        }}
                         className={cn(
                           "group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-card/80 transition-all",
                           "hover:-translate-y-px hover:border-primary/70 hover:shadow-md",
-                          isProjected ? "border-primary ring-2 ring-primary/40"
-                            : isActive ? "border-primary/60" : "border-border",
+                          isProjected
+                            ? "border-primary ring-2 ring-primary/40"
+                            : isActive
+                              ? "border-primary/60"
+                              : "border-border",
                         )}
                       >
                         <div className="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                           <span>Slide {i + 1}</span>
-                          <span className="text-muted-foreground/60">· {lineCount} line{lineCount === 1 ? "" : "s"}</span>
+                          <span className="text-muted-foreground/60">
+                            · {lineCount} line{lineCount === 1 ? "" : "s"}
+                          </span>
                           {isProjected && (
                             <span className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-1.5 py-px text-[9px] text-primary-foreground">
-                              <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" /> Live
+                              <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />{" "}
+                              Live
                             </span>
                           )}
                         </div>
@@ -531,7 +605,10 @@ export function TextPanel() {
                         </pre>
                         <div className="flex items-center justify-end border-t border-border/40 bg-muted/20 px-2 py-1">
                           <button
-                            onClick={(e) => { e.stopPropagation(); project(i); }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              project(i);
+                            }}
                             className="inline-flex items-center gap-1 rounded bg-primary px-2.5 py-1 text-[11px] font-semibold text-primary-foreground hover:opacity-90"
                           >
                             <Send className="h-3 w-3" /> Project

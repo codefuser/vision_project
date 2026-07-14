@@ -1,7 +1,9 @@
 // Generate thumbnails for images and videos. Returns a Blob (image/webp).
 const MAX_SIZE = 320;
 
-export async function generateImageThumb(file: Blob): Promise<{ blob: Blob; width: number; height: number }> {
+export async function generateImageThumb(
+  file: Blob,
+): Promise<{ blob: Blob; width: number; height: number }> {
   const bitmap = await createImageBitmap(file);
   const { width, height } = bitmap;
   const scale = Math.min(1, MAX_SIZE / Math.max(width, height));

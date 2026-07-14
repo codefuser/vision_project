@@ -30,7 +30,6 @@ import { LogoLayer } from "@/components/LogoLayer";
 import { useLogo } from "@/stores/logo.store";
 import { cn } from "@/lib/utils";
 
-
 /**
  * Live preview / operator console. Mirrors the projector output and exposes
  * the full transport surface (timeline, scrubbing, jump ±10s, volume,
@@ -197,9 +196,13 @@ export function LivePreviewPanel() {
           )}
         >
           {projectorOpen ? (
-            <><MonitorOff className="h-3.5 w-3.5" /> Close</>
+            <>
+              <MonitorOff className="h-3.5 w-3.5" /> Close
+            </>
           ) : (
-            <><MonitorPlay className="h-3.5 w-3.5" /> Open</>
+            <>
+              <MonitorPlay className="h-3.5 w-3.5" /> Open
+            </>
           )}
         </button>
       </PanelHeader>
@@ -213,7 +216,12 @@ export function LivePreviewPanel() {
           </div>
         )}
         {media && !black && url && media.type === "image" && (
-          <img src={url} alt="" className="max-h-full max-w-full object-contain" draggable={false} />
+          <img
+            src={url}
+            alt=""
+            className="max-h-full max-w-full object-contain"
+            draggable={false}
+          />
         )}
         {media && !black && url && media.type === "video" && (
           <video
@@ -279,7 +287,6 @@ export function LivePreviewPanel() {
           }}
         />
       )}
-
 
       {/* Transport */}
       <div className="flex flex-wrap items-center gap-1.5 border-t border-border bg-background/60 px-2 py-1.5">
@@ -355,7 +362,11 @@ export function LivePreviewPanel() {
           title={fullPreview ? "Exit full preview" : "Full preview"}
           active={fullPreview}
         >
-          {fullPreview ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+          {fullPreview ? (
+            <Minimize2 className="h-3.5 w-3.5" />
+          ) : (
+            <Maximize2 className="h-3.5 w-3.5" />
+          )}
         </IconBtn>
         <div className="mx-1 h-4 w-px bg-border" />
         <IconBtn
@@ -379,7 +390,9 @@ export function LivePreviewPanel() {
             <span title="Current">{fmtTime(currentTime)}</span>
             <span>/</span>
             <span title="Duration">{fmtTime(duration)}</span>
-            <span className="ml-1 opacity-60" title="Remaining">-{fmtTime(remaining)}</span>
+            <span className="ml-1 opacity-60" title="Remaining">
+              -{fmtTime(remaining)}
+            </span>
           </div>
         )}
         <div className="ml-auto flex items-center gap-2 truncate text-[11px] text-muted-foreground">
@@ -387,9 +400,7 @@ export function LivePreviewPanel() {
             <span
               className={cn(
                 "rounded px-1.5 py-0.5 font-medium uppercase tracking-wide",
-                state?.playing
-                  ? "bg-primary/15 text-primary"
-                  : "bg-muted text-muted-foreground",
+                state?.playing ? "bg-primary/15 text-primary" : "bg-muted text-muted-foreground",
               )}
             >
               {state?.playing ? (state?.videoReady === false ? "Buffering" : "Playing") : "Paused"}
@@ -401,7 +412,6 @@ export function LivePreviewPanel() {
     </div>
   );
 }
-
 
 function fmtTime(s: number): string {
   if (!isFinite(s) || s < 0) s = 0;
@@ -562,9 +572,12 @@ function TimelineScrubber({
     };
   }, [src]);
 
-  useEffect(() => () => {
-    if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+    },
+    [],
+  );
 
   const timeFromClientX = (clientX: number): number => {
     const track = trackRef.current;
@@ -581,7 +594,7 @@ function TimelineScrubber({
     const rowRect = row.getBoundingClientRect();
     const trackRect = track.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - trackRect.left) / trackRect.width));
-    return (trackRect.left - rowRect.left) + ratio * trackRect.width;
+    return trackRect.left - rowRect.left + ratio * trackRect.width;
   };
 
   const handlePointerMove = (clientX: number) => {
@@ -669,35 +682,35 @@ function TimelineScrubber({
       )}
 
       {/* Hover popup — fixed 144x80, edge-clamped, never resized. */}
-      {hover && src && (() => {
-        const POPUP_WIDTH = 152;
-        const rowWidth = rowRef.current?.getBoundingClientRect().width ?? 0;
-        const half = POPUP_WIDTH / 2;
-        const clampedX = Math.max(half, Math.min(rowWidth - half, hover.x));
-        return (
-          <div
-            className="pointer-events-none absolute bottom-full mb-2 flex flex-col items-center"
-            style={{ left: clampedX, transform: "translateX(-50%)", width: POPUP_WIDTH }}
-          >
+      {hover &&
+        src &&
+        (() => {
+          const POPUP_WIDTH = 152;
+          const rowWidth = rowRef.current?.getBoundingClientRect().width ?? 0;
+          const half = POPUP_WIDTH / 2;
+          const clampedX = Math.max(half, Math.min(rowWidth - half, hover.x));
+          return (
             <div
-              className="overflow-hidden rounded-md border border-border bg-black shadow-lg"
-              style={{ width: 144, height: 80 }}
+              className="pointer-events-none absolute bottom-full mb-2 flex flex-col items-center"
+              style={{ left: clampedX, transform: "translateX(-50%)", width: POPUP_WIDTH }}
             >
-              <canvas
-                ref={canvasRef}
-                width={144}
-                height={80}
-                style={{ width: 144, height: 80, display: "block" }}
-              />
+              <div
+                className="overflow-hidden rounded-md border border-border bg-black shadow-lg"
+                style={{ width: 144, height: 80 }}
+              >
+                <canvas
+                  ref={canvasRef}
+                  width={144}
+                  height={80}
+                  style={{ width: 144, height: 80, display: "block" }}
+                />
+              </div>
+              <div className="mt-1 rounded bg-black/80 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-white">
+                {fmtTime(hover.t)}
+              </div>
             </div>
-            <div className="mt-1 rounded bg-black/80 px-1.5 py-0.5 font-mono text-[10px] tabular-nums text-white">
-              {fmtTime(hover.t)}
-            </div>
-          </div>
-        );
-      })()}
+          );
+        })()}
     </div>
   );
 }
-
-

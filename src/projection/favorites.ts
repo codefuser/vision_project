@@ -66,7 +66,6 @@ class FavoritesStore {
       try {
         fn(snapshot);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("[favorites] subscriber error", err);
       }
     }
