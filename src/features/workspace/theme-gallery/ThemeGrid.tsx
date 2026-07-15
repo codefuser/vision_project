@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { ThemeCard } from "./ThemeCard";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
-import { cn } from "@/lib/utils";
+import { GripVertical } from "lucide-react";
 
-const CARD_WIDTH = 264;
-const GAP = 16;
-const ROW_HEIGHT = 240 + GAP;
+const CARD_WIDTH = 270;
+const GAP = 14;
+const ROW_HEIGHT = 236 + GAP;
 
 interface ThemeGridProps {
   items: TemplatePreset[];
@@ -14,14 +14,18 @@ interface ThemeGridProps {
   favorites: string[];
   onApply: (preset: TemplatePreset) => void;
   onToggleFavorite: (id: string) => void;
+  onReorderFavorites?: (ids: string[]) => void;
   renaming: string | null;
   onRename: (id: string, name: string) => void;
   onStartRename: (id: string) => void;
+  dragEnabled?: boolean;
 }
 
 export function ThemeGrid({
   items, appliedId, favorites, onApply, onToggleFavorite,
+  onReorderFavorites,
   renaming, onRename, onStartRename,
+  dragEnabled,
 }: ThemeGridProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -29,6 +33,8 @@ export function ThemeGrid({
   const [containerHeight, setContainerHeight] = useState(600);
   const duplicateCustom = useCustomTemplates((s) => s.duplicate);
   const removeCustom = useCustomTemplates((s) => s.remove);
+
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   const cols = useMemo(() => {
     if (containerWidth <= 0) return 3;
@@ -78,12 +84,33 @@ export function ThemeGrid({
     return () => ro.disconnect();
   }, []);
 
+  const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
+    setDragIndex(idx);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", String(idx));
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
+    e.preventDefault();
+    if (dragIndex === null || dragIndex === dropIdx || !onReorderFavorites) return;
+    const reordered = [...items];
+    const [moved] = reordered.splice(dragIndex, 1);
+    reordered.splice(dropIdx, 0, moved);
+    onReorderFavorites(reordered.map((t) => t.id));
+    setDragIndex(null);
+  }, [dragIndex, items, onReorderFavorites]);
+
   if (items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground px-4">
         <p className="text-center">
-          <span className="block text-lg">∅</span>
-          No themes match this filter.
+          <span className="block text-lg mb-1">∅</span>
+          {favorites.length === 0 ? "Tap ★ on any theme to add it here." : "No themes match this filter."}
         </p>
       </div>
     );
@@ -95,7 +122,7 @@ export function ThemeGrid({
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="h-full overflow-y-auto overflow-x-hidden"
+      className="h-full overflow-y-auto overflow-x-hidden px-4"
     >
       <div
         className="relative w-full will-change-transform"
@@ -112,6 +139,10 @@ export function ThemeGrid({
                 left: col * (CARD_WIDTH + GAP),
                 width: CARD_WIDTH,
               }}
+              draggable={dragEnabled}
+              onDragStart={dragEnabled ? (e) => handleDragStart(e, index) : undefined}
+              onDragOver={dragEnabled ? handleDragOver : undefined}
+              onDrop={dragEnabled ? (e) => handleDrop(e, index) : undefined}
             >
               <ThemeCard
                 preset={item}

@@ -119,7 +119,10 @@ export type BackgroundAnimation =
   | "clouds" | "golden-particles" | "floating-dust" | "fog"
   | "fire-glow" | "cross-beam" | "water" | "sky-motion"
   | "stage-lights" | "aurora" | "star-field" | "rain"
-  | "candle-glow" | "sunrise" | "ocean" | "abstract-worship";
+  | "candle-glow" | "sunrise" | "ocean" | "abstract-worship"
+  | "aurora-borealis" | "fireflies" | "ribbon" | "nebula"
+  | "galaxy" | "bloom" | "lens-flare" | "smoke" | "velvet"
+  | "heaven-light" | "snow";
 
 export const DEFAULT_BACKGROUND: BackgroundConfig = {
   kind: "color",

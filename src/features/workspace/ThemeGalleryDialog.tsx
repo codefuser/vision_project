@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Save, Sparkles, X, Check, Pencil } from "lucide-react";
+import { Search, Save, Sparkles, X, Check, Pencil, GripVertical } from "lucide-react";
 import { TEMPLATE_PRESETS, TEMPLATE_CATEGORIES, type TemplatePreset } from "@/lib/templates/presets";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useThemeFavorites } from "@/stores/theme-favorites.store";
@@ -24,7 +24,7 @@ const BUCKET_ICONS: Record<Bucket, string> = {
   Prayer: "✠", Animated: "▶", Seasonal: "◈",
 };
 
-const SEARCH_FIELDS = ["name", "category", "mood", "animation", "tags", "color"] as const;
+interface SideBtn { key: Bucket | "divider"; label: string; }
 
 export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const custom = useCustomTemplates((s) => s.templates);
@@ -34,6 +34,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const favorites = useThemeFavorites((s) => s.favorites);
   const recents = useThemeFavorites((s) => s.recents);
   const toggleFavorite = useThemeFavorites((s) => s.toggleFavorite);
+  const reorderFavorites = useThemeFavorites((s) => s.reorderFavorites);
 
   const [bucket, setBucket] = useState<Bucket>("All");
   const [query, setQuery] = useState("");
@@ -42,7 +43,6 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
-  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -55,6 +55,11 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const allBuiltin = useMemo(() => TEMPLATE_PRESETS, []);
   const all = useMemo(() => [...custom, ...allBuiltin], [custom, allBuiltin]);
   const byId = useMemo(() => new Map(all.map((t) => [t.id, t])), [all]);
+
+  const tamilSearch = useMemo(() => [
+    "கர்த்தர்", "இயேசு", "ஆண்டவர்", "தேவன்", "சங்கீதம்",
+    "வேதம்", "ஜெபம்", "துதி", "அல்லேலூயா", "ஆமென்",
+  ], []);
 
   const bucketList = useMemo(() => {
     let list: TemplatePreset[];
@@ -88,11 +93,12 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
         t.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
         t.mood?.toLowerCase().includes(q) ||
         t.background.animation?.toLowerCase().includes(q) ||
-        t.background.color?.toLowerCase().includes(q)
+        t.background.color?.toLowerCase().includes(q) ||
+        tamilSearch.some((w) => w.toLowerCase().includes(q))
       );
     }
     return list;
-  }, [bucket, all, custom, favorites, recents, byId, query]);
+  }, [bucket, all, custom, favorites, recents, byId, query, tamilSearch]);
 
   const bucketCounts = useMemo(() => {
     const c = {} as Record<Bucket, number>;
@@ -138,19 +144,22 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     setRenameValue("");
   }, [renaming, renameValue, renameCustom]);
 
-  interface SideBtn { key: Bucket | "divider"; label: string; }
+  const handleReorder = useCallback((ids: string[]) => {
+    reorderFavorites(ids);
+  }, [reorderFavorites]);
+
   const sideButtons: SideBtn[] = useMemo(() => [
     { key: "Favorites", label: "Favorites" },
     { key: "Recent", label: "Recent" },
     { key: "Custom", label: "Custom" },
     { key: "All", label: "All Themes" },
     { key: "divider", label: "—" },
+    { key: "Animated", label: "Animated" },
     { key: "Modern", label: "Modern" },
     { key: "Classic", label: "Classic" },
     { key: "Worship", label: "Worship" },
     { key: "Bible", label: "Bible" },
     { key: "Prayer", label: "Prayer" },
-    { key: "Animated", label: "Animated" },
     { key: "Seasonal", label: "Seasonal" },
   ], []);
 
@@ -158,24 +167,23 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="!max-w-[1320px] h-[90vh] flex flex-col gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
         {/* ── Header ── */}
-        <DialogHeader className="shrink-0 border-b border-border px-4 py-3">
+        <DialogHeader className="shrink-0 border-b border-border px-4 py-2.5">
           <div className="flex items-center justify-between gap-3">
-            <DialogTitle className="flex items-center gap-2 text-sm font-semibold">
+            <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-primary" />
-              Theme Browser
+              <DialogTitle className="text-sm font-semibold">Theme Browser</DialogTitle>
               <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
                 {allBuiltin.length} built-in{custom.length > 0 && ` · ${custom.length} custom`}
               </span>
-            </DialogTitle>
+            </div>
             <div className="flex items-center gap-2">
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  ref={inputRef}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name, color, mood, tag…"
-                  className="h-8 w-60 pl-7 text-xs"
+                  placeholder="Search name, colour, mood, tag…"
+                  className="h-8 w-56 pl-7 text-xs"
                 />
                 {query && (
                   <button
@@ -189,6 +197,14 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               <Button size="sm" variant="outline" onClick={() => setSaveOpen(true)} className="h-8 gap-1 text-xs">
                 <Save className="h-3 w-3" /> Save Current
               </Button>
+              {/* Close button in header — not overlapping */}
+              <button
+                onClick={() => onOpenChange(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                title="Close"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </DialogHeader>
@@ -234,9 +250,11 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               favorites={favorites}
               onApply={handleApply}
               onToggleFavorite={toggleFavorite}
+              onReorderFavorites={bucket === "Favorites" ? handleReorder : undefined}
               renaming={renaming}
               onRename={(id, name) => { renameCustom(id, name); setRenaming(null); }}
               onStartRename={handleStartRename}
+              dragEnabled={bucket === "Favorites" && bucketList.length > 1}
             />
           </main>
         </div>

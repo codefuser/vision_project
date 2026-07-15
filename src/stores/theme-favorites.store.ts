@@ -13,6 +13,7 @@ interface State {
   pushRecent: (id: string) => void;
   isFavorite: (id: string) => boolean;
   mostUsed: (limit?: number) => string[];
+  reorderFavorites: (ids: string[]) => void;
 }
 
 const MAX_RECENT = 12;
@@ -35,6 +36,7 @@ export const useThemeFavorites = create<State>()(
           usage: { ...s.usage, [id]: (s.usage[id] ?? 0) + 1 },
         })),
       isFavorite: (id) => get().favorites.includes(id),
+      reorderFavorites: (ids) => set({ favorites: ids }),
       mostUsed: (limit = 8) =>
         Object.entries(get().usage)
           .sort((a, b) => b[1] - a[1])

@@ -101,12 +101,12 @@ function ThemeCardInner({
           <ThemeAnimation animation={animation} paused={!hovered && !isSelected} />
         )}
 
-        {/* Text sample overlay */}
+        {/* Tamil preview text */}
         <div className="absolute inset-0 flex items-center justify-center p-3" style={sampleStyle}>
-          <div className="line-clamp-3">
-            <span>For God so loved</span>
+          <div className="line-clamp-3 text-balance">
+            <span>கர்த்தர் என்</span>
             <br />
-            <span className="opacity-80">the world</span>
+            <span className="opacity-85">மேய்ப்பராயிருக்கிறார்</span>
           </div>
         </div>
 
