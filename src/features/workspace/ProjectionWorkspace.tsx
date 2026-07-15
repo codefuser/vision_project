@@ -39,8 +39,9 @@ const TEXT_FORMAT_DEFAULT_SIZE = 40;
 // Pixel-based sizing for the left column (Preview + Text Formatting).
 // The workspace must never auto-balance on load: use the saved operator width
 // or exactly 250px on first run. The right Media workspace consumes the rest.
-const LEFT_DEFAULT_WIDTH = 250;
-const LEFT_MIN_WIDTH = 200;
+const LEFT_DEFAULT_WIDTH = 320;
+const LEFT_MIN_WIDTH = 280;
+const LEFT_MAX_WIDTH = 600;
 const RIGHT_MIN_WIDTH = 320;
 const TABS_COLLAPSED_WIDTH = 48;
 
@@ -67,7 +68,10 @@ function readSavedLeftWidth(): number | undefined {
     const raw = localStorage.getItem(LAYOUT_KEYS.leftWidth);
     if (!raw) return undefined;
     const parsed = Number(raw);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+    if (!Number.isFinite(parsed) || parsed < LEFT_MIN_WIDTH) {
+      return undefined;
+    }
+    return Math.min(parsed, LEFT_MAX_WIDTH);
   } catch {
     return undefined;
   }
@@ -144,7 +148,7 @@ export function ProjectionWorkspace() {
       if (!workspace) return;
       const bounds = workspace.getBoundingClientRect();
       const reservedRightWidth = visible.tabs && tabsCollapsed ? TABS_COLLAPSED_WIDTH : visible.tabs ? RIGHT_MIN_WIDTH : 0;
-      const maxLeftWidth = Math.max(LEFT_MIN_WIDTH, bounds.width - reservedRightWidth);
+      const maxLeftWidth = Math.min(LEFT_MAX_WIDTH, Math.max(LEFT_MIN_WIDTH, bounds.width - reservedRightWidth));
       const nextWidth = Math.min(Math.max(clientX - bounds.left, LEFT_MIN_WIDTH), maxLeftWidth);
       setLeftWidthDefault(nextWidth);
       writeLeftWidth(nextWidth);
