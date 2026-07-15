@@ -200,13 +200,13 @@ function SideNav() {
 }
 
 function Particles() {
-  const particles = Array.from({ length: 12 }, (_, i) => ({
+  const particles = Array.from({ length: 6 }, (_, i) => ({
     id: i,
-    size: 2 + (i % 3) * 2,
-    left: 5 + ((i * 17) % 90),
-    top: 10 + ((i * 13) % 80),
-    duration: 3 + (i % 4),
-    delay: i * 0.4,
+    size: 3,
+    left: 10 + ((i * 23) % 80),
+    top: 15 + ((i * 17) % 70),
+    duration: 6 + (i % 3),
+    delay: i * 0.8,
   }));
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
@@ -1056,7 +1056,7 @@ function FooterSection() {
 
 export function DeveloperHubPage() {
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="h-full overflow-y-auto bg-background text-foreground">
       <SideNav />
       <HeroSection />
       <AboutSection />
