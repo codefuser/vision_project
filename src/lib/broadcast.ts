@@ -114,17 +114,15 @@ export interface BackgroundConfig {
 
 export type BackgroundAnimation =
   | "none"
-  | "moving-grid" | "warp-grid" | "neon-grid"
-  | "perspective-tunnel" | "light-tunnel"
-  | "infinite-space" | "galaxy-motion" | "deep-ocean"
-  | "aurora-sky" | "bokeh-lights" | "floating-glass"
-  | "soft-ink" | "paper-texture" | "light-rays-cinematic"
-  | "spotlights" | "blue-nebula" | "golden-worship"
-  | "abstract-lines" | "wave-mesh" | "fluid-motion"
-  | "water-reflection" | "digital-horizon" | "blue-fog"
-  | "golden-dust-cinematic" | "cross-light"
-  | "morning-sky" | "evening-glow" | "dark-theatre"
-  | "stage-ambient" | "minimal-motion";
+  | "golden-stage" | "church-windows" | "cathedral-glass"
+  | "ocean-horizon" | "calm-lake" | "cloud-layers"
+  | "moving-fog" | "night-sky" | "aurora-curtain"
+  | "deep-space" | "mountain-sunrise" | "forest-light"
+  | "candle-glow" | "premium-geo" | "floating-silk"
+  | "liquid-glass" | "elegant-mesh" | "architectural-motion"
+  | "ambient-beams" | "dark-auditorium" | "stage-spotlights"
+  | "luxury-gold" | "premium-bokeh" | "velvet-background"
+  | "ethereal-glow";
 
 export const DEFAULT_BACKGROUND: BackgroundConfig = {
   kind: "color",

@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 const QUICK_IDS = [
   "worship-royal-sapphire", "worship-indigo-modern", "prayer-candlelight", "events-youth-pulse",
-  "bible-scholar", "anim-light-rays-cinematic", "anim-moving-grid", "minimal-black",
+  "bible-scholar", "worship-royal-sapphire", "worship-indigo-modern", "minimal-black",
 ];
 
 export function TemplatesStrip() {
