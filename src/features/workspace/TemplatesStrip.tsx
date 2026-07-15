@@ -23,9 +23,10 @@ export function TemplatesStrip() {
   const wsThemesOpen = useWorkspace((s) => s.textFormatThemesOpen);
   const setTextFormatThemesOpen = useWorkspace((s) => s.setTextFormatThemesOpen);
   const setActiveTemplateId = useWorkspace((s) => s.setActiveTemplateId);
+  const wsGalleryOpen = useWorkspace((s) => s.galleryOpen);
+  const setGalleryOpen = useWorkspace((s) => s.setGalleryOpen);
   const [open, setOpen] = useState(() => wsThemesOpen);
   const [active, setActive] = useState<string | null>(wsActiveTemplate ?? activeTemplateId());
-  const [galleryOpen, setGalleryOpen] = useState(false);
   const saveCurrent = useCustomTemplates((s) => s.saveCurrent);
   const customCount = useCustomTemplates((s) => s.templates.length);
 
@@ -119,7 +120,7 @@ export function TemplatesStrip() {
           </div>
         </div>
       )}
-      <ThemeGalleryDialog open={galleryOpen} onOpenChange={(v) => { setGalleryOpen(v); if (!v) setActive(activeTemplateId()); }} />
+      <ThemeGalleryDialog open={wsGalleryOpen} onOpenChange={(v) => { setGalleryOpen(v); if (!v) setActive(activeTemplateId()); }} />
     </div>
   );
 }

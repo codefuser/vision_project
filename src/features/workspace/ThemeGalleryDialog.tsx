@@ -7,6 +7,7 @@ import { TEMPLATE_PRESETS, TEMPLATE_CATEGORIES, type TemplatePreset } from "@/li
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useThemeFavorites } from "@/stores/theme-favorites.store";
 import { applyTemplate, activeTemplateId } from "@/lib/templates/apply";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { ThemeGrid } from "./theme-gallery/ThemeGrid";
 import { ThemeCard } from "./theme-gallery/ThemeCard";
@@ -51,8 +52,12 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const toggleFavorite = useThemeFavorites((s) => s.toggleFavorite);
   const reorderFavorites = useThemeFavorites((s) => s.reorderFavorites);
 
-  const [bucket, setBucket] = useState<Bucket>("All");
-  const [query, setQuery] = useState("");
+  const wsGalleryBucket = useWorkspace((s) => s.galleryBucket);
+  const wsGalleryQuery = useWorkspace((s) => s.galleryQuery);
+  const setGalleryBucket = useWorkspace((s) => s.setGalleryBucket);
+  const setGalleryQuery = useWorkspace((s) => s.setGalleryQuery);
+  const [bucket, setBucket] = useState<Bucket>(() => wsGalleryBucket as Bucket || "All");
+  const [query, setQuery] = useState(() => wsGalleryQuery);
   const [appliedId, setAppliedId] = useState<string | null>(null);
   const [saveOpen, setSaveOpen] = useState(false);
   const [newName, setNewName] = useState("");
@@ -69,6 +74,10 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
       setTimeout(() => searchRef.current?.focus(), 100);
     }
   }, [open, custom]);
+
+  // Sync bucket/query to workspace store for persistence across sessions
+  useEffect(() => { setGalleryBucket(bucket); }, [bucket]);
+  useEffect(() => { setGalleryQuery(query); }, [query]);
 
   const allBuiltin = useMemo(() => TEMPLATE_PRESETS, []);
   const all = useMemo(() => [...custom, ...allBuiltin], [custom, allBuiltin]);

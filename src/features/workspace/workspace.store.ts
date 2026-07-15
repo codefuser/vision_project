@@ -92,6 +92,13 @@ interface WorkspaceState {
     media: number;
     text: number;
   };
+  _hydrated: boolean;
+  galleryOpen: boolean;
+  galleryBucket: string;
+  galleryQuery: string;
+  setGalleryOpen: (open: boolean) => void;
+  setGalleryBucket: (bucket: string) => void;
+  setGalleryQuery: (query: string) => void;
   setActiveTab: (t: WorkspaceTab) => void;
   togglePanel: (key: keyof PanelVisibility) => void;
   showPanel: (key: keyof PanelVisibility) => void;
@@ -140,6 +147,10 @@ const DEFAULTS = {
   selectedTextId: null as string | null,
   activeTemplateId: null as string | null,
   scrollPositions: { songs: 0, bible: 0, media: 0, text: 0 },
+  _hydrated: false,
+  galleryOpen: false,
+  galleryBucket: "All",
+  galleryQuery: "",
 };
 
 const MAX_HISTORY = 50;
@@ -205,6 +216,9 @@ export const useWorkspace = create<WorkspaceState>()(
         set((s) => ({
           scrollPositions: { ...s.scrollPositions, [tab]: position },
         })),
+      setGalleryOpen: (open) => set({ galleryOpen: open }),
+      setGalleryBucket: (bucket) => set({ galleryBucket: bucket }),
+      setGalleryQuery: (query) => set({ galleryQuery: query }),
 
       resetLayout: () => {
         if (typeof window !== "undefined") {
@@ -218,7 +232,14 @@ export const useWorkspace = create<WorkspaceState>()(
     {
       name: "church-media-workspace",
       storage: createJSONStorage(() => localStorage),
-      version: 6,
+      version: 7,
+      partialize: (s) => {
+        const { _hydrated, galleryOpen, ...rest } = s;
+        return rest;
+      },
+      onRehydrateStorage: () => () => {
+        useWorkspace.setState({ _hydrated: true });
+      },
       migrate: (persisted: unknown) => {
         const p = persisted as Record<string, unknown> | undefined;
         return {
@@ -238,6 +259,10 @@ export const useWorkspace = create<WorkspaceState>()(
           selectedTextId: typeof p?.selectedTextId === "string" ? p.selectedTextId : DEFAULTS.selectedTextId,
           activeTemplateId: typeof p?.activeTemplateId === "string" ? p.activeTemplateId : DEFAULTS.activeTemplateId,
           scrollPositions: p?.scrollPositions ? { ...DEFAULTS.scrollPositions, ...(p.scrollPositions as object) } : DEFAULTS.scrollPositions,
+          _hydrated: false,
+          galleryOpen: false,
+          galleryBucket: typeof p?.galleryBucket === "string" ? p.galleryBucket : DEFAULTS.galleryBucket,
+          galleryQuery: typeof p?.galleryQuery === "string" ? p.galleryQuery : DEFAULTS.galleryQuery,
         } as WorkspaceState;
       },
     },

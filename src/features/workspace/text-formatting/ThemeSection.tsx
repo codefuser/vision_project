@@ -6,6 +6,7 @@ import { useThemeFavorites } from "@/stores/theme-favorites.store";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { applyTemplate, activeTemplateId } from "@/lib/templates/apply";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { ThemeGalleryDialog } from "../ThemeGalleryDialog";
 import { TemplatesStrip } from "../TemplatesStrip";
 import { Toggle } from "./shared";
@@ -14,7 +15,8 @@ export function ThemeSection() {
   const groups = useTextFormat((s) => s.groups);
   const reset = useTextFormat((s) => s.reset);
   const saveCurrent = useCustomTemplates((s) => s.saveCurrent);
-  const [galleryOpen, setGalleryOpen] = useState(false);
+  const galleryOpen = useWorkspace((s) => s.galleryOpen);
+  const setGalleryOpen = useWorkspace((s) => s.setGalleryOpen);
   const [activeId, setActiveId] = useState<string | null>(activeTemplateId());
   const activePreset = activeId
     ? TEMPLATE_PRESETS.find((t) => t.id === activeId) ?? null

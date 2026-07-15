@@ -5,6 +5,7 @@ import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
 import { GlobalFavoritesDock } from "@/components/GlobalFavoritesDock";
+import { AppStartupProvider } from "@/components/AppStartupProvider";
 import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
@@ -107,7 +108,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       </aside>
 
 
-      <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex flex-1 flex-col overflow-hidden">
+        <AppStartupProvider>
         {/* Integrated top bar — projector + theme controls. Compact, anchored, not floating. */}
         <header className="flex h-10 shrink-0 items-center justify-end gap-1 border-b border-border bg-background px-3">
           <ProjectorToggleButton projectorOpen={projectorOpen} onToggle={projectorOpen ? closeProjector : openProjector} />
@@ -121,6 +123,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </button>
         </header>
         <main className="flex-1 overflow-hidden">{children}</main>
+      </AppStartupProvider>
       </div>
       <GlobalFavoritesDock />
     </div>

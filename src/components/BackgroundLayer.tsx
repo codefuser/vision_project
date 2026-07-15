@@ -115,13 +115,7 @@ export function BackgroundLayer({ background }: Props) {
 
   if (!backgroundEnabled) return null;
 
-  const animationKind: BackgroundAnimation = (() => {
-    if (!motionEnabled) return "none";
-    const isParticle = bg.animation === "particles" || bg.animation === "golden-particles"
-      || bg.animation === "sparkles" || bg.animation === "floating-dust" || bg.animation === "star-field";
-    if (isParticle && !particlesEnabled) return "none";
-    return bg.animation;
-  })();
+  const animationKind: BackgroundAnimation = (!motionEnabled) ? "none" : bg.animation;
 
   const overlay = bg.overlayOpacity > 0 ? (
     <div className="pointer-events-none absolute inset-0" style={{ background: bg.overlayColor, opacity: bg.overlayOpacity }} />
