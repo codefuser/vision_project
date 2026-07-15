@@ -9,6 +9,8 @@ export interface TextStyle {
   fontWeight: number;
   italic: boolean;
   underline: boolean;
+  uppercase: boolean;
+  smallCaps: boolean;
   color: string;
   textOpacity: number;       // 0..1
   shadow: boolean;
@@ -23,7 +25,10 @@ export interface TextStyle {
   lineHeight: number;        // unit-less
   letterSpacing: number;     // px
   paddingVw: number;         // % of viewport width margins
+  textAnimation: TextAnimation;
 }
+
+export type TextAnimation = "none" | "fade" | "slide-up" | "slide-down" | "scale" | "typewriter";
 
 export const DEFAULT_TEXT_STYLE: TextStyle = {
   fontFamily: "Inter",
@@ -31,6 +36,8 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   fontWeight: 500,
   italic: false,
   underline: false,
+  uppercase: false,
+  smallCaps: false,
   color: "#ffffff",
   textOpacity: 1,
   shadow: true,
@@ -45,6 +52,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   lineHeight: 1.25,
   letterSpacing: 0,
   paddingVw: 6,
+  textAnimation: "none",
 };
 
 /** A SectionStyle wraps a TextStyle with a visibility toggle, used by the

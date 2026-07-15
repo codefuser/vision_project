@@ -1,7 +1,10 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
+import type { GroupedStyles } from "@/lib/broadcast";
 
 export type WorkspaceTab = "media" | "bible" | "songs" | "text";
+
+export type GroupedStylesSnapshot = Pick<GroupedStyles, "reference" | "tamil" | "english" | "background">;
 
 export interface PanelVisibility {
   preview: boolean;
@@ -31,6 +34,38 @@ export interface TextSearchState {
   filter: string;
 }
 
+export const DEFAULT_SECTION_ORDER = [
+  "theme",
+  "quick-text",
+  "color",
+  "alignment",
+  "effects",
+  "animation",
+  "layers",
+  "background",
+  "logo",
+  "advanced-typography",
+  "safe-area",
+  "quick-presets",
+  "history",
+] as const;
+
+const DEFAULT_SECTIONS: Record<string, boolean> = {
+  theme: true,
+  "quick-text": true,
+  color: true,
+  alignment: true,
+  effects: false,
+  animation: false,
+  layers: true,
+  background: true,
+  logo: true,
+  "advanced-typography": false,
+  "safe-area": false,
+  "quick-presets": false,
+  history: false,
+};
+
 interface WorkspaceState {
   activeTab: WorkspaceTab;
   visible: PanelVisibility;
@@ -41,6 +76,9 @@ interface WorkspaceState {
   leftPanelLayout: Record<string, number> | null;
   textFormatActiveSection: string;
   textFormatThemesOpen: boolean;
+  textFormatSections: Record<string, boolean>;
+  historyStack: GroupedStylesSnapshot[];
+  historyIndex: number;
   songsSearch: SongsSearchState;
   bibleSearch: BibleSearchState;
   mediaSearch: MediaSearchState;
@@ -66,6 +104,10 @@ interface WorkspaceState {
   setLeftPanelLayout: (l: Record<string, number> | null) => void;
   setTextFormatActiveSection: (s: string) => void;
   setTextFormatThemesOpen: (v: boolean) => void;
+  setTextFormatSectionOpen: (id: string, open: boolean) => void;
+  pushHistory: (snapshot: GroupedStylesSnapshot) => void;
+  undoHistory: () => GroupedStylesSnapshot | null;
+  redoHistory: () => GroupedStylesSnapshot | null;
   setSongsSearch: (s: Partial<SongsSearchState>) => void;
   setBibleSearch: (s: Partial<BibleSearchState>) => void;
   setMediaSearch: (s: Partial<MediaSearchState>) => void;
@@ -87,6 +129,9 @@ const DEFAULTS = {
   leftPanelLayout: null as Record<string, number> | null,
   textFormatActiveSection: "reference",
   textFormatThemesOpen: true,
+  textFormatSections: { ...DEFAULT_SECTIONS },
+  historyStack: [] as GroupedStylesSnapshot[],
+  historyIndex: -1,
   songsSearch: { query: "", filter: "all", authorFilter: null } as SongsSearchState,
   bibleSearch: { query: "", searchMode: "reference" } as BibleSearchState,
   mediaSearch: { query: "", filter: "all", currentFolderId: null } as MediaSearchState,
@@ -97,9 +142,11 @@ const DEFAULTS = {
   scrollPositions: { songs: 0, bible: 0, media: 0, text: 0 },
 };
 
+const MAX_HISTORY = 50;
+
 export const useWorkspace = create<WorkspaceState>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       ...DEFAULTS,
 
       setActiveTab: (t) => set({ activeTab: t }),
@@ -118,6 +165,31 @@ export const useWorkspace = create<WorkspaceState>()(
       setLeftPanelLayout: (l) => set({ leftPanelLayout: l }),
       setTextFormatActiveSection: (s) => set({ textFormatActiveSection: s }),
       setTextFormatThemesOpen: (v) => set({ textFormatThemesOpen: v }),
+      setTextFormatSectionOpen: (id, open) =>
+        set((s) => ({ textFormatSections: { ...s.textFormatSections, [id]: open } })),
+
+      pushHistory: (snapshot) =>
+        set((s) => {
+          const stack = s.historyStack.slice(0, s.historyIndex + 1);
+          stack.push(snapshot);
+          if (stack.length > MAX_HISTORY) stack.shift();
+          return { historyStack: stack, historyIndex: stack.length - 1 };
+        }),
+      undoHistory: () => {
+        const s = get();
+        if (s.historyIndex < 0) return null;
+        const idx = s.historyIndex - 1;
+        set({ historyIndex: idx });
+        return idx >= 0 ? (s.historyStack[idx] ?? null) : null;
+      },
+      redoHistory: () => {
+        const s = get();
+        if (s.historyIndex >= s.historyStack.length - 1) return null;
+        const idx = s.historyIndex + 1;
+        set({ historyIndex: idx });
+        return s.historyStack[idx] ?? null;
+      },
+
       setSongsSearch: (patch) =>
         set((s) => ({ songsSearch: { ...s.songsSearch, ...patch } })),
       setBibleSearch: (patch) =>
@@ -146,7 +218,7 @@ export const useWorkspace = create<WorkspaceState>()(
     {
       name: "church-media-workspace",
       storage: createJSONStorage(() => localStorage),
-      version: 5,
+      version: 6,
       migrate: (persisted: unknown) => {
         const p = persisted as Record<string, unknown> | undefined;
         return {
@@ -157,6 +229,7 @@ export const useWorkspace = create<WorkspaceState>()(
           leftPanelWidth: typeof p?.leftPanelWidth === "number" ? p.leftPanelWidth : DEFAULTS.leftPanelWidth,
           textFormatActiveSection: typeof p?.textFormatActiveSection === "string" ? p.textFormatActiveSection : DEFAULTS.textFormatActiveSection,
           textFormatThemesOpen: typeof p?.textFormatThemesOpen === "boolean" ? p.textFormatThemesOpen : DEFAULTS.textFormatThemesOpen,
+          textFormatSections: p?.textFormatSections ? { ...DEFAULTS.textFormatSections, ...(p.textFormatSections as object) } : DEFAULTS.textFormatSections,
           songsSearch: p?.songsSearch ? { ...DEFAULTS.songsSearch, ...(p.songsSearch as object) } : DEFAULTS.songsSearch,
           bibleSearch: p?.bibleSearch ? { ...DEFAULTS.bibleSearch, ...(p.bibleSearch as object) } : DEFAULTS.bibleSearch,
           mediaSearch: p?.mediaSearch ? { ...DEFAULTS.mediaSearch, ...(p.mediaSearch as object) } : DEFAULTS.mediaSearch,
