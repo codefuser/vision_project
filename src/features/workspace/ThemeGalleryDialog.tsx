@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Save, Sparkles, X, Check, Pencil, GripVertical } from "lucide-react";
+import { Search, Save, Sparkles, X, Check, Pencil } from "lucide-react";
 import { TEMPLATE_PRESETS, TEMPLATE_CATEGORIES, type TemplatePreset } from "@/lib/templates/presets";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useThemeFavorites } from "@/stores/theme-favorites.store";
@@ -18,13 +18,19 @@ type Bucket =
   | "Modern" | "Classic" | "Bible" | "Worship"
   | "Prayer" | "Animated" | "Seasonal";
 
-const BUCKET_ICONS: Record<Bucket, string> = {
-  All: "⊞", Favorites: "★", Recent: "↻", Custom: "⚙",
-  Modern: "✦", Classic: "🏛", Bible: "📖", Worship: "♫",
-  Prayer: "✠", Animated: "▶", Seasonal: "◈",
-};
-
-interface SideBtn { key: Bucket | "divider"; label: string; }
+const BUCKETS: Array<{ key: Bucket; label: string }> = [
+  { key: "Favorites", label: "Favorites" },
+  { key: "Recent", label: "Recent" },
+  { key: "Custom", label: "Custom" },
+  { key: "All", label: "All Themes" },
+  { key: "Animated", label: "Animated" },
+  { key: "Modern", label: "Modern" },
+  { key: "Classic", label: "Classic" },
+  { key: "Worship", label: "Worship" },
+  { key: "Bible", label: "Bible" },
+  { key: "Prayer", label: "Prayer" },
+  { key: "Seasonal", label: "Seasonal" },
+];
 
 export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const custom = useCustomTemplates((s) => s.templates);
@@ -43,12 +49,14 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
       setAppliedId(activeTemplateId());
       themeCache.prewarm(TEMPLATE_PRESETS);
       themeCache.prewarm(custom);
+      setTimeout(() => searchRef.current?.focus(), 100);
     }
   }, [open, custom]);
 
@@ -56,34 +64,16 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const all = useMemo(() => [...custom, ...allBuiltin], [custom, allBuiltin]);
   const byId = useMemo(() => new Map(all.map((t) => [t.id, t])), [all]);
 
-  const tamilSearch = useMemo(() => [
-    "கர்த்தர்", "இயேசு", "ஆண்டவர்", "தேவன்", "சங்கீதம்",
-    "வேதம்", "ஜெபம்", "துதி", "அல்லேலூயா", "ஆமென்",
-  ], []);
-
   const bucketList = useMemo(() => {
     let list: TemplatePreset[];
     switch (bucket) {
-      case "All":
-        list = all;
-        break;
-      case "Custom":
-        list = custom;
-        break;
-      case "Favorites":
-        list = favorites.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
-        break;
-      case "Recent":
-        list = recents.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
-        break;
-      case "Classic":
-        list = all.filter((t) => t.mood === "classic");
-        break;
-      default:
-        list = all.filter((t) => t.category === bucket);
-        break;
+      case "All": list = all; break;
+      case "Custom": list = custom; break;
+      case "Favorites": list = favorites.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[]; break;
+      case "Recent": list = recents.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[]; break;
+      case "Classic": list = all.filter((t) => t.mood === "classic"); break;
+      default: list = all.filter((t) => t.category === bucket); break;
     }
-
     const q = query.trim().toLowerCase();
     if (q) {
       list = list.filter((t) =>
@@ -93,22 +83,19 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
         t.tags?.some((tag) => tag.toLowerCase().includes(q)) ||
         t.mood?.toLowerCase().includes(q) ||
         t.background.animation?.toLowerCase().includes(q) ||
-        t.background.color?.toLowerCase().includes(q) ||
-        tamilSearch.some((w) => w.toLowerCase().includes(q))
+        t.background.color?.toLowerCase().includes(q)
       );
     }
     return list;
-  }, [bucket, all, custom, favorites, recents, byId, query, tamilSearch]);
+  }, [bucket, all, custom, favorites, recents, byId, query]);
 
   const bucketCounts = useMemo(() => {
     const c = {} as Record<Bucket, number>;
-    c.All = all.length;
-    c.Custom = custom.length;
-    c.Favorites = favorites.length;
-    c.Recent = recents.length;
+    c.All = all.length; c.Custom = custom.length;
+    c.Favorites = favorites.length; c.Recent = recents.length;
     c.Classic = all.filter((t) => t.mood === "classic").length;
     for (const cat of TEMPLATE_CATEGORIES) {
-      if (cat === "Modern" || cat === "Bible" || cat === "Worship" || cat === "Prayer" || cat === "Animated" || cat === "Seasonal") {
+      if (["Modern", "Bible", "Worship", "Prayer", "Animated", "Seasonal"].includes(cat)) {
         c[cat as Bucket] = allBuiltin.filter((t) => t.category === cat).length;
       }
     }
@@ -123,84 +110,66 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const handleSave = useCallback(() => {
     if (!newName.trim()) return;
     saveCurrent(newName.trim());
-    setNewName("");
-    setSaveOpen(false);
-    setBucket("Custom");
+    setNewName(""); setSaveOpen(false); setBucket("Custom");
   }, [newName, saveCurrent]);
 
   const handleStartRename = useCallback((id: string) => {
-    const preset = byId.get(id);
-    if (preset) {
-      setRenaming(id);
-      setRenameValue(preset.name);
-    }
+    const p = byId.get(id);
+    if (p) { setRenaming(id); setRenameValue(p.name); }
   }, [byId]);
 
   const handleFinishRename = useCallback(() => {
-    if (renaming && renameValue.trim()) {
-      renameCustom(renaming, renameValue.trim());
-    }
-    setRenaming(null);
-    setRenameValue("");
+    if (renaming && renameValue.trim()) renameCustom(renaming, renameValue.trim());
+    setRenaming(null); setRenameValue("");
   }, [renaming, renameValue, renameCustom]);
-
-  const handleReorder = useCallback((ids: string[]) => {
-    reorderFavorites(ids);
-  }, [reorderFavorites]);
-
-  const sideButtons: SideBtn[] = useMemo(() => [
-    { key: "Favorites", label: "Favorites" },
-    { key: "Recent", label: "Recent" },
-    { key: "Custom", label: "Custom" },
-    { key: "All", label: "All Themes" },
-    { key: "divider", label: "—" },
-    { key: "Animated", label: "Animated" },
-    { key: "Modern", label: "Modern" },
-    { key: "Classic", label: "Classic" },
-    { key: "Worship", label: "Worship" },
-    { key: "Bible", label: "Bible" },
-    { key: "Prayer", label: "Prayer" },
-    { key: "Seasonal", label: "Seasonal" },
-  ], []);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[1320px] h-[90vh] flex flex-col gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
-        {/* ── Header ── */}
-        <DialogHeader className="shrink-0 border-b border-border px-4 py-2.5">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" />
-              <DialogTitle className="text-sm font-semibold">Theme Browser</DialogTitle>
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-                {allBuiltin.length} built-in{custom.length > 0 && ` · ${custom.length} custom`}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Search name, colour, mood, tag…"
-                  className="h-8 w-56 pl-7 text-xs"
-                />
-                {query && (
-                  <button
-                    onClick={() => setQuery("")}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
+      <DialogContent className="!max-w-[1360px] h-[92vh] flex flex-col gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+        {/* ═══ Header ═══ */}
+        <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-5">
+          <div className="flex items-center gap-4">
+            {/* Left: Title */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
+                <Sparkles className="h-4 w-4 text-primary" />
               </div>
-              <Button size="sm" variant="outline" onClick={() => setSaveOpen(true)} className="h-8 gap-1 text-xs">
-                <Save className="h-3 w-3" /> Save Current
+              <div>
+                <h2 className="text-sm font-semibold leading-tight">Theme Browser</h2>
+                <p className="text-[11px] text-muted-foreground/70 leading-tight">
+                  {allBuiltin.length} built-in{custom.length > 0 && ` · ${custom.length} custom`}
+                </p>
+              </div>
+            </div>
+
+            {/* Center: Search */}
+            <div className="relative flex-1 max-w-md mx-auto">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
+              <Input
+                ref={searchRef}
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search themes…"
+                className="h-10 w-full rounded-xl border-border/60 bg-muted/30 pl-10 pr-9 text-sm placeholder:text-muted-foreground/40 focus-visible:border-primary/40 focus-visible:ring-2 focus-visible:ring-primary/10"
+              />
+              {query && (
+                <button
+                  onClick={() => { setQuery(""); searchRef.current?.focus(); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 flex h-5 w-5 items-center justify-center rounded-full text-muted-foreground/40 hover:bg-muted hover:text-foreground transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Right: Actions */}
+            <div className="flex items-center gap-3 shrink-0">
+              <Button size="sm" variant="outline" onClick={() => setSaveOpen(true)} className="h-9 gap-2 rounded-xl border-border/60 px-4 text-xs font-medium">
+                <Save className="h-3.5 w-3.5" /> Save Current
               </Button>
-              {/* Close button in header — not overlapping */}
               <button
                 onClick={() => onOpenChange(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border/30 text-muted-foreground/60 transition-all duration-200 hover:border-foreground/20 hover:bg-accent hover:text-foreground hover:shadow-lg active:scale-95"
                 title="Close"
               >
                 <X className="h-4 w-4" />
@@ -209,40 +178,36 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
           </div>
         </DialogHeader>
 
-        {/* ── Body: Sidebar + Grid ── */}
+        {/* ═══ Body ═══ */}
         <div className="flex min-h-0 flex-1">
           {/* Sidebar */}
-          <aside className="w-40 shrink-0 overflow-y-auto border-r border-border bg-muted/10 p-1.5">
-            {sideButtons.map((btn) => {
-              if (btn.key === "divider") {
-                return <div key="div" className="my-1.5 border-t border-border/40" />;
-              }
-              const bkey = btn.key as Bucket;
-              return (
-                <button
-                  key={bkey}
-                  onClick={() => setBucket(bkey)}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs transition-all duration-150",
-                    bucket === bkey
-                      ? "bg-primary/10 text-primary font-medium shadow-sm"
-                      : "text-muted-foreground hover:bg-accent",
-                  )}
-                >
-                  <span className="w-4 text-center text-sm leading-none">{BUCKET_ICONS[bkey]}</span>
-                  <span className="flex-1 truncate">{btn.label}</span>
-                  <span className={cn(
-                    "rounded px-1 text-[9px] font-medium",
-                    bucket === bkey ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
-                  )}>
-                    {bucketCounts[bkey] ?? 0}
-                  </span>
-                </button>
-              );
-            })}
+          <aside className="w-44 shrink-0 overflow-y-auto border-r border-border/60 bg-muted/[0.03] px-2.5 py-3">
+            {BUCKETS.map((btn) => (
+              <button
+                key={btn.key}
+                onClick={() => { setBucket(btn.key); searchRef.current?.focus(); }}
+                className={cn(
+                  "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition-all duration-150 mb-0.5",
+                  bucket === btn.key
+                    ? "bg-primary/10 text-primary font-semibold shadow-sm"
+                    : "text-muted-foreground/70 hover:bg-accent/50 hover:text-foreground",
+                )}
+              >
+                <span className={cn(
+                  "flex-1 truncate",
+                  bucket === btn.key && "text-primary",
+                )}>{btn.label}</span>
+                <span className={cn(
+                  "rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-none",
+                  bucket === btn.key ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground/60",
+                )}>
+                  {bucketCounts[btn.key] ?? 0}
+                </span>
+              </button>
+            ))}
           </aside>
 
-          {/* Grid area */}
+          {/* Grid */}
           <main className="flex-1 min-w-0">
             <ThemeGrid
               items={bucketList}
@@ -250,7 +215,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               favorites={favorites}
               onApply={handleApply}
               onToggleFavorite={toggleFavorite}
-              onReorderFavorites={bucket === "Favorites" ? handleReorder : undefined}
+              onReorderFavorites={bucket === "Favorites" ? reorderFavorites : undefined}
               renaming={renaming}
               onRename={(id, name) => { renameCustom(id, name); setRenaming(null); }}
               onStartRename={handleStartRename}
@@ -259,53 +224,57 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
           </main>
         </div>
 
-        {/* ── Save Dialog ── */}
+        {/* ═══ Save Dialog ═══ */}
         <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-          <DialogContent className="!max-w-md gap-3" aria-describedby={undefined}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
+          <DialogContent className="!max-w-md gap-4 p-6 rounded-2xl" aria-describedby={undefined}>
+            <div className="flex items-center gap-3 pb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Save className="h-4 w-4 text-primary" />
-                Save Current as Template
-              </DialogTitle>
-            </DialogHeader>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Save Current as Template</h3>
+                <p className="text-[11px] text-muted-foreground">Captures text styles, background, and logo.</p>
+              </div>
+            </div>
             <Input
               autoFocus
               placeholder="Theme name (e.g. Sunday Morning)"
               value={newName}
               onChange={(e) => setNewName(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleSave(); }}
+              className="h-10 rounded-xl border-border/60"
             />
-            <p className="text-[11px] text-muted-foreground">
-              Captures current text styles, background, and logo settings.
-            </p>
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="outline" onClick={() => setSaveOpen(false)}>Cancel</Button>
-              <Button size="sm" onClick={handleSave} disabled={!newName.trim()}>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button size="sm" variant="ghost" onClick={() => setSaveOpen(false)} className="rounded-xl">Cancel</Button>
+              <Button size="sm" onClick={handleSave} disabled={!newName.trim()} className="rounded-xl gap-1.5">
                 <Check className="h-3.5 w-3.5" /> Save
               </Button>
             </div>
           </DialogContent>
         </Dialog>
 
-        {/* ── Rename Dialog ── */}
+        {/* ═══ Rename Dialog ═══ */}
         <Dialog open={!!renaming} onOpenChange={(v) => { if (!v) { setRenaming(null); setRenameValue(""); } }}>
-          <DialogContent className="!max-w-sm gap-3" aria-describedby={undefined}>
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2 text-base">
+          <DialogContent className="!max-w-sm gap-4 p-6 rounded-2xl" aria-describedby={undefined}>
+            <div className="flex items-center gap-3 pb-1">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Pencil className="h-4 w-4 text-primary" />
-                Rename Theme
-              </DialogTitle>
-            </DialogHeader>
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold">Rename Theme</h3>
+              </div>
+            </div>
             <Input
               autoFocus
               placeholder="Theme name"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter") handleFinishRename(); }}
+              className="h-10 rounded-xl border-border/60"
             />
-            <div className="flex justify-end gap-2">
-              <Button size="sm" variant="outline" onClick={() => { setRenaming(null); setRenameValue(""); }}>Cancel</Button>
-              <Button size="sm" onClick={handleFinishRename} disabled={!renameValue.trim()}>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button size="sm" variant="ghost" onClick={() => { setRenaming(null); setRenameValue(""); }} className="rounded-xl">Cancel</Button>
+              <Button size="sm" onClick={handleFinishRename} disabled={!renameValue.trim()} className="rounded-xl gap-1.5">
                 <Check className="h-3.5 w-3.5" /> Rename
               </Button>
             </div>

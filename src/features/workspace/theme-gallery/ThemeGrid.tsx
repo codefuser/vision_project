@@ -2,11 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { ThemeCard } from "./ThemeCard";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
-import { GripVertical } from "lucide-react";
 
-const CARD_WIDTH = 270;
-const GAP = 14;
-const ROW_HEIGHT = 236 + GAP;
+const GAP = 24;
+const INFO_HEIGHT = 72;
 
 interface ThemeGridProps {
   items: TemplatePreset[];
@@ -23,76 +21,66 @@ interface ThemeGridProps {
 
 export function ThemeGrid({
   items, appliedId, favorites, onApply, onToggleFavorite,
-  onReorderFavorites,
-  renaming, onRename, onStartRename,
-  dragEnabled,
+  onReorderFavorites, renaming, onRename, onStartRename, dragEnabled,
 }: ThemeGridProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
-  const [containerWidth, setContainerWidth] = useState(800);
-  const [containerHeight, setContainerHeight] = useState(600);
+  const [dims, setDims] = useState({ w: 900, h: 600 });
   const duplicateCustom = useCustomTemplates((s) => s.duplicate);
   const removeCustom = useCustomTemplates((s) => s.remove);
-
   const [dragIndex, setDragIndex] = useState<number | null>(null);
-
-  const cols = useMemo(() => {
-    if (containerWidth <= 0) return 3;
-    return Math.max(2, Math.floor((containerWidth + GAP) / (CARD_WIDTH + GAP)));
-  }, [containerWidth]);
-
-  const totalRows = useMemo(() => Math.ceil(items.length / cols), [items.length, cols]);
-
-  const visibleStartRow = useMemo(() => {
-    return Math.max(0, Math.floor(scrollTop / ROW_HEIGHT) - 1);
-  }, [scrollTop]);
-
-  const visibleEndRow = useMemo(() => {
-    return Math.min(totalRows, Math.ceil((scrollTop + containerHeight) / ROW_HEIGHT) + 1);
-  }, [scrollTop, containerHeight, totalRows]);
-
-  const visibleItems = useMemo(() => {
-    const start = visibleStartRow * cols;
-    const end = Math.min(items.length, visibleEndRow * cols);
-    return items.slice(start, end).map((item, i) => ({
-      item,
-      index: start + i,
-      row: visibleStartRow + Math.floor(i / cols),
-    }));
-  }, [items, visibleStartRow, visibleEndRow, cols]);
-
-  const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (el) {
-      setScrollTop(el.scrollTop);
-      setContainerHeight(el.clientHeight);
-    }
-  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setContainerWidth(entry.contentRect.width);
-        setContainerHeight(entry.contentRect.height);
-      }
+      const { width, height } = entries[0].contentRect;
+      setDims({ w: width, h: height });
     });
     ro.observe(el);
-    setContainerWidth(el.clientWidth);
-    setContainerHeight(el.clientHeight);
+    setDims({ w: el.clientWidth, h: el.clientHeight });
     return () => ro.disconnect();
+  }, []);
+
+  const cols = useMemo(() => {
+    if (dims.w >= 1100) return 4;
+    if (dims.w >= 820) return 3;
+    if (dims.w >= 540) return 2;
+    return 1;
+  }, [dims.w]);
+
+  const cardWidth = useMemo(() => {
+    return (dims.w - (cols - 1) * GAP) / cols;
+  }, [dims.w, cols]);
+
+  const cardHeight = useMemo(() => cardWidth * (9 / 16) + INFO_HEIGHT, [cardWidth]);
+  const rowHeight = cardHeight + GAP;
+  const totalRows = Math.ceil(items.length / cols);
+  const totalHeight = totalRows * rowHeight - GAP;
+
+  const startRow = Math.max(0, Math.floor(scrollTop / rowHeight) - 1);
+  const endRow = Math.min(totalRows, Math.ceil((scrollTop + dims.h) / rowHeight) + 1);
+
+  const visibleItems = useMemo(() => {
+    const start = startRow * cols;
+    const end = Math.min(items.length, endRow * cols);
+    return items.slice(start, end).map((item, i) => ({
+      item,
+      absIndex: start + i,
+      row: startRow + Math.floor(i / cols),
+      col: i % cols,
+    }));
+  }, [items, startRow, endRow, cols]);
+
+  const handleScroll = useCallback(() => {
+    const el = containerRef.current;
+    if (el) { setScrollTop(el.scrollTop); setDims((d) => ({ ...d, h: el.clientHeight })); }
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
     setDragIndex(idx);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(idx));
-  }, []);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
   }, []);
 
   const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
@@ -107,58 +95,59 @@ export function ThemeGrid({
 
   if (items.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground px-4">
-        <p className="text-center">
-          <span className="block text-lg mb-1">∅</span>
-          {favorites.length === 0 ? "Tap ★ on any theme to add it here." : "No themes match this filter."}
-        </p>
+      <div className="flex h-full items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/30">
+            <span className="text-lg text-muted-foreground/40">∅</span>
+          </div>
+          <p className="text-sm text-muted-foreground/60">
+            {bucketEmptyMessage(favorites.length)}
+          </p>
+        </div>
       </div>
     );
   }
-
-  const totalHeight = totalRows * ROW_HEIGHT - GAP;
 
   return (
     <div
       ref={containerRef}
       onScroll={handleScroll}
-      className="h-full overflow-y-auto overflow-x-hidden px-4"
+      className="h-full overflow-y-auto overflow-x-hidden px-6 pt-6"
     >
-      <div
-        className="relative w-full will-change-transform"
-        style={{ height: totalHeight }}
-      >
-        {visibleItems.map(({ item, index, row }) => {
-          const col = index % cols;
-          return (
-            <div
-              key={item.id}
-              className="absolute"
-              style={{
-                top: row * ROW_HEIGHT,
-                left: col * (CARD_WIDTH + GAP),
-                width: CARD_WIDTH,
-              }}
-              draggable={dragEnabled}
-              onDragStart={dragEnabled ? (e) => handleDragStart(e, index) : undefined}
-              onDragOver={dragEnabled ? handleDragOver : undefined}
-              onDrop={dragEnabled ? (e) => handleDrop(e, index) : undefined}
-            >
-              <ThemeCard
-                preset={item}
-                isSelected={appliedId === item.id}
-                isFavorite={favorites.includes(item.id)}
-                isCustom={item.id.startsWith("custom-")}
-                onClick={() => onApply(item)}
-                onFavorite={() => onToggleFavorite(item.id)}
-                onDuplicate={() => duplicateCustom(item)}
-                onRename={item.id.startsWith("custom-") ? () => onStartRename(item.id) : undefined}
-                onDelete={() => removeCustom(item.id)}
-              />
-            </div>
-          );
-        })}
+      <div className="relative will-change-transform" style={{ height: totalHeight }}>
+        {visibleItems.map(({ item, absIndex, row, col }) => (
+          <div
+            key={item.id}
+            className="absolute"
+            style={{
+              top: row * rowHeight,
+              left: col * (cardWidth + GAP),
+              width: cardWidth,
+            }}
+            draggable={dragEnabled}
+            onDragStart={dragEnabled ? (e) => handleDragStart(e, absIndex) : undefined}
+            onDragOver={dragEnabled ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } : undefined}
+            onDrop={dragEnabled ? (e) => handleDrop(e, absIndex) : undefined}
+          >
+            <ThemeCard
+              preset={item}
+              isSelected={appliedId === item.id}
+              isFavorite={favorites.includes(item.id)}
+              isCustom={item.id.startsWith("custom-")}
+              onClick={() => onApply(item)}
+              onFavorite={() => onToggleFavorite(item.id)}
+              onDuplicate={() => duplicateCustom(item)}
+              onRename={item.id.startsWith("custom-") ? () => onStartRename(item.id) : undefined}
+              onDelete={() => removeCustom(item.id)}
+            />
+          </div>
+        ))}
       </div>
     </div>
   );
+}
+
+function bucketEmptyMessage(favCount: number) {
+  if (favCount === 0) return "Tap the star on any theme to add it to your favourites.";
+  return "No themes match this filter.";
 }

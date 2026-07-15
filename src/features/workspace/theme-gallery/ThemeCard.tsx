@@ -2,7 +2,7 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { cn } from "@/lib/utils";
 import { ThemeAnimation, getAnimationLabel } from "./ThemeAnimation";
-import { Star, Copy, Trash2, Download, Info, Pencil } from "lucide-react";
+import { Star, Copy, Trash2, Pencil, Check } from "lucide-react";
 
 interface ThemeCardProps {
   preset: TemplatePreset;
@@ -14,37 +14,25 @@ interface ThemeCardProps {
   onDuplicate: () => void;
   onRename?: () => void;
   onDelete: () => void;
-  onExport?: () => void;
-  onInfo?: () => void;
 }
 
 function ThemeCardInner({
   preset, isSelected, isFavorite, isCustom,
-  onClick, onFavorite, onDuplicate, onRename, onDelete, onExport, onInfo,
+  onClick, onFavorite, onDuplicate, onRename, onDelete,
 }: ThemeCardProps) {
   const ref = useRef<HTMLDivElement | null>(null);
   const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
-  const ioRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
     const el = ref.current;
-    if (!el) return;
-    if (visible) return;
-    ioRef.current = new IntersectionObserver(
-      (entries) => {
-        for (const e of entries) {
-          if (e.isIntersecting) {
-            setVisible(true);
-            ioRef.current?.disconnect();
-            break;
-          }
-        }
-      },
+    if (!el || visible) return;
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { setVisible(true); io.disconnect(); } },
       { rootMargin: "200px", threshold: 0 },
     );
-    ioRef.current.observe(el);
-    return () => ioRef.current?.disconnect();
+    io.observe(el);
+    return () => io.disconnect();
   }, [visible]);
 
   const bgGradient = preset.background.gradient;
@@ -59,14 +47,13 @@ function ThemeCardInner({
     color: textColor,
     fontFamily,
     fontWeight,
-    fontSize: "clamp(10px, 2.2vw, 18px)",
+    fontSize: "clamp(11px, 2.4vw, 20px)",
     lineHeight: 1.3,
     textShadow: preset.text.shadow
       ? `${preset.text.shadowColor ?? "#000"} 0 ${Math.min(preset.text.shadowBlur ?? 20, 30) * 0.15}px ${Math.min(preset.text.shadowBlur ?? 20, 30) * 0.3}px`
       : "none",
-    textAlign: preset.text.align ?? "center",
-    letterSpacing: preset.text.letterSpacing ? `${preset.text.letterSpacing * 0.5}px` : "normal",
-  }), [textColor, fontFamily, fontWeight, preset.text.shadow, preset.text.shadowColor, preset.text.shadowBlur, preset.text.align, preset.text.letterSpacing]);
+    textAlign: (preset.text.align ?? "center") as React.CSSProperties["textAlign"],
+  }), [textColor, fontFamily, fontWeight, preset.text.shadow, preset.text.shadowColor, preset.text.shadowBlur, preset.text.align]);
 
   return (
     <div
@@ -78,120 +65,103 @@ function ThemeCardInner({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-xl border bg-card transition-all duration-200 select-none",
+        "group relative cursor-pointer overflow-hidden rounded-2xl bg-card transition-all duration-300 select-none",
         "will-change-transform",
         isSelected
-          ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/20 scale-[1.02]"
-          : "border-transparent hover:border-primary/40 hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.02]",
+          ? "ring-2 ring-primary/40 shadow-xl shadow-primary/10 scale-[1.01]"
+          : "shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.015]",
       )}
-      style={{ contain: "layout style", contentVisibility: "auto" } as React.CSSProperties}
+      style={{ contain: "layout style" } as React.CSSProperties}
     >
-      {/* Preview area */}
+      {/* ── Preview ── */}
       <div className="relative overflow-hidden" style={{ aspectRatio: "16 / 9" }}>
-        {/* Base background */}
-        <div
-          className="absolute inset-0"
-          style={{
-            background: bgGradient ?? bgColor,
-          }}
-        />
+        <div className="absolute inset-0" style={{ background: bgGradient ?? bgColor }} />
 
-        {/* Animated overlay */}
         {isAnimated && visible && (
           <ThemeAnimation animation={animation} paused={!hovered && !isSelected} />
         )}
 
-        {/* Tamil preview text */}
-        <div className="absolute inset-0 flex items-center justify-center p-3" style={sampleStyle}>
-          <div className="line-clamp-3 text-balance">
+        {/* Tamil preview */}
+        <div className="absolute inset-0 flex items-center justify-center px-4 py-3" style={sampleStyle}>
+          <div className="line-clamp-3 text-balance leading-snug">
             <span>கர்த்தர் என்</span>
             <br />
-            <span className="opacity-85">மேய்ப்பராயிருக்கிறார்</span>
+            <span className="opacity-80">மேய்ப்பராயிருக்கிறார்</span>
           </div>
         </div>
 
-        {/* Hover gradient overlay */}
-        <div
-          className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent transition-opacity duration-200",
-            hovered ? "opacity-100" : "opacity-0",
-          )}
-        />
+        {/* Darken overlay on hover */}
+        <div className={cn(
+          "absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent transition-opacity duration-300",
+          hovered ? "opacity-100" : "opacity-0",
+        )} />
 
-        {/* Selected badge */}
+        {/* Active badge */}
         {isSelected && (
-          <div className="absolute left-2 top-2 z-20 flex items-center gap-1 rounded-md bg-primary px-1.5 py-0.5 text-[9px] font-semibold text-primary-foreground shadow-sm">
-            <div className="h-1.5 w-1.5 rounded-full bg-white" />
+          <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground shadow-lg shadow-primary/20">
+            <Check className="h-3 w-3" />
             Active
           </div>
         )}
 
         {/* Animated badge */}
         {isAnimated && !isSelected && visible && (
-          <div className="absolute bottom-2 left-2 z-20 flex items-center gap-1 rounded-md bg-black/50 px-1.5 py-0.5 text-[8px] font-medium text-white/80 backdrop-blur-sm">
-            <div className="h-1 w-1 animate-pulse rounded-full bg-green-400" />
+          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[9px] font-medium text-white/80 backdrop-blur-sm">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
             {getAnimationLabel(animation)}
           </div>
         )}
 
-        {/* Quick actions — appear on hover */}
-        <div
-          className={cn(
-            "absolute right-2 top-2 z-20 flex items-center gap-0.5 transition-all duration-150",
-            hovered ? "translate-y-0 opacity-100" : "translate-y-[-4px] opacity-0 pointer-events-none",
-          )}
-        >
-          <ActionBtn onClick={(e) => { e.stopPropagation(); onFavorite(); }} title={isFavorite ? "Remove from favorites" : "Add to favorites"}>
-            <Star className={cn("h-3 w-3", isFavorite && "fill-yellow-300 text-yellow-300")} />
+        {/* Category badge top-right */}
+        {!isSelected && (
+          <div className="absolute right-3 top-3 z-20">
+            <span className={cn(
+              "rounded-full px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider backdrop-blur-sm",
+              isCustom
+                ? "bg-purple-500/20 text-purple-200"
+                : "bg-white/10 text-white/70",
+            )}>
+              {isCustom ? "Custom" : preset.category}
+            </span>
+          </div>
+        )}
+
+        {/* Hover actions */}
+        <div className={cn(
+          "absolute right-3 top-3 z-20 flex items-center gap-1 transition-all duration-200",
+          hovered ? "translate-y-0 opacity-100" : "translate-y-[-6px] opacity-0 pointer-events-none",
+        )}>
+          <ActionBtn onClick={(e) => { e.stopPropagation(); onFavorite(); }} title={isFavorite ? "Remove from favourites" : "Add to favourites"}>
+            <Star className={cn("h-3.5 w-3.5", isFavorite && "fill-yellow-300 text-yellow-300")} />
           </ActionBtn>
           <ActionBtn onClick={(e) => { e.stopPropagation(); onDuplicate(); }} title="Duplicate">
-            <Copy className="h-3 w-3" />
+            <Copy className="h-3.5 w-3.5" />
           </ActionBtn>
           {isCustom && onRename && (
             <ActionBtn onClick={(e) => { e.stopPropagation(); onRename(); }} title="Rename">
-              <Pencil className="h-3 w-3" />
+              <Pencil className="h-3.5 w-3.5" />
             </ActionBtn>
           )}
           {isCustom && (
-            <ActionBtn onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete" hoverBg="hover:bg-red-500">
-              <Trash2 className="h-3 w-3" />
-            </ActionBtn>
-          )}
-          {onExport && (
-            <ActionBtn onClick={(e) => { e.stopPropagation(); onExport?.(); }} title="Export">
-              <Download className="h-3 w-3" />
-            </ActionBtn>
-          )}
-          {onInfo && (
-            <ActionBtn onClick={(e) => { e.stopPropagation(); onInfo?.(); }} title="Details">
-              <Info className="h-3 w-3" />
+            <ActionBtn onClick={(e) => { e.stopPropagation(); onDelete(); }} title="Delete" hoverBg="hover:bg-red-500/80">
+              <Trash2 className="h-3.5 w-3.5" />
             </ActionBtn>
           )}
         </div>
       </div>
 
-      {/* Info area */}
-      <div className="border-t border-border/50 p-2.5">
-        <div className="flex items-start justify-between gap-1.5">
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[12px] font-semibold leading-tight">{preset.name}</div>
-            <div className="mt-0.5 flex items-center gap-1.5">
-              <span className={cn(
-                "rounded px-1 py-[1px] text-[8px] font-medium leading-none",
-                isCustom
-                  ? "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-                  : "bg-muted/60 text-muted-foreground",
-              )}>
-                {isCustom ? "Custom" : preset.category}
-              </span>
-              {preset.mood && (
-                <span className="text-[8px] text-muted-foreground/60 capitalize">{preset.mood}</span>
-              )}
-            </div>
-          </div>
-          <span className="shrink-0 text-[8px] text-muted-foreground/50">
-            {isFavorite ? "★" : ""}
+      {/* ── Info ── */}
+      <div className="px-3.5 py-3">
+        <div className="truncate text-[13px] font-semibold leading-snug text-foreground/90">
+          {preset.name}
+        </div>
+        <div className="mt-1 flex items-center gap-2">
+          <span className="text-[10px] font-medium text-muted-foreground/50 capitalize tracking-wide">
+            {preset.category}{preset.mood ? ` · ${preset.mood}` : ""}
           </span>
+          {isFavorite && (
+            <span className="text-[9px] text-yellow-500/70">★</span>
+          )}
         </div>
       </div>
     </div>
@@ -208,7 +178,7 @@ function ActionBtn({
       onClick={onClick}
       title={title}
       className={cn(
-        "inline-flex h-6 w-6 items-center justify-center rounded-md bg-black/50 text-white/90 shadow-sm backdrop-blur-sm transition-all duration-150",
+        "flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/80 shadow-sm backdrop-blur-sm transition-all duration-150",
         "hover:bg-white/20 hover:text-white active:scale-90",
         hoverBg,
       )}
