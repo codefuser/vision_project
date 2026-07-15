@@ -1,16 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState, type ComponentType } from "react";
-
-function Loading() {
-  return (
-    <div className="flex h-full items-center justify-center bg-background">
-      <div className="flex flex-col items-center gap-3">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      </div>
-    </div>
-  );
-}
+import { isPreloaded, ensurePreloaded, BlurLoadingOverlay } from "@/features/devhub/devhub-loader";
 
 export const Route = createFileRoute("/contact")({
   head: () => ({
@@ -22,11 +12,25 @@ export const Route = createFileRoute("/contact")({
   component: ContactRoute,
 });
 
+let cached: ComponentType | null = null;
+
 function ContactRoute() {
-  const [Comp, setComp] = useState<ComponentType | null>(null);
+  const [ready, setReady] = useState(!!cached);
+
   useEffect(() => {
-    import("@/features/devhub/ContactPage").then((m) => setComp(() => m.ContactPage));
+    if (cached) {
+      setReady(true);
+      return;
+    }
+    (isPreloaded() ? Promise.resolve() : ensurePreloaded())
+      .then(() => import("@/features/devhub/ContactPage"))
+      .then((m) => {
+        cached = m.ContactPage;
+        setReady(true);
+      });
   }, []);
-  if (!Comp) return <Loading />;
-  return <Comp />;
+
+  if (!ready || !cached) return <BlurLoadingOverlay message="Loading Contact…" />;
+  const Page = cached;
+  return <Page />;
 }
