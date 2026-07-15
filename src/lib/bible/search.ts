@@ -69,7 +69,9 @@ export function parseReference(input: string): ParsedRef | null {
   const trimmed = input.trim();
   if (!trimmed) return null;
   const lower = trimmed.toLowerCase();
-  const tailMatch = lower.match(/^(.*?)(?:[\s:]*?)(\d+)(?:\s*[:.\s-]\s*(\d+))?(?:\s*-\s*(\d+))?\s*$/);
+  const tailMatch = lower.match(
+    /^(.*?)(?:[\s:]*?)(\d+)(?:\s*[:.\s-]\s*(\d+))?(?:\s*-\s*(\d+))?\s*$/,
+  );
   let bookToken = lower;
   let chapter: number | undefined;
   let verse: number | undefined;
@@ -100,38 +102,44 @@ function matchBook(token: string): BibleBookMeta | null {
   const tNoSpace = t.replace(/\s+/g, "");
   for (const b of BIBLE_BOOKS) if (b.aliases.includes(t) || b.aliases.includes(tNoSpace)) return b;
   let best: { b: BibleBookMeta; len: number } | null = null;
-  for (const b of BIBLE_BOOKS) for (const a of b.aliases) {
-    if (a.length < t.length) continue;
-    if (a.startsWith(t) || a.startsWith(tNoSpace)) {
-      if (!best || a.length < best.len) best = { b, len: a.length };
+  for (const b of BIBLE_BOOKS)
+    for (const a of b.aliases) {
+      if (a.length < t.length) continue;
+      if (a.startsWith(t) || a.startsWith(tNoSpace)) {
+        if (!best || a.length < best.len) best = { b, len: a.length };
+      }
     }
-  }
   if (best) return best.b;
-  if (t.length >= 3) for (const b of BIBLE_BOOKS) for (const a of b.aliases) {
-    if (a.includes(t) || a.includes(tNoSpace)) return b;
-  }
+  if (t.length >= 3)
+    for (const b of BIBLE_BOOKS)
+      for (const a of b.aliases) {
+        if (a.includes(t) || a.includes(tNoSpace)) return b;
+      }
   let fuzzy: { b: BibleBookMeta; d: number } | null = null;
-  for (const b of BIBLE_BOOKS) for (const a of b.aliases) {
-    if (Math.abs(a.length - t.length) > 2) continue;
-    const d = editDistance(a, t);
-    const max = a.length >= 6 ? 2 : 1;
-    if (d <= max && (!fuzzy || d < fuzzy.d)) fuzzy = { b, d };
-  }
+  for (const b of BIBLE_BOOKS)
+    for (const a of b.aliases) {
+      if (Math.abs(a.length - t.length) > 2) continue;
+      const d = editDistance(a, t);
+      const max = a.length >= 6 ? 2 : 1;
+      if (d <= max && (!fuzzy || d < fuzzy.d)) fuzzy = { b, d };
+    }
   // Tanglish fuzz fallback
   const nt = normalizeTanglish(t);
   if (!fuzzy && nt.length >= 2) {
-    for (const b of BIBLE_BOOKS) for (const a of b.aliases) {
-      const na = normalizeTanglish(a);
-      if (!na) continue;
-      if (na === nt || na.startsWith(nt) || nt.startsWith(na)) return b;
-    }
+    for (const b of BIBLE_BOOKS)
+      for (const a of b.aliases) {
+        const na = normalizeTanglish(a);
+        if (!na) continue;
+        if (na === nt || na.startsWith(nt) || nt.startsWith(na)) return b;
+      }
   }
   return fuzzy?.b ?? null;
 }
 
 function editDistance(a: string, b: string): number {
   if (a === b) return 0;
-  const al = a.length, bl = b.length;
+  const al = a.length,
+    bl = b.length;
   if (Math.abs(al - bl) > 3) return 4;
   const dp: number[] = new Array(bl + 1);
   for (let j = 0; j <= bl; j++) dp[j] = j;
@@ -161,7 +169,12 @@ export function search(query: string, data: BibleData, lang: BibleLang, limit = 
   return fullTextSearch(q, data, lang, limit);
 }
 
-export function getChapterVerses(book: number, chapter: number, data: BibleData, lang: BibleLang): VerseHit[] {
+export function getChapterVerses(
+  book: number,
+  chapter: number,
+  data: BibleData,
+  lang: BibleLang,
+): VerseHit[] {
   const meta = BIBLE_BOOKS[book];
   if (!meta) return [];
   const ch = data[book]?.[chapter - 1];
@@ -179,7 +192,8 @@ function resolveReference(ref: ParsedRef, data: BibleData, lang: BibleLang): Ver
   }
   const ch = chapters[ref.chapter - 1];
   if (!ch) return [];
-  if (ref.verse == null) return ch.map((text, i) => verseHit(book, ref.chapter!, i + 1, text, lang, 100));
+  if (ref.verse == null)
+    return ch.map((text, i) => verseHit(book, ref.chapter!, i + 1, text, lang, 100));
   const start = ref.verse;
   const end = ref.verseEnd ?? start;
   const out: VerseHit[] = [];
@@ -190,17 +204,35 @@ function resolveReference(ref: ParsedRef, data: BibleData, lang: BibleLang): Ver
   return out;
 }
 
-function verseHit(book: BibleBookMeta, chapter: number, verse: number, text: string, lang: BibleLang, score: number, matched?: string[]): VerseHit {
+function verseHit(
+  book: BibleBookMeta,
+  chapter: number,
+  verse: number,
+  text: string,
+  lang: BibleLang,
+  score: number,
+  matched?: string[],
+): VerseHit {
   return {
-    book: book.index, bookName: book.name,
+    book: book.index,
+    bookName: book.name,
     bookNameLocal: LANG_NAME(lang, book),
-    chapter, verse, text, score, matched,
+    chapter,
+    verse,
+    text,
+    score,
+    matched,
   };
 }
 
 /* ───────── Full-text search with normalization + ranking ───────── */
 
-function fullTextSearch(query: string, data: BibleData, lang: BibleLang, limit: number): VerseHit[] {
+function fullTextSearch(
+  query: string,
+  data: BibleData,
+  lang: BibleLang,
+  limit: number,
+): VerseHit[] {
   const qLower = query.toLowerCase();
   const tokensRaw = qLower.split(/\s+/).filter(Boolean);
   const tokensNorm = tokensRaw.map(normalizeForSearch).filter(Boolean);
@@ -226,8 +258,15 @@ function fullTextSearch(query: string, data: BibleData, lang: BibleLang, limit: 
         for (let i = 0; i < tokensRaw.length; i++) {
           const rt = tokensRaw[i];
           const nt = tokensNorm[i];
-          if (rt && lower.includes(rt)) { exactHits++; matched.push(rt); continue; }
-          if (nt && nt.length >= 2 && norm.includes(nt)) { normHits++; matched.push(rt); }
+          if (rt && lower.includes(rt)) {
+            exactHits++;
+            matched.push(rt);
+            continue;
+          }
+          if (nt && nt.length >= 2 && norm.includes(nt)) {
+            normHits++;
+            matched.push(rt);
+          }
         }
         const totalHits = exactHits + normHits;
         if (totalHits < tokensRaw.length) continue;

@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import {
-  Search, Settings, RotateCcw, Download, Upload, Keyboard,
-  Monitor, Sun, Moon, ChevronRight, X,
+  Search,
+  Settings,
+  RotateCcw,
+  Download,
+  Upload,
+  Keyboard,
+  Monitor,
+  Sun,
+  Moon,
+  ChevronRight,
+  X,
 } from "lucide-react";
 import { useSettings } from "@/stores/settings.store";
 import { db, DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
@@ -11,7 +20,11 @@ import { cn } from "@/lib/utils";
 import { SETTINGS, CATEGORY_META } from "./settings-defs";
 import type { SettingDef } from "./settings-defs";
 import {
-  SettingToggle, SettingSlider, SettingSelect, SettingInput, SettingColor,
+  SettingToggle,
+  SettingSlider,
+  SettingSelect,
+  SettingInput,
+  SettingColor,
   SettingCard,
 } from "./SettingsControls";
 
@@ -29,12 +42,25 @@ function searchSettings(query: string): SearchHit[] {
   const q = query.toLowerCase();
   const results: SearchHit[] = [];
   for (const def of SETTINGS) {
-    const haystacks = [def.title.toLowerCase(), def.description.toLowerCase(), ...def.keywords.map((k) => k.toLowerCase())];
+    const haystacks = [
+      def.title.toLowerCase(),
+      def.description.toLowerCase(),
+      ...def.keywords.map((k) => k.toLowerCase()),
+    ];
     let score = 0;
     for (const h of haystacks) {
-      if (h === q) { score = Math.max(score, 100); break; }
-      if (h.startsWith(q)) { score = Math.max(score, 50); continue; }
-      if (h.includes(q)) { score = Math.max(score, 20); continue; }
+      if (h === q) {
+        score = Math.max(score, 100);
+        break;
+      }
+      if (h.startsWith(q)) {
+        score = Math.max(score, 50);
+        continue;
+      }
+      if (h.includes(q)) {
+        score = Math.max(score, 20);
+        continue;
+      }
     }
     if (score > 0) results.push({ def, score });
   }
@@ -46,9 +72,13 @@ function highlightMatch(text: string, query: string) {
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
   return parts.map((p, i) =>
-    p.toLowerCase() === query.toLowerCase()
-      ? <span key={i} className="rounded-sm bg-primary/20 font-medium text-primary">{p}</span>
-      : p,
+    p.toLowerCase() === query.toLowerCase() ? (
+      <span key={i} className="rounded-sm bg-primary/20 font-medium text-primary">
+        {p}
+      </span>
+    ) : (
+      p
+    ),
   );
 }
 
@@ -58,11 +88,31 @@ function highlightMatch(text: string, query: string) {
 
 function renderControl(def: SettingDef, value: unknown, onChange: (v: unknown) => void) {
   switch (def.type) {
-    case "toggle": return <SettingToggle def={def} value={!!value} onChange={onChange as (v: boolean) => void} />;
-    case "slider": return <SettingSlider def={def} value={Number(value)} onChange={onChange as (v: number) => void} />;
-    case "select": return <SettingSelect def={def} value={String(value)} onChange={onChange as (v: string) => void} />;
-    case "input": case "number": return <SettingInput def={def} value={value as string | number} onChange={onChange as (v: string) => void} />;
-    case "color": return <SettingColor def={def} value={String(value)} onChange={onChange as (v: string) => void} />;
+    case "toggle":
+      return (
+        <SettingToggle def={def} value={!!value} onChange={onChange as (v: boolean) => void} />
+      );
+    case "slider":
+      return (
+        <SettingSlider def={def} value={Number(value)} onChange={onChange as (v: number) => void} />
+      );
+    case "select":
+      return (
+        <SettingSelect def={def} value={String(value)} onChange={onChange as (v: string) => void} />
+      );
+    case "input":
+    case "number":
+      return (
+        <SettingInput
+          def={def}
+          value={value as string | number}
+          onChange={onChange as (v: string) => void}
+        />
+      );
+    case "color":
+      return (
+        <SettingColor def={def} value={String(value)} onChange={onChange as (v: string) => void} />
+      );
   }
 }
 
@@ -86,40 +136,65 @@ export function SettingsPage() {
   }, [load, loaded]);
 
   /* ── Change handler ── */
-  const handleChange = useCallback((key: keyof AppSettings, value: unknown) => {
-    if (savingRef.current) return;
-    savingRef.current = true;
-    setSaving(true);
-    update({ [key]: value } as Partial<AppSettings>)
-      .catch((e) => toast.error("Failed to save: " + (e as Error).message))
-      .finally(() => { savingRef.current = false; setSaving(false); });
-  }, [update]);
+  const handleChange = useCallback(
+    (key: keyof AppSettings, value: unknown) => {
+      if (savingRef.current) return;
+      savingRef.current = true;
+      setSaving(true);
+      update({ [key]: value } as Partial<AppSettings>)
+        .catch((e) => toast.error("Failed to save: " + (e as Error).message))
+        .finally(() => {
+          savingRef.current = false;
+          setSaving(false);
+        });
+    },
+    [update],
+  );
 
   /* ── Reset section ── */
-  const resetSection = useCallback(async (catId: string) => {
-    const defs = SETTINGS.filter((s) => s.category === catId);
-    if (defs.length === 0) return;
-    const patch: Partial<AppSettings> = {};
-    for (const d of defs) (patch as Record<string, unknown>)[d.key] = (DEFAULT_SETTINGS as unknown as Record<string, unknown>)[d.key];
-    setSaving(true);
-    try { await update(patch); toast.success(`${CATEGORY_META[catId]?.title ?? catId} reset to defaults`); }
-    catch (e) { toast.error("Reset failed: " + (e as Error).message); }
-    finally { setSaving(false); }
-  }, [update]);
+  const resetSection = useCallback(
+    async (catId: string) => {
+      const defs = SETTINGS.filter((s) => s.category === catId);
+      if (defs.length === 0) return;
+      const patch: Partial<AppSettings> = {};
+      for (const d of defs)
+        (patch as Record<string, unknown>)[d.key] = (
+          DEFAULT_SETTINGS as unknown as Record<string, unknown>
+        )[d.key];
+      setSaving(true);
+      try {
+        await update(patch);
+        toast.success(`${CATEGORY_META[catId]?.title ?? catId} reset to defaults`);
+      } catch (e) {
+        toast.error("Reset failed: " + (e as Error).message);
+      } finally {
+        setSaving(false);
+      }
+    },
+    [update],
+  );
 
   /* ── Reset all ── */
   const resetAll = useCallback(async () => {
     if (!confirm("Reset all settings to their default values?")) return;
     setSaving(true);
-    try { await update(DEFAULT_SETTINGS); toast.success("All settings restored to defaults"); }
-    catch (e) { toast.error("Reset failed: " + (e as Error).message); }
-    finally { setSaving(false); }
+    try {
+      await update(DEFAULT_SETTINGS);
+      toast.success("All settings restored to defaults");
+    } catch (e) {
+      toast.error("Reset failed: " + (e as Error).message);
+    } finally {
+      setSaving(false);
+    }
   }, [update]);
 
   /* ── Scrolling ── */
   const scrollTo = useCallback((catId: string) => {
     const el = document.getElementById(`section-${catId}`);
-    if (el) { el.scrollIntoView({ behavior: "smooth", block: "start" }); setActiveSection(catId); }
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveSection(catId);
+    }
   }, []);
 
   /* ── IntersectionObserver ── */
@@ -152,7 +227,9 @@ export function SettingsPage() {
   const visibleCategories = useMemo(() => {
     if (!search.trim()) return Object.entries(CATEGORY_META);
     const cats = new Set(searchHits.map((h) => h.def.category));
-    return Object.entries(CATEGORY_META).filter(([id]) => cats.has(id) || id === "keyboard-shortcuts");
+    return Object.entries(CATEGORY_META).filter(
+      ([id]) => cats.has(id) || id === "keyboard-shortcuts",
+    );
   }, [search, searchHits]);
 
   const onSearchKeyDown = (e: React.KeyboardEvent) => {
@@ -166,20 +243,31 @@ export function SettingsPage() {
       const blob = await exportBackup();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = `vision-projector-backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      a.click(); URL.revokeObjectURL(url); toast.success("Backup downloaded");
-    } catch (e) { toast.error("Export failed: " + (e as Error).message); }
-    finally { setBusy(null); }
+      a.href = url;
+      a.download = `vision-projector-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded");
+    } catch (e) {
+      toast.error("Export failed: " + (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
   }, []);
 
   const onImport = useCallback(async (file: File) => {
-    const mode = confirm("Replace existing library? Cancel to merge.") ? "replace" as const : "merge" as const;
+    const mode = confirm("Replace existing library? Cancel to merge.")
+      ? ("replace" as const)
+      : ("merge" as const);
     setBusy("import");
     try {
       await importBackup(file, { mode });
       toast.success("Backup restored – reloading…");
       setTimeout(() => window.location.reload(), 500);
-    } catch (e) { toast.error("Import failed: " + (e as Error).message); setBusy(null); }
+    } catch (e) {
+      toast.error("Import failed: " + (e as Error).message);
+      setBusy(null);
+    }
   }, []);
 
   /* ── Settings by category ── */
@@ -234,7 +322,10 @@ export function SettingsPage() {
             />
             {search && (
               <button
-                onClick={() => { setSearch(""); searchRef.current?.focus(); }}
+                onClick={() => {
+                  setSearch("");
+                  searchRef.current?.focus();
+                }}
                 className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer text-muted-foreground/25 hover:text-muted-foreground"
               >
                 <X className="h-3 w-3" />
@@ -254,7 +345,9 @@ export function SettingsPage() {
                 onClick={() => scrollTo(id)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-left text-xs font-medium transition-all duration-150",
-                  active ? "bg-primary/8 text-primary shadow-xs" : "text-muted-foreground/55 hover:bg-accent/40 hover:text-foreground",
+                  active
+                    ? "bg-primary/8 text-primary shadow-xs"
+                    : "text-muted-foreground/55 hover:bg-accent/40 hover:text-foreground",
                 )}
               >
                 <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -283,14 +376,23 @@ export function SettingsPage() {
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border/25 px-6">
           <h1 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             {search ? (
-              <>{highlightMatch(`"${search}"`, search)} <span className="text-[11px] font-normal text-muted-foreground/40">{searchHits.length} result{searchHits.length !== 1 ? "s" : ""}</span></>
-            ) : "Settings"}
+              <>
+                {highlightMatch(`"${search}"`, search)}{" "}
+                <span className="text-[11px] font-normal text-muted-foreground/40">
+                  {searchHits.length} result{searchHits.length !== 1 ? "s" : ""}
+                </span>
+              </>
+            ) : (
+              "Settings"
+            )}
           </h1>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-muted-foreground/40">
               {saving ? "Saving…" : "All changes saved"}
             </span>
-            <div className={cn("h-1.5 w-1.5 rounded-full", saving ? "bg-amber-500" : "bg-emerald-500")} />
+            <div
+              className={cn("h-1.5 w-1.5 rounded-full", saving ? "bg-amber-500" : "bg-emerald-500")}
+            />
           </div>
         </div>
 
@@ -318,7 +420,9 @@ export function SettingsPage() {
                   <div className="mb-3 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <Icon className="h-4 w-4 text-primary" />
-                      <h2 className="text-sm font-semibold text-foreground">{highlightMatch(meta.title, search)}</h2>
+                      <h2 className="text-sm font-semibold text-foreground">
+                        {highlightMatch(meta.title, search)}
+                      </h2>
                     </div>
                     <button
                       onClick={() => resetSection(id)}
@@ -331,7 +435,11 @@ export function SettingsPage() {
                     <div className="divide-y divide-border/6">
                       {visible.map((def) => {
                         const value = (settings as unknown as Record<string, unknown>)[def.key];
-                        return <div key={def.key}>{renderControl(def, value, (v) => handleChange(def.key, v))}</div>;
+                        return (
+                          <div key={def.key}>
+                            {renderControl(def, value, (v) => handleChange(def.key, v))}
+                          </div>
+                        );
                       })}
                     </div>
                   </div>
@@ -340,13 +448,23 @@ export function SettingsPage() {
             })}
 
             {/* ── Keyboard Shortcuts ── */}
-            {(!search.trim() || (hitKeys && (search.toLowerCase().includes("keyboard") || search.toLowerCase().includes("shortcut")))) && (
+            {(!search.trim() ||
+              (hitKeys &&
+                (search.toLowerCase().includes("keyboard") ||
+                  search.toLowerCase().includes("shortcut")))) && (
               <KeyboardShortcutsSection search={search} />
             )}
 
             {/* ── Backup & Restore ── */}
             {!search.trim() && (
-              <BackupSection onExport={onExport} onImport={onImport} busy={busy} settings={settings} handleChange={handleChange} byCategory={byCategory} />
+              <BackupSection
+                onExport={onExport}
+                onImport={onImport}
+                busy={busy}
+                settings={settings}
+                handleChange={handleChange}
+                byCategory={byCategory}
+              />
             )}
 
             <div className="h-12" />
@@ -378,8 +496,11 @@ function KeyboardShortcutsSection({ search }: { search: string }) {
     { id: "settings", label: "Open Settings", keys: "Ctrl+," },
   ];
 
-  const filtered = shortcuts.filter((s) =>
-    !query.trim() || s.label.toLowerCase().includes(query.toLowerCase()) || s.keys.toLowerCase().includes(query.toLowerCase()),
+  const filtered = shortcuts.filter(
+    (s) =>
+      !query.trim() ||
+      s.label.toLowerCase().includes(query.toLowerCase()) ||
+      s.keys.toLowerCase().includes(query.toLowerCase()),
   );
 
   return (
@@ -404,12 +525,16 @@ function KeyboardShortcutsSection({ search }: { search: string }) {
           {filtered.map((s) => (
             <div key={s.id} className="flex items-center justify-between px-4 py-2.5">
               <span className="text-[13px] text-foreground/80">{s.label}</span>
-              <kbd className="rounded-md border border-border/25 bg-muted/25 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-xs">{s.keys}</kbd>
+              <kbd className="rounded-md border border-border/25 bg-muted/25 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-xs">
+                {s.keys}
+              </kbd>
             </div>
           ))}
         </div>
         {filtered.length === 0 && (
-          <div className="px-4 py-6 text-center text-sm text-muted-foreground/45">No shortcuts found</div>
+          <div className="px-4 py-6 text-center text-sm text-muted-foreground/45">
+            No shortcuts found
+          </div>
         )}
       </div>
     </section>
@@ -420,9 +545,19 @@ function KeyboardShortcutsSection({ search }: { search: string }) {
    Backup Section
    ═══════════════════════════════════════════════════ */
 
-function BackupSection({ onExport, onImport, busy, settings, handleChange, byCategory }: {
-  onExport: () => Promise<void>; onImport: (file: File) => Promise<void>; busy: string | null;
-  settings: AppSettings; handleChange: (k: keyof AppSettings, v: unknown) => void;
+function BackupSection({
+  onExport,
+  onImport,
+  busy,
+  settings,
+  handleChange,
+  byCategory,
+}: {
+  onExport: () => Promise<void>;
+  onImport: (file: File) => Promise<void>;
+  busy: string | null;
+  settings: AppSettings;
+  handleChange: (k: keyof AppSettings, v: unknown) => void;
   byCategory: Map<string, SettingDef[]>;
 }) {
   return (
@@ -436,12 +571,16 @@ function BackupSection({ onExport, onImport, busy, settings, handleChange, byCat
           {/* Backup settings */}
           {byCategory.get("backup")?.map((def) => {
             const value = (settings as unknown as Record<string, unknown>)[def.key];
-            return <div key={def.key}>{renderControl(def, value, (v) => handleChange(def.key, v))}</div>;
+            return (
+              <div key={def.key}>{renderControl(def, value, (v) => handleChange(def.key, v))}</div>
+            );
           })}
 
           {/* Export / Import */}
           <div className="px-4 py-3">
-            <p className="mb-3 text-sm text-foreground/70">Export a backup of all your data, or restore from a previous backup.</p>
+            <p className="mb-3 text-sm text-foreground/70">
+              Export a backup of all your data, or restore from a previous backup.
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 onClick={onExport}
@@ -454,10 +593,17 @@ function BackupSection({ onExport, onImport, busy, settings, handleChange, byCat
               <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-border bg-background/70 px-3.5 py-1.5 text-xs font-medium text-foreground transition-all hover:bg-accent">
                 <Upload className="h-3.5 w-3.5" />
                 {busy === "import" ? "Importing…" : "Import Backup"}
-                <input type="file" accept=".zip,application/zip" hidden onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])} />
+                <input
+                  type="file"
+                  accept=".zip,application/zip"
+                  hidden
+                  onChange={(e) => e.target.files?.[0] && onImport(e.target.files[0])}
+                />
               </label>
             </div>
-            <p className="mt-2 text-[11px] text-muted-foreground/40">Backups include all media files, playlists, settings, and library data.</p>
+            <p className="mt-2 text-[11px] text-muted-foreground/40">
+              Backups include all media files, playlists, settings, and library data.
+            </p>
           </div>
         </div>
       </div>

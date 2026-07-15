@@ -20,8 +20,16 @@ interface ThemeGridProps {
 }
 
 export function ThemeGrid({
-  items, appliedId, favorites, onApply, onToggleFavorite,
-  onReorderFavorites, renaming, onRename, onStartRename, dragEnabled,
+  items,
+  appliedId,
+  favorites,
+  onApply,
+  onToggleFavorite,
+  onReorderFavorites,
+  renaming,
+  onRename,
+  onStartRename,
+  dragEnabled,
 }: ThemeGridProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [scrollTop, setScrollTop] = useState(0);
@@ -74,7 +82,10 @@ export function ThemeGrid({
 
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
-    if (el) { setScrollTop(el.scrollTop); setDims((d) => ({ ...d, h: el.clientHeight })); }
+    if (el) {
+      setScrollTop(el.scrollTop);
+      setDims((d) => ({ ...d, h: el.clientHeight }));
+    }
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
@@ -83,15 +94,18 @@ export function ThemeGrid({
     e.dataTransfer.setData("text/plain", String(idx));
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent, dropIdx: number) => {
-    e.preventDefault();
-    if (dragIndex === null || dragIndex === dropIdx || !onReorderFavorites) return;
-    const reordered = [...items];
-    const [moved] = reordered.splice(dragIndex, 1);
-    reordered.splice(dropIdx, 0, moved);
-    onReorderFavorites(reordered.map((t) => t.id));
-    setDragIndex(null);
-  }, [dragIndex, items, onReorderFavorites]);
+  const handleDrop = useCallback(
+    (e: React.DragEvent, dropIdx: number) => {
+      e.preventDefault();
+      if (dragIndex === null || dragIndex === dropIdx || !onReorderFavorites) return;
+      const reordered = [...items];
+      const [moved] = reordered.splice(dragIndex, 1);
+      reordered.splice(dropIdx, 0, moved);
+      onReorderFavorites(reordered.map((t) => t.id));
+      setDragIndex(null);
+    },
+    [dragIndex, items, onReorderFavorites],
+  );
 
   if (items.length === 0) {
     return (
@@ -100,9 +114,7 @@ export function ThemeGrid({
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/30">
             <span className="text-lg text-muted-foreground/40">∅</span>
           </div>
-          <p className="text-sm text-muted-foreground/60">
-            {bucketEmptyMessage(favorites.length)}
-          </p>
+          <p className="text-sm text-muted-foreground/60">{bucketEmptyMessage(favorites.length)}</p>
         </div>
       </div>
     );
@@ -126,7 +138,14 @@ export function ThemeGrid({
             }}
             draggable={dragEnabled}
             onDragStart={dragEnabled ? (e) => handleDragStart(e, absIndex) : undefined}
-            onDragOver={dragEnabled ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; } : undefined}
+            onDragOver={
+              dragEnabled
+                ? (e) => {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = "move";
+                  }
+                : undefined
+            }
             onDrop={dragEnabled ? (e) => handleDrop(e, absIndex) : undefined}
           >
             <ThemeCard

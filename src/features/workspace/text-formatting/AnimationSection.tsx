@@ -8,9 +8,17 @@ interface Props {
   active: StyleGroup;
 }
 
-const ANIMATIONS: { value: TextAnimation; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+const ANIMATIONS: {
+  value: TextAnimation;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}[] = [
   { value: "none", label: "None", icon: () => <span className="h-3 w-3 inline-block" /> },
-  { value: "fade", label: "Fade In", icon: () => <span className="h-3 w-3 inline-block rounded-sm border opacity-60" /> },
+  {
+    value: "fade",
+    label: "Fade In",
+    icon: () => <span className="h-3 w-3 inline-block rounded-sm border opacity-60" />,
+  },
   { value: "slide-up", label: "Slide Up", icon: MoveRight },
   { value: "slide-down", label: "Slide Down", icon: MoveRight },
   { value: "scale", label: "Scale In", icon: Scale },
@@ -32,7 +40,9 @@ export function AnimationSection({ active }: Props) {
   return (
     <div className="space-y-2.5">
       <div>
-        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Entrance Animation</div>
+        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          Entrance Animation
+        </div>
         <div className="grid grid-cols-3 gap-1.5">
           {ANIMATIONS.map((a) => (
             <button
@@ -55,16 +65,10 @@ export function AnimationSection({ active }: Props) {
       {style.textAnimation !== "none" && (
         <>
           <Field label="Duration">
-            <Select
-              value={String(0.5)}
-              onChange={() => {}}
-              options={DURATIONS}
-            />
+            <Select value={String(0.5)} onChange={() => {}} options={DURATIONS} />
           </Field>
 
-          <button
-            className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-[10px] font-medium text-primary transition hover:bg-primary/10"
-          >
+          <button className="inline-flex w-full cursor-pointer items-center justify-center gap-1.5 rounded-md border border-primary/30 bg-primary/5 px-3 py-1.5 text-[10px] font-medium text-primary transition hover:bg-primary/10">
             <Play className="h-3 w-3" /> Preview Animation
           </button>
 

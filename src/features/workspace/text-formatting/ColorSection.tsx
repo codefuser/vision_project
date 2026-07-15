@@ -14,10 +14,7 @@ export function ColorSection({ active }: Props) {
   return (
     <div className="space-y-2.5">
       <Field label="Text Color">
-        <ColorInput
-          value={style.color}
-          onChange={(v) => setField(active, "color", v)}
-        />
+        <ColorInput value={style.color} onChange={(v) => setField(active, "color", v)} />
       </Field>
 
       <Row>

@@ -4,7 +4,13 @@
  * sees exactly what will be generated before saving.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
@@ -31,10 +37,16 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
     const u = userSongs.find((x) => x.id === editingId);
     if (u) return { ...u, isUser: true };
     const lib = getSongs()?.find((s) => s.id === editingId);
-    if (lib) return {
-      id: lib.id, title: lib.title, content: lib.content,
-      artist: lib.artist, album: lib.album, scale: lib.scale, isUser: false,
-    };
+    if (lib)
+      return {
+        id: lib.id,
+        title: lib.title,
+        content: lib.content,
+        artist: lib.artist,
+        album: lib.album,
+        scale: lib.scale,
+        isUser: false,
+      };
     return null;
   }, [editingId, userSongs, open]);
 
@@ -54,12 +66,22 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
   const save = () => {
     const t = title.trim();
     const c = lyrics.trim();
-    if (!t) { toast.error("Title is required"); return; }
-    if (!c) { toast.error("Lyrics are required"); return; }
+    if (!t) {
+      toast.error("Title is required");
+      return;
+    }
+    if (!c) {
+      toast.error("Lyrics are required");
+      return;
+    }
     if (editing) {
       upsertUserSong({
-        id: editing.id, title: t, content: c, artist: artist.trim(),
-        album: editing.album, scale: editing.scale,
+        id: editing.id,
+        title: t,
+        content: c,
+        artist: artist.trim(),
+        album: editing.album,
+        scale: editing.scale,
       });
       toast.success(editing.isUser ? "Song updated" : "Library song overridden");
     } else {
@@ -88,11 +110,22 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
           <div className="space-y-2">
             <div>
               <label className="text-[11px] font-medium text-muted-foreground">Title (தமிழ்)</label>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="பாடல் தலைப்பு" autoFocus />
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="பாடல் தலைப்பு"
+                autoFocus
+              />
             </div>
             <div>
-              <label className="text-[11px] font-medium text-muted-foreground">Artist (optional)</label>
-              <Input value={artist} onChange={(e) => setArtist(e.target.value)} placeholder="இசையமைப்பாளர் / பாடகர்" />
+              <label className="text-[11px] font-medium text-muted-foreground">
+                Artist (optional)
+              </label>
+              <Input
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder="இசையமைப்பாளர் / பாடகர்"
+              />
             </div>
             <div>
               <label className="text-[11px] font-medium text-muted-foreground">
@@ -102,7 +135,9 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
                 value={lyrics}
                 onChange={(e) => setLyrics(e.target.value)}
                 rows={16}
-                placeholder={"இயேசு என் இரட்சகர்\nஇயேசு என் ஆண்டவர்\n\n(chorus)\nஅல்லேலூயா அல்லேலூயா"}
+                placeholder={
+                  "இயேசு என் இரட்சகர்\nஇயேசு என் ஆண்டவர்\n\n(chorus)\nஅல்லேலூயா அல்லேலூயா"
+                }
                 className="font-mono text-sm"
               />
             </div>
@@ -129,7 +164,9 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
           </div>
         </div>
         <DialogFooter>
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
           <Button onClick={save}>{editing ? "Save changes" : "Create song"}</Button>
         </DialogFooter>
       </DialogContent>

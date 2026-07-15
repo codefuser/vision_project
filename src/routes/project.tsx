@@ -21,9 +21,5 @@ function ProjectRoute() {
     return window.opener && window.name === "church-projector" ? "popup" : "control";
   });
   if (mode === "popup") return <ProjectionWindow />;
-  return (
-    <ProjectionWorkspace />
-  );
+  return <ProjectionWorkspace />;
 }
-
-

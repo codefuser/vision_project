@@ -36,8 +36,8 @@ function normalize(key: string): string {
   // secondary lookups only — exact lookup still wins first.
   return key
     .toLowerCase()
-    .replace(/(.)\1+/g, "$1")          // collapse doubled letters
-    .replace(/h(?=[^aeiou]|$)/g, "")   // drop trailing 'h' after consonants
+    .replace(/(.)\1+/g, "$1") // collapse doubled letters
+    .replace(/h(?=[^aeiou]|$)/g, "") // drop trailing 'h' after consonants
     .replace(/[^a-z]/g, "");
 }
 
@@ -132,7 +132,12 @@ export function suggest(prefix: string, limit = 6): Suggestion[] {
 
   const out: Suggestion[] = [];
   const seen = new Set<string>();
-  const push = (tamil: string, key: string, score: number, source: "church" | "corpus" | "phonetic") => {
+  const push = (
+    tamil: string,
+    key: string,
+    score: number,
+    source: "church" | "corpus" | "phonetic",
+  ) => {
     if (seen.has(tamil)) return;
     seen.add(tamil);
     out.push({ tamil, key, score, source });
@@ -142,7 +147,8 @@ export function suggest(prefix: string, limit = 6): Suggestion[] {
 
   // 1) Exact
   const exact = MERGED!.get(p);
-  if (exact) for (const t of exact.candidates) push(t, p, 0 + sourceBoost(exact.source), exact.source);
+  if (exact)
+    for (const t of exact.candidates) push(t, p, 0 + sourceBoost(exact.source), exact.source);
 
   // 1b) Normalized exact
   const np = normalize(p);
@@ -175,7 +181,8 @@ export function suggest(prefix: string, limit = 6): Suggestion[] {
         if (d === Infinity) continue;
         const entry = MERGED!.get(k);
         if (!entry) continue;
-        for (const t of entry.candidates) push(t, k, 2 + d + sourceBoost(entry.source), entry.source);
+        for (const t of entry.candidates)
+          push(t, k, 2 + d + sourceBoost(entry.source), entry.source);
       }
     }
   }

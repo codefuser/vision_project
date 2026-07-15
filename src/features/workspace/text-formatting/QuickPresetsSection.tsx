@@ -4,7 +4,13 @@ import { cn } from "@/lib/utils";
 const QUICK_PRESETS = [
   { id: "mw-mono-bold", name: "Large Text", icon: "T", desc: "Bold & readable" },
   { id: "mn-light", name: "Small Text", icon: "t", desc: "Compact details" },
-  { id: "bs-parchment", name: "Bible", icon: "B", desc: "Scripture focus", category: "Bible Study" },
+  {
+    id: "bs-parchment",
+    name: "Bible",
+    icon: "B",
+    desc: "Scripture focus",
+    category: "Bible Study",
+  },
   { id: "mw-slate", name: "Lyrics", icon: "♪", desc: "Song presentation" },
   { id: "cw-navy", name: "Reference", icon: "¶", desc: "Citation style" },
   { id: "ss-sky", name: "Announcement", icon: "A", desc: "Clear & bright" },
@@ -26,7 +32,9 @@ export function QuickPresetsSection() {
           }}
           className={cn(
             "flex cursor-pointer flex-col items-center gap-0.5 rounded-md border px-1.5 py-2 text-center transition-all hover:border-primary/40 hover:bg-accent",
-            p.id === "mn-charcoal" ? "border-dashed border-border text-muted-foreground" : "border-border bg-background",
+            p.id === "mn-charcoal"
+              ? "border-dashed border-border text-muted-foreground"
+              : "border-border bg-background",
           )}
           title={p.desc}
         >

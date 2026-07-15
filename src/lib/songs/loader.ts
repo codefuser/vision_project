@@ -3,11 +3,11 @@ import { songStem, songLower } from "./normalize";
 
 export interface RawSong {
   id: number;
-  t: string;   // title
-  c: string;   // content (lyrics)
-  a: string;   // artist
-  al: string;  // album
-  s: string;   // scale
+  t: string; // title
+  c: string; // content (lyrics)
+  a: string; // artist
+  al: string; // album
+  s: string; // scale
 }
 
 export interface Song {
@@ -40,7 +40,15 @@ export function buildSlides(content: string): string[] {
     .filter(Boolean);
 }
 
-export function buildSong(raw: { id: number; title: string; content: string; artist?: string; album?: string; scale?: string; userCreated?: boolean }): Song {
+export function buildSong(raw: {
+  id: number;
+  title: string;
+  content: string;
+  artist?: string;
+  album?: string;
+  scale?: string;
+  userCreated?: boolean;
+}): Song {
   const title = (raw.title || "").trim();
   const content = (raw.content || "").trim();
   const slides = buildSlides(content);
@@ -86,7 +94,10 @@ export function setUserSongs(songs: Song[]) {
 export async function loadSongs(): Promise<Song[]> {
   if (cache) return cache;
   if (inflight) return inflight;
-  const url = (asset as { url: string }).url.replace(/^\/__l5e/, "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e");
+  const url = (asset as { url: string }).url.replace(
+    /^\/__l5e/,
+    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
+  );
   inflight = fetch(url)
     .then((r) => {
       if (!r.ok) throw new Error(`Failed to load songs: ${r.status}`);

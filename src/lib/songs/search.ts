@@ -61,11 +61,13 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
   const qLower = songLower(q);
   const qStem = songStem(q);
   const rawTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const tokens = rawTokens.map((t) => ({
-    raw: t,
-    lower: songLower(t),
-    stem: songStem(t),
-  })).filter((t) => t.stem.length >= 1 || t.lower.length >= 2);
+  const tokens = rawTokens
+    .map((t) => ({
+      raw: t,
+      lower: songLower(t),
+      stem: songStem(t),
+    }))
+    .filter((t) => t.stem.length >= 1 || t.lower.length >= 2);
 
   if (!tokens.length) return [];
 
@@ -82,30 +84,38 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     for (const tok of tokens) {
       let found = false;
       if (tok.lower && s.titleLower.includes(tok.lower)) {
-        titleHits++; matched.push(tok.raw); found = true;
+        titleHits++;
+        matched.push(tok.raw);
+        found = true;
       } else if (tok.stem.length >= 2 && s.titleStem.includes(tok.stem)) {
-        titleStemHits++; matched.push(tok.raw); found = true;
+        titleStemHits++;
+        matched.push(tok.raw);
+        found = true;
       } else if (tok.lower && s.contentLower.includes(tok.lower)) {
-        contentHits++; matched.push(tok.raw); found = true;
+        contentHits++;
+        matched.push(tok.raw);
+        found = true;
       } else if (tok.stem.length >= 2 && s.contentStem.includes(tok.stem)) {
-        contentStemHits++; matched.push(tok.raw); found = true;
+        contentStemHits++;
+        matched.push(tok.raw);
+        found = true;
       }
-      if (!found) { allMatched = false; break; }
+      if (!found) {
+        allMatched = false;
+        break;
+      }
     }
     if (!allMatched) continue;
 
-    let score =
-      titleHits * 220 +
-      titleStemHits * 140 +
-      contentHits * 30 +
-      contentStemHits * 18;
+    let score = titleHits * 220 + titleStemHits * 140 + contentHits * 30 + contentStemHits * 18;
     if (qLower && s.titleLower.includes(qLower)) score += 320;
     if (qStem && s.titleStem.includes(qStem)) score += 80;
     if (qLower && s.contentLower.includes(qLower)) score += 90;
     score -= Math.min(40, Math.floor(s.content.length / 400));
 
     // Pick best slide (stem-aware) for jump-to-slide.
-    let bestSlide = 0, bestScore = -1;
+    let bestSlide = 0,
+      bestScore = -1;
     for (let j = 0; j < s.slides.length; j++) {
       const sl = s.slides[j].toLowerCase();
       const st = s.slideStems[j] ?? "";
@@ -115,7 +125,10 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         else if (tok.stem.length >= 2 && st.includes(tok.stem)) sc += 4;
       }
       if (qLower && sl.includes(qLower)) sc += 12;
-      if (sc > bestScore) { bestScore = sc; bestSlide = j; }
+      if (sc > bestScore) {
+        bestScore = sc;
+        bestSlide = j;
+      }
     }
 
     hits.push({ song: s, score, slideIndex: bestSlide, matched });

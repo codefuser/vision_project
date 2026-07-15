@@ -1,5 +1,14 @@
 import { useMemo, useState } from "react";
-import { Plus, Folder, Trash2, ChevronLeft, Search as SearchIcon, Send, ListOrdered, X } from "lucide-react";
+import {
+  Plus,
+  Folder,
+  Trash2,
+  ChevronLeft,
+  Search as SearchIcon,
+  Send,
+  ListOrdered,
+  X,
+} from "lucide-react";
 import { useBibleCollections, type Collection } from "@/stores/bible-collections.store";
 import { useBibleQueue } from "@/stores/bible-queue.store";
 import { projectVerseAt } from "@/lib/bible/project-ref";
@@ -12,7 +21,7 @@ export function CollectionsPanel() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
 
-  const active = activeId ? collections.find((c) => c.id === activeId) ?? null : null;
+  const active = activeId ? (collections.find((c) => c.id === activeId) ?? null) : null;
 
   if (active) return <CollectionDetail collection={active} onBack={() => setActiveId(null)} />;
 
@@ -30,7 +39,9 @@ export function CollectionsPanel() {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") handleCreate(); }}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleCreate();
+          }}
           placeholder="New collection name…"
           className="h-7 text-xs"
         />

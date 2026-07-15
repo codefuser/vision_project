@@ -29,9 +29,7 @@ export const useBibleRecent = create<RecentStore>()(
       push: (v) =>
         set((s) => {
           const key = `${v.book}:${v.chapter}:${v.verse}`;
-          const filtered = s.items.filter(
-            (x) => `${x.book}:${x.chapter}:${x.verse}` !== key,
-          );
+          const filtered = s.items.filter((x) => `${x.book}:${x.chapter}:${x.verse}` !== key);
           return { items: [{ ...v, at: Date.now() }, ...filtered].slice(0, MAX) };
         }),
       clear: () => set({ items: [] }),

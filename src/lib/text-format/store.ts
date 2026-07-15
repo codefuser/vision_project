@@ -23,7 +23,11 @@ interface TextFormatStore {
   groups: GroupedStyles;
   /** Legacy alias mirroring the english group — keeps existing imports compiling. */
   style: TextStyle;
-  setField: <K extends keyof SectionStyle>(group: StyleGroup, key: K, value: SectionStyle[K]) => void;
+  setField: <K extends keyof SectionStyle>(
+    group: StyleGroup,
+    key: K,
+    value: SectionStyle[K],
+  ) => void;
   /** Legacy single-group setter (writes to english) — preserved for compatibility. */
   set: <K extends keyof TextStyle>(key: K, value: TextStyle[K]) => void;
   patchGroup: (group: StyleGroup, partial: Partial<SectionStyle>) => void;
@@ -103,7 +107,9 @@ export const useTextFormat = create<TextFormatStore>()(
             type: "UPDATE_BACKGROUND",
             background: get().groups.background,
           });
-        } catch { /* */ }
+        } catch {
+          /* */
+        }
         broadcastSoon(get().groups);
       },
       reset: () => {
@@ -117,7 +123,7 @@ export const useTextFormat = create<TextFormatStore>()(
         set((s) => {
           const next: GroupedStyles = {
             ...s.groups,
-            [group]: { ...DEFAULT_GROUPED_STYLES[group] as SectionStyle },
+            [group]: { ...(DEFAULT_GROUPED_STYLES[group] as SectionStyle) },
           };
           return { groups: next, style: stripSection(next.english) };
         });
@@ -141,7 +147,10 @@ export const useTextFormat = create<TextFormatStore>()(
           };
           return { groups, style: stripSection(groups.english) } as never;
         }
-        return { groups: DEFAULT_GROUPED_STYLES, style: stripSection(DEFAULT_GROUPED_STYLES.english) } as never;
+        return {
+          groups: DEFAULT_GROUPED_STYLES,
+          style: stripSection(DEFAULT_GROUPED_STYLES.english),
+        } as never;
       },
     },
   ),

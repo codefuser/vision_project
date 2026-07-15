@@ -25,7 +25,13 @@ interface MediaDeleteDialogProps {
  *   - Shows count + sample names for multi-select.
  *   - Enter = confirm, Escape = cancel (provided by Radix Dialog + form).
  */
-export function MediaDeleteDialog({ open, items, folders, onCancel, onConfirm }: MediaDeleteDialogProps) {
+export function MediaDeleteDialog({
+  open,
+  items,
+  folders,
+  onCancel,
+  onConfirm,
+}: MediaDeleteDialogProps) {
   const [busy, setBusy] = useState(false);
   const confirmRef = useRef<HTMLButtonElement>(null);
 
@@ -60,7 +66,7 @@ export function MediaDeleteDialog({ open, items, folders, onCancel, onConfirm }:
   };
 
   const folderName = (id: string | null) =>
-    id === null ? "All Media" : folders.find((f) => f.id === id)?.name ?? "Unknown folder";
+    id === null ? "All Media" : (folders.find((f) => f.id === id)?.name ?? "Unknown folder");
 
   const single = items.length === 1 ? items[0] : null;
 
@@ -72,9 +78,7 @@ export function MediaDeleteDialog({ open, items, folders, onCancel, onConfirm }:
             <AlertTriangle className="h-4 w-4 text-destructive" />
             Delete {single ? "file" : `${items.length} files`}
           </DialogTitle>
-          <DialogDescription>
-            This action cannot be undone.
-          </DialogDescription>
+          <DialogDescription>This action cannot be undone.</DialogDescription>
         </DialogHeader>
 
         {single ? (
@@ -90,7 +94,9 @@ export function MediaDeleteDialog({ open, items, folders, onCancel, onConfirm }:
             </div>
             <ul className="max-h-32 space-y-0.5 overflow-y-auto text-xs">
               {items.slice(0, 8).map((m) => (
-                <li key={m.id} className="truncate text-foreground/80">• {m.name}</li>
+                <li key={m.id} className="truncate text-foreground/80">
+                  • {m.name}
+                </li>
               ))}
               {items.length > 8 && (
                 <li className="text-muted-foreground">…and {items.length - 8} more</li>
@@ -126,8 +132,15 @@ export function MediaDeleteDialog({ open, items, folders, onCancel, onConfirm }:
 function Row({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   return (
     <div className="flex items-baseline gap-3 py-0.5">
-      <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-      <span className={"min-w-0 flex-1 truncate " + (mono ? "font-mono text-xs" : "text-sm")} title={value}>{value}</span>
+      <span className="w-16 shrink-0 text-xs uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
+      <span
+        className={"min-w-0 flex-1 truncate " + (mono ? "font-mono text-xs" : "text-sm")}
+        title={value}
+      >
+        {value}
+      </span>
     </div>
   );
 }

@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { DEFAULT_GROUPED_STYLES, getChannel, type ProjectionCommand, type ProjectionState } from "@/lib/broadcast";
+import {
+  DEFAULT_GROUPED_STYLES,
+  getChannel,
+  type ProjectionCommand,
+  type ProjectionState,
+} from "@/lib/broadcast";
 import {
   buildPopupFeatures,
   getDisplayDiagnostics,
@@ -45,7 +50,8 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
       const data = ev.data;
       if (data?.type === "STATE") set({ state: data as ProjectionState });
       if (data?.type === "PROJECTOR_OPEN") set({ projectorOpen: true });
-      if (data?.type === "PROJECTOR_CLOSED") set({ projectorOpen: false, windowRef: null, state: null });
+      if (data?.type === "PROJECTOR_CLOSED")
+        set({ projectorOpen: false, windowRef: null, state: null });
     };
     set({ channel: ch });
   },
@@ -59,7 +65,9 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
     // 1. Request Window Management permission (must be inside the user gesture
     //    that triggered openProjector). This populates screen details so we
     //    can place the popup directly on the external display.
-    const preferred = preferredScreenId ?? (typeof localStorage !== "undefined" ? localStorage.getItem(PREFERRED_SCREEN_KEY) : null);
+    const preferred =
+      preferredScreenId ??
+      (typeof localStorage !== "undefined" ? localStorage.getItem(PREFERRED_SCREEN_KEY) : null);
     let targetScreen: ScreenInfo | null = null;
     try {
       await requestScreenDetails();
@@ -142,18 +150,56 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
             groupedStyles: cmd.styles ?? cur.groupedStyles,
           };
           break;
-        case "UPDATE_TEXT_STYLE": next = { ...cur, textStyle: cmd.style }; break;
-        case "UPDATE_STYLES": next = { ...cur, groupedStyles: cmd.styles }; break;
-        case "UPDATE_BACKGROUND": next = { ...cur, groupedStyles: { ...(cur.groupedStyles ?? DEFAULT_GROUPED_STYLES), background: cmd.background } }; break;
-        case "UPDATE_LOGO": next = { ...cur, logo: cmd.logo }; break;
-        case "PLAY":  next = { ...cur, playing: true }; break;
-        case "PAUSE": next = { ...cur, playing: false }; break;
-        case "STOP":  next = { ...cur, playing: false, mode: "idle", currentMediaId: null, index: 0, total: 0, textOverlay: null }; break;
-        case "BLACK": next = { ...cur, black: cmd.value }; break;
-        case "MUTE":  next = { ...cur, muted: cmd.value }; break;
-        case "VOLUME":next = { ...cur, volume: cmd.value }; break;
-        case "RATE":  next = { ...cur, playbackRate: cmd.value }; break;
-        case "LOOP":  next = { ...cur, loop: cmd.value }; break;
+        case "UPDATE_TEXT_STYLE":
+          next = { ...cur, textStyle: cmd.style };
+          break;
+        case "UPDATE_STYLES":
+          next = { ...cur, groupedStyles: cmd.styles };
+          break;
+        case "UPDATE_BACKGROUND":
+          next = {
+            ...cur,
+            groupedStyles: {
+              ...(cur.groupedStyles ?? DEFAULT_GROUPED_STYLES),
+              background: cmd.background,
+            },
+          };
+          break;
+        case "UPDATE_LOGO":
+          next = { ...cur, logo: cmd.logo };
+          break;
+        case "PLAY":
+          next = { ...cur, playing: true };
+          break;
+        case "PAUSE":
+          next = { ...cur, playing: false };
+          break;
+        case "STOP":
+          next = {
+            ...cur,
+            playing: false,
+            mode: "idle",
+            currentMediaId: null,
+            index: 0,
+            total: 0,
+            textOverlay: null,
+          };
+          break;
+        case "BLACK":
+          next = { ...cur, black: cmd.value };
+          break;
+        case "MUTE":
+          next = { ...cur, muted: cmd.value };
+          break;
+        case "VOLUME":
+          next = { ...cur, volume: cmd.value };
+          break;
+        case "RATE":
+          next = { ...cur, playbackRate: cmd.value };
+          break;
+        case "LOOP":
+          next = { ...cur, loop: cmd.value };
+          break;
       }
       if (next !== cur) set({ state: next });
     }

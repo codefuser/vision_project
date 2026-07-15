@@ -73,9 +73,7 @@ export function FolderCreateDialog({
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New folder</DialogTitle>
-          {parentLabel && (
-            <DialogDescription>Inside: {parentLabel}</DialogDescription>
-          )}
+          {parentLabel && <DialogDescription>Inside: {parentLabel}</DialogDescription>}
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-3">
           <label className="text-xs text-muted-foreground">Folder name</label>

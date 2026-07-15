@@ -48,7 +48,7 @@ export const useCustomTemplates = create<CustomTemplatesStore>()(
         const preset: TemplatePreset = {
           ...source,
           id,
-          name: (name?.trim() || `${source.name} (Copy)`),
+          name: name?.trim() || `${source.name} (Copy)`,
           description: source.description,
           category: source.category ?? "Worship",
         };

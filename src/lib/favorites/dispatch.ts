@@ -37,14 +37,21 @@ export async function activateBibleFavorite(
 
   useWorkspace.getState().setActiveTab("bible");
   if (typeof window !== "undefined" && window.location.pathname !== "/project") {
-    try { await Promise.resolve(navigate({ to: "/project" })); } catch { /* */ }
+    try {
+      await Promise.resolve(navigate({ to: "/project" }));
+    } catch {
+      /* */
+    }
   }
   bs.setQuery(`${meta.name} ${chapter}`);
 
   const primary = bs.displayMode === "ta" ? "ta" : "en";
   const dp = getBible(primary);
   const dotxt = dp?.[book]?.[chapter - 1]?.[verse - 1];
-  if (!dotxt) { toast.error("Verse not available yet — loading…"); return; }
+  if (!dotxt) {
+    toast.error("Verse not available yet — loading…");
+    return;
+  }
   const otherLang = bs.displayMode === "both" ? (primary === "en" ? "ta" : "en") : null;
   const otherTxt = otherLang ? getBible(otherLang)?.[book]?.[chapter - 1]?.[verse - 1] : null;
 
@@ -54,7 +61,7 @@ export async function activateBibleFavorite(
   const taTxt = primary === "ta" ? dotxt : (otherTxt ?? "");
 
   projectVerse({
-    reference: bs.displayMode === "both" ? `${refTa} | ${refEn}` : (primary === "ta" ? refTa : refEn),
+    reference: bs.displayMode === "both" ? `${refTa} | ${refEn}` : primary === "ta" ? refTa : refEn,
     text: dotxt,
     translation: primary === "ta" ? "தமிழ்" : "KJV",
     subtext: otherTxt ?? undefined,
@@ -63,14 +70,19 @@ export async function activateBibleFavorite(
     referenceTa: refTa,
     textEn: enTxt,
     textTa: taTxt,
-    mode: bs.displayMode === "both" ? "both" : (primary === "ta" ? "ta" : "en"),
-    book, chapter, verse,
+    mode: bs.displayMode === "both" ? "both" : primary === "ta" ? "ta" : "en",
+    book,
+    chapter,
+    verse,
   });
 }
 
 export async function activateMediaFavorite(mediaId: string) {
   const m = await getMedia(mediaId);
-  if (!m) { toast.error("Media not found"); return; }
+  if (!m) {
+    toast.error("Media not found");
+    return;
+  }
   const proj = useProjection.getState();
   if (!proj.projectorOpen) proj.openProjector();
   const send = () => useProjection.getState().send({ type: "LOAD", mediaId });
@@ -82,7 +94,10 @@ export async function activateMediaFavorite(mediaId: string) {
 export async function activateSongFavorite(songId: number, slideIndex = 0) {
   await useSongsStore.getState().ensureLoaded();
   const song = getSongs()?.find((s) => s.id === songId);
-  if (!song) { toast.error("Song not found"); return; }
+  if (!song) {
+    toast.error("Song not found");
+    return;
+  }
   const text = song.slides[slideIndex] ?? song.content;
   projectSongSlide({
     songId: song.id,

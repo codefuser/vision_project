@@ -143,7 +143,12 @@ function injectAnimCSS() {
 
 function useStyles() {
   const r = useRef(false);
-  useEffect(() => { if (!r.current) { injectAnimCSS(); r.current = true; } }, []);
+  useEffect(() => {
+    if (!r.current) {
+      injectAnimCSS();
+      r.current = true;
+    }
+  }, []);
 }
 
 /* ════════════════════════════════════════════════════════════════════════════
@@ -153,10 +158,34 @@ function GoldenStage({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 60%,rgba(251,191,36,.18),rgba(217,119,6,.08),rgba(120,53,15,.04),transparent)" }} />
-      <div className="s-beam absolute -left-[10%] -top-[5%] h-[180%] w-[40%]" style={{ background: "linear-gradient(135deg,rgba(253,224,71,.08),transparent 70%)", transformOrigin: "left top" }} />
-      <div className="s-beam-2 absolute -right-[10%] -top-[5%] h-[160%] w-[35%]" style={{ background: "linear-gradient(225deg,rgba(251,191,36,.06),transparent 70%)", transformOrigin: "right top" }} />
-      <div className="s-stage absolute left-[20%] right-[20%] top-[65%] h-[30%]" style={{ background: "linear-gradient(180deg,transparent,rgba(251,191,36,.06))", clipPath: "polygon(5% 0%,95% 0%,100% 100%,0% 100%)" }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse at 50% 60%,rgba(251,191,36,.18),rgba(217,119,6,.08),rgba(120,53,15,.04),transparent)",
+        }}
+      />
+      <div
+        className="s-beam absolute -left-[10%] -top-[5%] h-[180%] w-[40%]"
+        style={{
+          background: "linear-gradient(135deg,rgba(253,224,71,.08),transparent 70%)",
+          transformOrigin: "left top",
+        }}
+      />
+      <div
+        className="s-beam-2 absolute -right-[10%] -top-[5%] h-[160%] w-[35%]"
+        style={{
+          background: "linear-gradient(225deg,rgba(251,191,36,.06),transparent 70%)",
+          transformOrigin: "right top",
+        }}
+      />
+      <div
+        className="s-stage absolute left-[20%] right-[20%] top-[65%] h-[30%]"
+        style={{
+          background: "linear-gradient(180deg,transparent,rgba(251,191,36,.06))",
+          clipPath: "polygon(5% 0%,95% 0%,100% 100%,0% 100%)",
+        }}
+      />
     </div>
   );
 }
@@ -168,13 +197,39 @@ function ChurchWindows({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,rgba(251,146,60,.1),rgba(251,191,36,.05),rgba(147,51,234,.03))" }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(251,146,60,.1),rgba(251,191,36,.05),rgba(147,51,234,.03))",
+        }}
+      />
       {[25, 50, 75].map((p, i) => (
-        <div key={i} className={cn("absolute bottom-0 w-[12%]", i === 1 && "s-window")} style={{ left: `${p - 6}%`, height: "70%", background: "rgba(255,255,255,.03)", borderTop: "3px solid rgba(255,255,255,.06)", borderTopLeftRadius: "40% 20%", borderTopRightRadius: "40% 20%" }}>
-          <div className="absolute inset-x-[15%] top-[10%] bottom-[5%]" style={{ background: "linear-gradient(180deg,rgba(253,224,71,.06),transparent)" }} />
+        <div
+          key={i}
+          className={cn("absolute bottom-0 w-[12%]", i === 1 && "s-window")}
+          style={{
+            left: `${p - 6}%`,
+            height: "70%",
+            background: "rgba(255,255,255,.03)",
+            borderTop: "3px solid rgba(255,255,255,.06)",
+            borderTopLeftRadius: "40% 20%",
+            borderTopRightRadius: "40% 20%",
+          }}
+        >
+          <div
+            className="absolute inset-x-[15%] top-[10%] bottom-[5%]"
+            style={{ background: "linear-gradient(180deg,rgba(253,224,71,.06),transparent)" }}
+          />
         </div>
       ))}
-      <div className="s-beam absolute -left-[5%] top-0 h-full w-[25%] opacity-[.06]" style={{ background: "linear-gradient(135deg,rgba(253,224,71,.15),transparent 70%)", transformOrigin: "left top" }} />
+      <div
+        className="s-beam absolute -left-[5%] top-0 h-full w-[25%] opacity-[.06]"
+        style={{
+          background: "linear-gradient(135deg,rgba(253,224,71,.15),transparent 70%)",
+          transformOrigin: "left top",
+        }}
+      />
     </div>
   );
 }
@@ -186,17 +241,42 @@ function CathedralGlass({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#0a0a2e,#1a0a3e,#2a0a4e)" }} />
-      {["rgba(147,51,234,.12)","rgba(59,130,246,.1)","rgba(236,72,153,.08)","rgba(251,191,36,.1)","rgba(34,211,238,.08)","rgba(168,85,247,.1)"].map((c, i) => (
-        <div key={i} className={cn("s-glass absolute rounded-lg", i % 2 === 0 ? "s-glass-bend" : "s-glass-bend-2")}
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg,#0a0a2e,#1a0a3e,#2a0a4e)" }}
+      />
+      {[
+        "rgba(147,51,234,.12)",
+        "rgba(59,130,246,.1)",
+        "rgba(236,72,153,.08)",
+        "rgba(251,191,36,.1)",
+        "rgba(34,211,238,.08)",
+        "rgba(168,85,247,.1)",
+      ].map((c, i) => (
+        <div
+          key={i}
+          className={cn(
+            "s-glass absolute rounded-lg",
+            i % 2 === 0 ? "s-glass-bend" : "s-glass-bend-2",
+          )}
           style={{
-            left: `${8 + i * 16}%`, top: `${12 + (i % 3) * 20}%`,
-            width: `${10 + (i % 4) * 6}%`, height: `${30 + (i % 3) * 15}%`,
-            background: c, clipPath: `polygon(${50 + (i % 3) * 5}% 0%,100% ${30 + i * 5}%,${80 - i * 10}% 100%,0% ${70 - i * 10}%)`,
+            left: `${8 + i * 16}%`,
+            top: `${12 + (i % 3) * 20}%`,
+            width: `${10 + (i % 4) * 6}%`,
+            height: `${30 + (i % 3) * 15}%`,
+            background: c,
+            clipPath: `polygon(${50 + (i % 3) * 5}% 0%,100% ${30 + i * 5}%,${80 - i * 10}% 100%,0% ${70 - i * 10}%)`,
             filter: "blur(2px)",
-          }} />
+          }}
+        />
       ))}
-      <div className="s-shimmer absolute inset-0" style={{ background: "linear-gradient(135deg,transparent 30%,rgba(255,255,255,.02) 50%,transparent 70%)" }} />
+      <div
+        className="s-shimmer absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg,transparent 30%,rgba(255,255,255,.02) 50%,transparent 70%)",
+        }}
+      />
     </div>
   );
 }
@@ -208,10 +288,29 @@ function OceanHorizon({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#020d1a 40%,#06304a 45%,#0a4a6a 50%,#105a7a 55%,#0a3a5a 60%,#020d1a)" }} />
-      <div className="s-shimmer absolute left-0 right-0 top-[44%] h-[3%]" style={{ background: "linear-gradient(90deg,transparent,rgba(103,232,249,.15),rgba(147,197,253,.2),rgba(103,232,249,.15),transparent)", filter: "blur(3px)" }} />
-      <div className="s-wave absolute -bottom-[5%] left-0 right-0 h-[20%] rounded-[50%]" style={{ background: "rgba(6,78,100,.15)", filter: "blur(4px)" }} />
-      <div className="s-wave-2 absolute -bottom-[8%] left-0 right-0 h-[15%] rounded-[50%]" style={{ background: "rgba(8,100,130,.1)", filter: "blur(6px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg,#020d1a 40%,#06304a 45%,#0a4a6a 50%,#105a7a 55%,#0a3a5a 60%,#020d1a)",
+        }}
+      />
+      <div
+        className="s-shimmer absolute left-0 right-0 top-[44%] h-[3%]"
+        style={{
+          background:
+            "linear-gradient(90deg,transparent,rgba(103,232,249,.15),rgba(147,197,253,.2),rgba(103,232,249,.15),transparent)",
+          filter: "blur(3px)",
+        }}
+      />
+      <div
+        className="s-wave absolute -bottom-[5%] left-0 right-0 h-[20%] rounded-[50%]"
+        style={{ background: "rgba(6,78,100,.15)", filter: "blur(4px)" }}
+      />
+      <div
+        className="s-wave-2 absolute -bottom-[8%] left-0 right-0 h-[15%] rounded-[50%]"
+        style={{ background: "rgba(8,100,130,.1)", filter: "blur(6px)" }}
+      />
     </div>
   );
 }
@@ -223,11 +322,29 @@ function CalmLake({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#020d1a 35%,#042a3e 42%,#063a4e 45%,#084a5e 48%,#0a3a4e 55%,#042a3e 65%,#020d1a)" }} />
-      <div className="s-shimmer absolute left-0 right-0 top-[42%] h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(147,197,253,.2),rgba(147,197,253,.3),transparent)" }} />
-      <div className="s-wave absolute inset-x-[10%] -bottom-[2%] h-[15%] rounded-[50%]" style={{ background: "rgba(10,90,110,.08)", filter: "blur(8px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(180deg,#020d1a 35%,#042a3e 42%,#063a4e 45%,#084a5e 48%,#0a3a4e 55%,#042a3e 65%,#020d1a)",
+        }}
+      />
+      <div
+        className="s-shimmer absolute left-0 right-0 top-[42%] h-px"
+        style={{
+          background:
+            "linear-gradient(90deg,transparent,rgba(147,197,253,.2),rgba(147,197,253,.3),transparent)",
+        }}
+      />
+      <div
+        className="s-wave absolute inset-x-[10%] -bottom-[2%] h-[15%] rounded-[50%]"
+        style={{ background: "rgba(10,90,110,.08)", filter: "blur(8px)" }}
+      />
       <div style={{ position: "absolute", left: "45%", top: "43%", width: "10%", height: "2%" }}>
-        <div className="s-ripple absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-1 rounded-full bg-cyan-400" style={{ boxShadow: "0 0 2px rgba(103,232,249,.3)" }} />
+        <div
+          className="s-ripple absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 h-1 w-1 rounded-full bg-cyan-400"
+          style={{ boxShadow: "0 0 2px rgba(103,232,249,.3)" }}
+        />
       </div>
     </div>
   );
@@ -240,10 +357,32 @@ function CloudLayers({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#0a1628,#1a2e4a,#2a4060)" }} />
-      <div className="s-cloud absolute -left-[20%] -top-[5%] h-[35%] w-[140%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(255,255,255,.04),transparent)", filter: "blur(30px)" }} />
-      <div className="s-cloud-2 absolute -left-[10%] top-[20%] h-[30%] w-[120%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(255,255,255,.03),transparent)", filter: "blur(40px)" }} />
-      <div className="s-cloud absolute -left-[30%] top-[45%] h-[25%] w-[160%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(255,255,255,.025),transparent)", filter: "blur(50px)", animationDelay: "-7s" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg,#0a1628,#1a2e4a,#2a4060)" }}
+      />
+      <div
+        className="s-cloud absolute -left-[20%] -top-[5%] h-[35%] w-[140%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(255,255,255,.04),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
+      <div
+        className="s-cloud-2 absolute -left-[10%] top-[20%] h-[30%] w-[120%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(255,255,255,.03),transparent)",
+          filter: "blur(40px)",
+        }}
+      />
+      <div
+        className="s-cloud absolute -left-[30%] top-[45%] h-[25%] w-[160%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(255,255,255,.025),transparent)",
+          filter: "blur(50px)",
+          animationDelay: "-7s",
+        }}
+      />
     </div>
   );
 }
@@ -255,10 +394,32 @@ function MovingFog({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#0a0e1a,#1a2240,#0a0e1a)" }} />
-      <div className="s-fog absolute -left-[25%] -top-[10%] h-[60%] w-[150%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(148,163,184,.04),transparent)", filter: "blur(50px)" }} />
-      <div className="s-fog-2 absolute -left-[10%] top-[30%] h-[50%] w-[130%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(148,163,184,.03),transparent)", filter: "blur(60px)" }} />
-      <div className="s-fog absolute -left-[30%] top-[55%] h-[40%] w-[160%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(100,116,139,.025),transparent)", filter: "blur(70px)", animationDelay: "-8s" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg,#0a0e1a,#1a2240,#0a0e1a)" }}
+      />
+      <div
+        className="s-fog absolute -left-[25%] -top-[10%] h-[60%] w-[150%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(148,163,184,.04),transparent)",
+          filter: "blur(50px)",
+        }}
+      />
+      <div
+        className="s-fog-2 absolute -left-[10%] top-[30%] h-[50%] w-[130%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(148,163,184,.03),transparent)",
+          filter: "blur(60px)",
+        }}
+      />
+      <div
+        className="s-fog absolute -left-[30%] top-[55%] h-[40%] w-[160%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(100,116,139,.025),transparent)",
+          filter: "blur(70px)",
+          animationDelay: "-8s",
+        }}
+      />
     </div>
   );
 }
@@ -270,16 +431,31 @@ function NightSky({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#020214,#000005)" }} />
-      <div className="s-aurora absolute -inset-4" style={{ background: "linear-gradient(180deg,rgba(99,102,241,.04),transparent)", filter: "blur(30px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#020214,#000005)" }}
+      />
+      <div
+        className="s-aurora absolute -inset-4"
+        style={{
+          background: "linear-gradient(180deg,rgba(99,102,241,.04),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
       {Array.from({ length: 30 }).map((_, i) => (
-        <div key={i} className="s-star absolute rounded-full bg-white"
+        <div
+          key={i}
+          className="s-star absolute rounded-full bg-white"
           style={{
-            left: `${(i * 3.3 + 1.7) % 100}%`, top: `${(i * 7.1 + 3.2) % 90}%`,
-            width: `${1 + (i % 3) * .5}px`, height: `${1 + (i % 3) * .5}px`,
-            animationDelay: `${i * .2}s`, animationDuration: `${2 + (i % 5) * .8}s`,
-            opacity: .2 + (i % 5) * .15,
-          }} />
+            left: `${(i * 3.3 + 1.7) % 100}%`,
+            top: `${(i * 7.1 + 3.2) % 90}%`,
+            width: `${1 + (i % 3) * 0.5}px`,
+            height: `${1 + (i % 3) * 0.5}px`,
+            animationDelay: `${i * 0.2}s`,
+            animationDuration: `${2 + (i % 5) * 0.8}s`,
+            opacity: 0.2 + (i % 5) * 0.15,
+          }}
+        />
       ))}
     </div>
   );
@@ -292,10 +468,35 @@ function AuroraCurtain({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#02061a,#020210,#000005)" }} />
-      <div className="s-aurora absolute -left-[10%] -top-[5%] h-[60%] w-[130%]" style={{ background: "linear-gradient(180deg,rgba(52,211,153,.08),rgba(16,185,129,.04),transparent)", filter: "blur(40px)" }} />
-      <div className="s-aurora-2 absolute -left-[5%] top-[25%] h-[50%] w-[120%]" style={{ background: "linear-gradient(180deg,rgba(103,232,249,.06),rgba(45,212,191,.03),transparent)", filter: "blur(50px)" }} />
-      <div className="s-aurora absolute -left-[15%] top-[45%] h-[40%] w-[140%]" style={{ background: "linear-gradient(180deg,rgba(167,139,250,.05),rgba(139,92,246,.03),transparent)", filter: "blur(45px)", animationDelay: "-6s" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#02061a,#020210,#000005)" }}
+      />
+      <div
+        className="s-aurora absolute -left-[10%] -top-[5%] h-[60%] w-[130%]"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(52,211,153,.08),rgba(16,185,129,.04),transparent)",
+          filter: "blur(40px)",
+        }}
+      />
+      <div
+        className="s-aurora-2 absolute -left-[5%] top-[25%] h-[50%] w-[120%]"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(103,232,249,.06),rgba(45,212,191,.03),transparent)",
+          filter: "blur(50px)",
+        }}
+      />
+      <div
+        className="s-aurora absolute -left-[15%] top-[45%] h-[40%] w-[140%]"
+        style={{
+          background:
+            "linear-gradient(180deg,rgba(167,139,250,.05),rgba(139,92,246,.03),transparent)",
+          filter: "blur(45px)",
+          animationDelay: "-6s",
+        }}
+      />
     </div>
   );
 }
@@ -307,17 +508,39 @@ function DeepSpace({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 40% 50%,#0a0020,#020010,#000005)" }} />
-      <div className="s-nebula absolute -inset-1/2 rounded-full" style={{ background: "conic-gradient(from 0deg,transparent,rgba(99,102,241,.03),rgba(168,85,247,.02),transparent,rgba(139,92,246,.03),transparent)", transformOrigin: "center" }} />
-      <div className="s-nebula-pulse absolute -inset-1/3 rounded-full" style={{ background: "radial-gradient(ellipse,rgba(99,102,241,.04),transparent)", filter: "blur(40px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 40% 50%,#0a0020,#020010,#000005)" }}
+      />
+      <div
+        className="s-nebula absolute -inset-1/2 rounded-full"
+        style={{
+          background:
+            "conic-gradient(from 0deg,transparent,rgba(99,102,241,.03),rgba(168,85,247,.02),transparent,rgba(139,92,246,.03),transparent)",
+          transformOrigin: "center",
+        }}
+      />
+      <div
+        className="s-nebula-pulse absolute -inset-1/3 rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(99,102,241,.04),transparent)",
+          filter: "blur(40px)",
+        }}
+      />
       {Array.from({ length: 25 }).map((_, i) => (
-        <div key={i} className="s-star absolute rounded-full bg-white"
+        <div
+          key={i}
+          className="s-star absolute rounded-full bg-white"
           style={{
-            left: `${(i * 4.1 + 2.3) % 100}%`, top: `${(i * 6.7 + 1.8) % 100}%`,
-            width: `${.5 + (i % 4) * .4}px`, height: `${.5 + (i % 4) * .4}px`,
-            animationDelay: `${i * .3}s`, animationDuration: `${1.5 + (i % 6) * .6}s`,
-            opacity: .1 + (i % 5) * .12,
-          }} />
+            left: `${(i * 4.1 + 2.3) % 100}%`,
+            top: `${(i * 6.7 + 1.8) % 100}%`,
+            width: `${0.5 + (i % 4) * 0.4}px`,
+            height: `${0.5 + (i % 4) * 0.4}px`,
+            animationDelay: `${i * 0.3}s`,
+            animationDuration: `${1.5 + (i % 6) * 0.6}s`,
+            opacity: 0.1 + (i % 5) * 0.12,
+          }}
+        />
       ))}
     </div>
   );
@@ -330,10 +553,34 @@ function MountainSunrise({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#1a0a2e,#3a1a3e,#6a2a3e,#a04a3e)" }} />
-      <div className="s-sun absolute left-1/2 top-[45%] h-[20%] w-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full" style={{ background: "radial-gradient(ellipse,rgba(253,224,71,.12),rgba(251,146,60,.06),transparent)", filter: "blur(30px)" }} />
-      <div className="s-mountain absolute bottom-0 left-0 right-0 h-[45%]" style={{ background: "#0a0a1a", clipPath: "polygon(0% 100%,8% 55%,15% 60%,22% 40%,30% 50%,38% 30%,45% 42%,52% 25%,58% 38%,65% 20%,72% 35%,78% 28%,85% 40%,92% 32%,100% 45%,100% 100%)" }} />
-      <div className="s-mountain absolute bottom-0 left-0 right-0 h-[35%] opacity-60" style={{ background: "#1a0a1e", clipPath: "polygon(0% 100%,12% 50%,20% 55%,30% 42%,40% 48%,50% 35%,60% 45%,70% 30%,80% 42%,90% 35%,100% 48%,100% 100%)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg,#1a0a2e,#3a1a3e,#6a2a3e,#a04a3e)" }}
+      />
+      <div
+        className="s-sun absolute left-1/2 top-[45%] h-[20%] w-[30%] -translate-x-1/2 -translate-y-1/2 rounded-full"
+        style={{
+          background:
+            "radial-gradient(ellipse,rgba(253,224,71,.12),rgba(251,146,60,.06),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
+      <div
+        className="s-mountain absolute bottom-0 left-0 right-0 h-[45%]"
+        style={{
+          background: "#0a0a1a",
+          clipPath:
+            "polygon(0% 100%,8% 55%,15% 60%,22% 40%,30% 50%,38% 30%,45% 42%,52% 25%,58% 38%,65% 20%,72% 35%,78% 28%,85% 40%,92% 32%,100% 45%,100% 100%)",
+        }}
+      />
+      <div
+        className="s-mountain absolute bottom-0 left-0 right-0 h-[35%] opacity-60"
+        style={{
+          background: "#1a0a1e",
+          clipPath:
+            "polygon(0% 100%,12% 50%,20% 55%,30% 42%,40% 48%,50% 35%,60% 45%,70% 30%,80% 42%,90% 35%,100% 48%,100% 100%)",
+        }}
+      />
     </div>
   );
 }
@@ -345,19 +592,38 @@ function ForestLight({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(180deg,#063016,#0a4a1a,#063016)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(180deg,#063016,#0a4a1a,#063016)" }}
+      />
       {[15, 28, 42, 58, 72, 85].map((p, i) => (
-        <div key={i} className={cn("s-tree absolute bottom-0", i % 2 === 0 && "s-mountain")}
+        <div
+          key={i}
+          className={cn("s-tree absolute bottom-0", i % 2 === 0 && "s-mountain")}
           style={{
-            left: `${p}%`, width: `${3 + (i % 3)}%`, height: `${60 + (i % 4) * 10}%`,
+            left: `${p}%`,
+            width: `${3 + (i % 3)}%`,
+            height: `${60 + (i % 4) * 10}%`,
             background: "linear-gradient(180deg,transparent,rgba(0,0,0,.15))",
             borderLeft: `${1 + (i % 2)}px solid rgba(0,0,0,.2)`,
             borderRight: `${1 + (i % 2)}px solid rgba(0,0,0,.2)`,
             transformOrigin: "bottom center",
-          }} />
+          }}
+        />
       ))}
       {[20, 50, 80].map((p, i) => (
-        <div key={`sh-${i}`} className="s-shaft absolute" style={{ left: `${p}%`, top: 0, width: "15%", height: "100%", background: "linear-gradient(180deg,rgba(253,224,71,.04),transparent 70%)", transformOrigin: "left top" }} />
+        <div
+          key={`sh-${i}`}
+          className="s-shaft absolute"
+          style={{
+            left: `${p}%`,
+            top: 0,
+            width: "15%",
+            height: "100%",
+            background: "linear-gradient(180deg,rgba(253,224,71,.04),transparent 70%)",
+            transformOrigin: "left top",
+          }}
+        />
       ))}
     </div>
   );
@@ -370,15 +636,47 @@ function CandleGlow({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 80%,#1a0f08,#0a0604)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 80%,#1a0f08,#0a0604)" }}
+      />
       {[30, 50, 70].map((p, i) => (
-        <div key={i} className="candle-group" style={{ position: "absolute", left: `${p}%`, bottom: "15%" }}>
-          <div className="absolute -bottom-[5%] left-1/2 h-[15%] w-[4%] -translate-x-1/2 rounded-sm" style={{ background: "linear-gradient(180deg,rgba(253,224,71,.15),rgba(120,53,15,.1))" }} />
-          <div className={cn("s-flame absolute -top-[5%] left-1/2 h-[12%] w-[6%] -translate-x-1/2")} style={{ background: "radial-gradient(ellipse,rgba(253,224,71,.2),rgba(251,146,60,.08),transparent)", borderRadius: "50% 50% 20% 20%", filter: "blur(1px)" }} />
-          <div className={cn("s-flame-2 absolute -top-[8%] left-1/2 h-[18%] w-[10%] -translate-x-1/2")} style={{ background: "radial-gradient(ellipse,rgba(251,191,36,.08),transparent)", filter: "blur(3px)" }} />
+        <div
+          key={i}
+          className="candle-group"
+          style={{ position: "absolute", left: `${p}%`, bottom: "15%" }}
+        >
+          <div
+            className="absolute -bottom-[5%] left-1/2 h-[15%] w-[4%] -translate-x-1/2 rounded-sm"
+            style={{
+              background: "linear-gradient(180deg,rgba(253,224,71,.15),rgba(120,53,15,.1))",
+            }}
+          />
+          <div
+            className={cn("s-flame absolute -top-[5%] left-1/2 h-[12%] w-[6%] -translate-x-1/2")}
+            style={{
+              background:
+                "radial-gradient(ellipse,rgba(253,224,71,.2),rgba(251,146,60,.08),transparent)",
+              borderRadius: "50% 50% 20% 20%",
+              filter: "blur(1px)",
+            }}
+          />
+          <div
+            className={cn("s-flame-2 absolute -top-[8%] left-1/2 h-[18%] w-[10%] -translate-x-1/2")}
+            style={{
+              background: "radial-gradient(ellipse,rgba(251,191,36,.08),transparent)",
+              filter: "blur(3px)",
+            }}
+          />
         </div>
       ))}
-      <div className="s-candle-glow absolute inset-x-[15%] bottom-0 h-[40%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(251,191,36,.06),transparent)", filter: "blur(30px)" }} />
+      <div
+        className="s-candle-glow absolute inset-x-[15%] bottom-0 h-[40%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(251,191,36,.06),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
     </div>
   );
 }
@@ -390,11 +688,26 @@ function PremiumGeo({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#040412)" }} />
-      <div className="s-geo-y absolute left-1/2 top-1/3 h-[30%] w-[30%] -translate-x-1/2 -translate-y-1/2" style={{ transformStyle: "preserve-3d", perspective: "600px" }}>
-        <div className="absolute inset-0 border border-indigo-400/10 rounded-lg" style={{ transform: "translateZ(20px)" }} />
-        <div className="absolute inset-[15%] border border-purple-400/8 rounded-lg" style={{ transform: "translateZ(-10px)" }} />
-        <div className="absolute inset-[30%] border border-cyan-400/6 rounded-lg" style={{ transform: "translateZ(10px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#040412)" }}
+      />
+      <div
+        className="s-geo-y absolute left-1/2 top-1/3 h-[30%] w-[30%] -translate-x-1/2 -translate-y-1/2"
+        style={{ transformStyle: "preserve-3d", perspective: "600px" }}
+      >
+        <div
+          className="absolute inset-0 border border-indigo-400/10 rounded-lg"
+          style={{ transform: "translateZ(20px)" }}
+        />
+        <div
+          className="absolute inset-[15%] border border-purple-400/8 rounded-lg"
+          style={{ transform: "translateZ(-10px)" }}
+        />
+        <div
+          className="absolute inset-[30%] border border-cyan-400/6 rounded-lg"
+          style={{ transform: "translateZ(10px)" }}
+        />
       </div>
       <div className="s-geo-float absolute left-[15%] top-[55%] h-[12%] w-[12%] border border-indigo-400/8 rounded-full" />
       <div className="s-geo-float-2 absolute right-[20%] top-[20%] h-[8%] w-[8%] border border-purple-400/6 rounded-full" />
@@ -409,10 +722,36 @@ function FloatingSilk({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#0a0a2e,#1a1a4e,#2a1a4e)" }} />
-      <div className="s-silk absolute -left-[20%] -top-[10%] h-[70%] w-[60%] rounded-full" style={{ background: "linear-gradient(135deg,rgba(167,139,250,.06),rgba(139,92,246,.03),transparent)", filter: "blur(30px)", transformOrigin: "center" }} />
-      <div className="s-silk-2 absolute -right-[15%] -bottom-[10%] h-[65%] w-[55%] rounded-full" style={{ background: "linear-gradient(225deg,rgba(99,102,241,.05),rgba(129,140,248,.03),transparent)", filter: "blur(30px)", transformOrigin: "center" }} />
-      <div className="s-silk absolute left-[20%] top-[25%] h-[40%] w-[35%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(192,132,252,.04),transparent)", filter: "blur(40px)", animationDelay: "-7s" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg,#0a0a2e,#1a1a4e,#2a1a4e)" }}
+      />
+      <div
+        className="s-silk absolute -left-[20%] -top-[10%] h-[70%] w-[60%] rounded-full"
+        style={{
+          background:
+            "linear-gradient(135deg,rgba(167,139,250,.06),rgba(139,92,246,.03),transparent)",
+          filter: "blur(30px)",
+          transformOrigin: "center",
+        }}
+      />
+      <div
+        className="s-silk-2 absolute -right-[15%] -bottom-[10%] h-[65%] w-[55%] rounded-full"
+        style={{
+          background:
+            "linear-gradient(225deg,rgba(99,102,241,.05),rgba(129,140,248,.03),transparent)",
+          filter: "blur(30px)",
+          transformOrigin: "center",
+        }}
+      />
+      <div
+        className="s-silk absolute left-[20%] top-[25%] h-[40%] w-[35%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(192,132,252,.04),transparent)",
+          filter: "blur(40px)",
+          animationDelay: "-7s",
+        }}
+      />
     </div>
   );
 }
@@ -424,11 +763,37 @@ function LiquidGlass({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#0a122e,#1a2250,#0a122e)" }} />
-      <div className="s-glass-bend absolute left-[10%] top-[15%] h-[30%] w-[25%] rounded-3xl" style={{ background: "rgba(147,197,253,.02)", border: "1px solid rgba(147,197,253,.06)", backdropFilter: "blur(2px)" }} />
-      <div className="s-glass-bend-2 absolute right-[15%] top-[45%] h-[25%] w-[20%] rounded-2xl" style={{ background: "rgba(167,139,250,.015)", border: "1px solid rgba(167,139,250,.05)", backdropFilter: "blur(2px)" }} />
-      <div className="s-gold-shimmer absolute inset-0" style={{ background: "linear-gradient(135deg,transparent 35%,rgba(255,255,255,.015) 50%,transparent 65%)" }} />
-      <div className="s-geo-float absolute left-[55%] top-[15%] h-[18%] w-[18%] rounded-full" style={{ border: "1px solid rgba(103,232,249,.05)", background: "rgba(103,232,249,.01)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg,#0a122e,#1a2250,#0a122e)" }}
+      />
+      <div
+        className="s-glass-bend absolute left-[10%] top-[15%] h-[30%] w-[25%] rounded-3xl"
+        style={{
+          background: "rgba(147,197,253,.02)",
+          border: "1px solid rgba(147,197,253,.06)",
+          backdropFilter: "blur(2px)",
+        }}
+      />
+      <div
+        className="s-glass-bend-2 absolute right-[15%] top-[45%] h-[25%] w-[20%] rounded-2xl"
+        style={{
+          background: "rgba(167,139,250,.015)",
+          border: "1px solid rgba(167,139,250,.05)",
+          backdropFilter: "blur(2px)",
+        }}
+      />
+      <div
+        className="s-gold-shimmer absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg,transparent 35%,rgba(255,255,255,.015) 50%,transparent 65%)",
+        }}
+      />
+      <div
+        className="s-geo-float absolute left-[55%] top-[15%] h-[18%] w-[18%] rounded-full"
+        style={{ border: "1px solid rgba(103,232,249,.05)", background: "rgba(103,232,249,.01)" }}
+      />
     </div>
   );
 }
@@ -440,18 +805,38 @@ function ElegantMesh({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0e1a,#060810)" }} />
-      <div className="absolute inset-0" style={{ backgroundImage: "linear-gradient(rgba(148,163,184,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.02) 1px,transparent 1px)", backgroundSize: "30px 30px" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0e1a,#060810)" }}
+      />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage:
+            "linear-gradient(rgba(148,163,184,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(148,163,184,.02) 1px,transparent 1px)",
+          backgroundSize: "30px 30px",
+        }}
+      />
       {[0, 1, 2, 3].map((i) => (
-        <div key={i} className={cn("absolute h-[3%] w-[3%] rounded-full", i % 2 === 0 ? "s-mesh" : "s-mesh-2")}
+        <div
+          key={i}
+          className={cn("absolute h-[3%] w-[3%] rounded-full", i % 2 === 0 ? "s-mesh" : "s-mesh-2")}
           style={{
-            left: `${25 + i * 18}%`, top: `${30 + (i % 2) * 30}%`,
+            left: `${25 + i * 18}%`,
+            top: `${30 + (i % 2) * 30}%`,
             background: `rgba(148,163,184,.04)`,
             transition: "all .3s",
             animationDelay: `${i * 1.5}s`,
-          }} />
+          }}
+        />
       ))}
-      <div className="s-ambient absolute left-1/4 right-1/4 top-1/4 bottom-1/4" style={{ background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)", filter: "blur(30px)" }} />
+      <div
+        className="s-ambient absolute left-1/4 right-1/4 top-1/4 bottom-1/4"
+        style={{
+          background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
     </div>
   );
 }
@@ -463,11 +848,29 @@ function ArchitecturalMotion({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#0a0e1a,#141a2e,#1a1f3a)" }} />
-      <div className="s-arch-scan absolute left-[15%] top-0 h-full w-px" style={{ background: "linear-gradient(180deg,transparent,rgba(148,163,184,.06),rgba(148,163,184,.08),rgba(148,163,184,.06),transparent)" }} />
-      <div className="s-arch-scan-2 absolute right-[25%] top-0 h-full w-px" style={{ background: "linear-gradient(180deg,transparent,rgba(148,163,184,.04),rgba(148,163,184,.06),rgba(148,163,184,.04),transparent)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg,#0a0e1a,#141a2e,#1a1f3a)" }}
+      />
+      <div
+        className="s-arch-scan absolute left-[15%] top-0 h-full w-px"
+        style={{
+          background:
+            "linear-gradient(180deg,transparent,rgba(148,163,184,.06),rgba(148,163,184,.08),rgba(148,163,184,.06),transparent)",
+        }}
+      />
+      <div
+        className="s-arch-scan-2 absolute right-[25%] top-0 h-full w-px"
+        style={{
+          background:
+            "linear-gradient(180deg,transparent,rgba(148,163,184,.04),rgba(148,163,184,.06),rgba(148,163,184,.04),transparent)",
+        }}
+      />
       <div className="s-pillar absolute bottom-0 left-[8%] h-[70%] w-[2%] bg-gradient-to-t from-white/5 via-transparent to-transparent" />
-      <div className="s-pillar absolute bottom-0 right-[12%] h-[65%] w-[2%] bg-gradient-to-t from-white/4 via-transparent to-transparent" style={{ animationDelay: "-4s" }} />
+      <div
+        className="s-pillar absolute bottom-0 right-[12%] h-[65%] w-[2%] bg-gradient-to-t from-white/4 via-transparent to-transparent"
+        style={{ animationDelay: "-4s" }}
+      />
       <div className="s-ambient absolute left-0 right-0 top-[30%] h-px bg-gradient-to-r from-transparent via-indigo-400/6 to-transparent" />
     </div>
   );
@@ -480,10 +883,31 @@ function AmbientBeams({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0e1a,#050810)" }} />
-      <div className="s-beam absolute -left-[5%] top-0 h-full w-[30%] opacity-[.06]" style={{ background: "linear-gradient(135deg,rgba(147,197,253,.1),transparent 70%)", transformOrigin: "left top" }} />
-      <div className="s-beam-2 absolute -right-[5%] top-0 h-full w-[25%] opacity-[.04]" style={{ background: "linear-gradient(225deg,rgba(167,139,250,.08),transparent 70%)", transformOrigin: "right top" }} />
-      <div className="s-ambient absolute left-[30%] right-[30%] top-[20%] h-[30%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)", filter: "blur(30px)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0e1a,#050810)" }}
+      />
+      <div
+        className="s-beam absolute -left-[5%] top-0 h-full w-[30%] opacity-[.06]"
+        style={{
+          background: "linear-gradient(135deg,rgba(147,197,253,.1),transparent 70%)",
+          transformOrigin: "left top",
+        }}
+      />
+      <div
+        className="s-beam-2 absolute -right-[5%] top-0 h-full w-[25%] opacity-[.04]"
+        style={{
+          background: "linear-gradient(225deg,rgba(167,139,250,.08),transparent 70%)",
+          transformOrigin: "right top",
+        }}
+      />
+      <div
+        className="s-ambient absolute left-[30%] right-[30%] top-[20%] h-[30%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)",
+          filter: "blur(30px)",
+        }}
+      />
     </div>
   );
 }
@@ -495,10 +919,29 @@ function DarkAuditorium({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%,#0a0a12,#030306)" }} />
-      <div className="s-vignette absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 30%,transparent 50%,rgba(0,0,0,.3) 100%)" }} />
-      <div className="s-stage absolute left-[20%] right-[20%] top-[35%] h-[30%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(255,255,255,.01),transparent)", filter: "blur(20px)" }} />
-      <div className="s-shimmer absolute left-[30%] right-[30%] top-[35%] h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 40%,#0a0a12,#030306)" }}
+      />
+      <div
+        className="s-vignette absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at 50% 30%,transparent 50%,rgba(0,0,0,.3) 100%)",
+        }}
+      />
+      <div
+        className="s-stage absolute left-[20%] right-[20%] top-[35%] h-[30%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(255,255,255,.01),transparent)",
+          filter: "blur(20px)",
+        }}
+      />
+      <div
+        className="s-shimmer absolute left-[30%] right-[30%] top-[35%] h-px"
+        style={{
+          background: "linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent)",
+        }}
+      />
     </div>
   );
 }
@@ -510,10 +953,30 @@ function StageSpotlights({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 40%,#0a0a1e,#03030a)" }} />
-      <div className="s-spotlight absolute -left-[10%] -top-[5%] h-[120%] w-[60%]" style={{ background: "linear-gradient(135deg,rgba(99,102,241,.06),transparent 60%)", transformOrigin: "left top" }} />
-      <div className="s-spotlight-2 absolute -right-[10%] -top-[5%] h-[120%] w-[60%]" style={{ background: "linear-gradient(225deg,rgba(168,85,247,.04),transparent 60%)", transformOrigin: "right top" }} />
-      <div className="s-vignette absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(0,0,0,.2) 100%)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 40%,#0a0a1e,#03030a)" }}
+      />
+      <div
+        className="s-spotlight absolute -left-[10%] -top-[5%] h-[120%] w-[60%]"
+        style={{
+          background: "linear-gradient(135deg,rgba(99,102,241,.06),transparent 60%)",
+          transformOrigin: "left top",
+        }}
+      />
+      <div
+        className="s-spotlight-2 absolute -right-[10%] -top-[5%] h-[120%] w-[60%]"
+        style={{
+          background: "linear-gradient(225deg,rgba(168,85,247,.04),transparent 60%)",
+          transformOrigin: "right top",
+        }}
+      />
+      <div
+        className="s-vignette absolute inset-0"
+        style={{
+          background: "radial-gradient(ellipse at 50% 30%,transparent 40%,rgba(0,0,0,.2) 100%)",
+        }}
+      />
     </div>
   );
 }
@@ -525,11 +988,39 @@ function LuxuryGold({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#1a0e06,#0a0604)" }} />
-      <div className="s-gold-float absolute left-[20%] top-[20%] h-[25%] w-[18%] rounded-[60%_40%]" style={{ background: "linear-gradient(135deg,rgba(251,191,36,.04),rgba(217,119,6,.02))", border: "1px solid rgba(251,191,36,.05)", borderRadius: "40% 60% 45% 55%" }} />
-      <div className="s-gold-float-2 absolute right-[25%] top-[45%] h-[20%] w-[15%] rounded-[50%_40%]" style={{ background: "linear-gradient(225deg,rgba(253,224,71,.03),rgba(217,119,6,.02))", border: "1px solid rgba(251,191,36,.04)", borderRadius: "55% 45% 50% 50%" }} />
-      <div className="s-gold-shimmer absolute inset-0" style={{ background: "linear-gradient(135deg,transparent 30%,rgba(253,224,71,.02) 50%,transparent 70%)" }} />
-      <div className="s-shimmer absolute left-1/3 right-1/3 top-[45%] h-px" style={{ background: "linear-gradient(90deg,transparent,rgba(251,191,36,.04),transparent)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#1a0e06,#0a0604)" }}
+      />
+      <div
+        className="s-gold-float absolute left-[20%] top-[20%] h-[25%] w-[18%] rounded-[60%_40%]"
+        style={{
+          background: "linear-gradient(135deg,rgba(251,191,36,.04),rgba(217,119,6,.02))",
+          border: "1px solid rgba(251,191,36,.05)",
+          borderRadius: "40% 60% 45% 55%",
+        }}
+      />
+      <div
+        className="s-gold-float-2 absolute right-[25%] top-[45%] h-[20%] w-[15%] rounded-[50%_40%]"
+        style={{
+          background: "linear-gradient(225deg,rgba(253,224,71,.03),rgba(217,119,6,.02))",
+          border: "1px solid rgba(251,191,36,.04)",
+          borderRadius: "55% 45% 50% 50%",
+        }}
+      />
+      <div
+        className="s-gold-shimmer absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg,transparent 30%,rgba(253,224,71,.02) 50%,transparent 70%)",
+        }}
+      />
+      <div
+        className="s-shimmer absolute left-1/3 right-1/3 top-[45%] h-px"
+        style={{
+          background: "linear-gradient(90deg,transparent,rgba(251,191,36,.04),transparent)",
+        }}
+      />
     </div>
   );
 }
@@ -541,17 +1032,26 @@ function PremiumBokeh({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a1a,#05050e)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a1a,#05050e)" }}
+      />
       {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => (
-        <div key={i} className={cn(i % 2 === 0 ? "s-bokeh" : "s-bokeh-2")} style={{
-          position: "absolute",
-          left: `${10 + (i * 11) % 80}%`, top: `${15 + (i * 7) % 70}%`,
-          width: `${20 + (i % 5) * 15}px`, height: `${20 + (i % 5) * 15}px`,
-          borderRadius: "50%",
-          background: i % 2 === 0 ? "rgba(147,197,253,.03)" : "rgba(167,139,250,.025)",
-          filter: `blur(${3 + (i % 4)}px)`,
-          animationDelay: `${i * 1.5}s`,
-        }} />
+        <div
+          key={i}
+          className={cn(i % 2 === 0 ? "s-bokeh" : "s-bokeh-2")}
+          style={{
+            position: "absolute",
+            left: `${10 + ((i * 11) % 80)}%`,
+            top: `${15 + ((i * 7) % 70)}%`,
+            width: `${20 + (i % 5) * 15}px`,
+            height: `${20 + (i % 5) * 15}px`,
+            borderRadius: "50%",
+            background: i % 2 === 0 ? "rgba(147,197,253,.03)" : "rgba(167,139,250,.025)",
+            filter: `blur(${3 + (i % 4)}px)`,
+            animationDelay: `${i * 1.5}s`,
+          }}
+        />
       ))}
     </div>
   );
@@ -564,10 +1064,31 @@ function VelvetBackground({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "linear-gradient(135deg,#1a0a0a,#2a0a1a,#1a0a0e)" }} />
-      <div className="s-velvet absolute -left-[10%] top-0 h-full w-[60%] rounded-[50%]" style={{ background: "radial-gradient(ellipse,rgba(139,30,30,.03),transparent)", filter: "blur(40px)" }} />
-      <div className="s-velvet-2 absolute -right-[10%] -bottom-[10%] h-[80%] w-[50%] rounded-[50%]" style={{ background: "radial-gradient(ellipse,rgba(120,20,40,.025),transparent)", filter: "blur(50px)" }} />
-      <div className="s-gold-shimmer absolute inset-0" style={{ background: "linear-gradient(135deg,transparent 30%,rgba(200,150,100,.008) 50%,transparent 70%)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "linear-gradient(135deg,#1a0a0a,#2a0a1a,#1a0a0e)" }}
+      />
+      <div
+        className="s-velvet absolute -left-[10%] top-0 h-full w-[60%] rounded-[50%]"
+        style={{
+          background: "radial-gradient(ellipse,rgba(139,30,30,.03),transparent)",
+          filter: "blur(40px)",
+        }}
+      />
+      <div
+        className="s-velvet-2 absolute -right-[10%] -bottom-[10%] h-[80%] w-[50%] rounded-[50%]"
+        style={{
+          background: "radial-gradient(ellipse,rgba(120,20,40,.025),transparent)",
+          filter: "blur(50px)",
+        }}
+      />
+      <div
+        className="s-gold-shimmer absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg,transparent 30%,rgba(200,150,100,.008) 50%,transparent 70%)",
+        }}
+      />
     </div>
   );
 }
@@ -579,11 +1100,39 @@ function EtherealGlow({ paused }: AnimProps) {
   useStyles();
   return (
     <div className={cn("absolute inset-0 overflow-hidden", paused && "paused")}>
-      <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#050518)" }} />
-      <div className="s-ether absolute left-[20%] top-[10%] h-[40%] w-[35%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(167,139,250,.04),transparent)", filter: "blur(50px)" }} />
-      <div className="s-ether-2 absolute right-[15%] bottom-[10%] h-[35%] w-[30%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)", filter: "blur(60px)" }} />
-      <div className="s-ether absolute left-[45%] top-[45%] h-[25%] w-[20%] rounded-full" style={{ background: "radial-gradient(ellipse,rgba(192,132,252,.025),transparent)", filter: "blur(40px)", animationDelay: "-7s" }} />
-      <div className="s-gold-shimmer absolute inset-0" style={{ background: "linear-gradient(135deg,transparent 30%,rgba(255,255,255,.01) 50%,transparent 70%)" }} />
+      <div
+        className="absolute inset-0"
+        style={{ background: "radial-gradient(ellipse at 50% 50%,#0a0a2e,#050518)" }}
+      />
+      <div
+        className="s-ether absolute left-[20%] top-[10%] h-[40%] w-[35%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(167,139,250,.04),transparent)",
+          filter: "blur(50px)",
+        }}
+      />
+      <div
+        className="s-ether-2 absolute right-[15%] bottom-[10%] h-[35%] w-[30%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(99,102,241,.03),transparent)",
+          filter: "blur(60px)",
+        }}
+      />
+      <div
+        className="s-ether absolute left-[45%] top-[45%] h-[25%] w-[20%] rounded-full"
+        style={{
+          background: "radial-gradient(ellipse,rgba(192,132,252,.025),transparent)",
+          filter: "blur(40px)",
+          animationDelay: "-7s",
+        }}
+      />
+      <div
+        className="s-gold-shimmer absolute inset-0"
+        style={{
+          background:
+            "linear-gradient(135deg,transparent 30%,rgba(255,255,255,.01) 50%,transparent 70%)",
+        }}
+      />
     </div>
   );
 }
@@ -619,7 +1168,13 @@ const ANIM_MAP: Record<string, React.FC<AnimProps>> = {
   "ethereal-glow": EtherealGlow,
 };
 
-export function ThemeAnimation({ animation, paused }: { animation: BackgroundAnimation; paused?: boolean }) {
+export function ThemeAnimation({
+  animation,
+  paused,
+}: {
+  animation: BackgroundAnimation;
+  paused?: boolean;
+}) {
   const Comp = ANIM_MAP[animation];
   if (!Comp) return null;
   return <Comp paused={paused} />;

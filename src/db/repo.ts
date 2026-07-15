@@ -1,4 +1,13 @@
-import { db, DEFAULT_SETTINGS, type AppSettings, type FolderRecord, type MediaRecord, type PlaylistRecord, type PlaylistItem, type MediaType } from "./schema";
+import {
+  db,
+  DEFAULT_SETTINGS,
+  type AppSettings,
+  type FolderRecord,
+  type MediaRecord,
+  type PlaylistRecord,
+  type PlaylistItem,
+  type MediaType,
+} from "./schema";
 import { uid } from "@/lib/uid";
 import { classifyMime, detectMime } from "@/lib/files";
 import { generateImageThumb, generateVideoThumb } from "@/lib/thumbnails";
@@ -24,9 +33,18 @@ export async function saveSettings(patch: Partial<AppSettings>): Promise<AppSett
 export async function listFolders(): Promise<FolderRecord[]> {
   return db().folders.orderBy("name").toArray();
 }
-export async function createFolder(name: string, parentId: string | null = null): Promise<FolderRecord> {
+export async function createFolder(
+  name: string,
+  parentId: string | null = null,
+): Promise<FolderRecord> {
   const now = Date.now();
-  const rec: FolderRecord = { id: uid(), name: name.trim() || "Untitled", parentId, createdAt: now, updatedAt: now };
+  const rec: FolderRecord = {
+    id: uid(),
+    name: name.trim() || "Untitled",
+    parentId,
+    createdAt: now,
+    updatedAt: now,
+  };
   await db().folders.add(rec);
   return rec;
 }
@@ -85,12 +103,13 @@ export async function deleteFolderOnly(id: string) {
   });
 }
 
-
 // ---------- Media ----------
 export async function listMediaInFolder(folderId: string | null): Promise<MediaRecord[]> {
   // dexie can't index null directly; use a sentinel filter
   if (folderId === null) {
-    return db().media.filter((m) => m.folderId === null).toArray();
+    return db()
+      .media.filter((m) => m.folderId === null)
+      .toArray();
   }
   return db().media.where("folderId").equals(folderId).toArray();
 }
@@ -240,12 +259,21 @@ export async function getPlaylist(id: string) {
 }
 export async function createPlaylist(name: string): Promise<PlaylistRecord> {
   const now = Date.now();
-  const rec: PlaylistRecord = { id: uid(), name: name.trim() || "Untitled Playlist", items: [], createdAt: now, updatedAt: now };
+  const rec: PlaylistRecord = {
+    id: uid(),
+    name: name.trim() || "Untitled Playlist",
+    items: [],
+    createdAt: now,
+    updatedAt: now,
+  };
   await db().playlists.add(rec);
   return rec;
 }
 export async function renamePlaylist(id: string, name: string) {
-  await db().playlists.update(id, { name: name.trim() || "Untitled Playlist", updatedAt: Date.now() });
+  await db().playlists.update(id, {
+    name: name.trim() || "Untitled Playlist",
+    updatedAt: Date.now(),
+  });
 }
 export async function deletePlaylist(id: string) {
   await db().playlists.delete(id);
@@ -278,10 +306,16 @@ export async function addMediaToPlaylist(playlistId: string, mediaIds: string[])
     .map((m) => ({
       id: uid(),
       mediaId: m.id,
-      durationMs: m.type === "video" ? m.durationMs ?? settings.defaultImageDurationMs : settings.defaultImageDurationMs,
+      durationMs:
+        m.type === "video"
+          ? (m.durationMs ?? settings.defaultImageDurationMs)
+          : settings.defaultImageDurationMs,
       transition: settings.defaultTransition,
     }));
-  await db().playlists.update(playlistId, { items: [...p.items, ...newItems], updatedAt: Date.now() });
+  await db().playlists.update(playlistId, {
+    items: [...p.items, ...newItems],
+    updatedAt: Date.now(),
+  });
 }
 
 // helper: media type guard for editor-side typing

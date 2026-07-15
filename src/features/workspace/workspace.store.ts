@@ -4,7 +4,10 @@ import type { GroupedStyles } from "@/lib/broadcast";
 
 export type WorkspaceTab = "media" | "bible" | "songs" | "text";
 
-export type GroupedStylesSnapshot = Pick<GroupedStyles, "reference" | "tamil" | "english" | "background">;
+export type GroupedStylesSnapshot = Pick<
+  GroupedStyles,
+  "reference" | "tamil" | "english" | "background"
+>;
 
 export interface PanelVisibility {
   preview: boolean;
@@ -161,10 +164,8 @@ export const useWorkspace = create<WorkspaceState>()(
       ...DEFAULTS,
 
       setActiveTab: (t) => set({ activeTab: t }),
-      togglePanel: (key) =>
-        set((s) => ({ visible: { ...s.visible, [key]: !s.visible[key] } })),
-      showPanel: (key) =>
-        set((s) => ({ visible: { ...s.visible, [key]: true } })),
+      togglePanel: (key) => set((s) => ({ visible: { ...s.visible, [key]: !s.visible[key] } })),
+      showPanel: (key) => set((s) => ({ visible: { ...s.visible, [key]: true } })),
       setTextFormatCollapsed: (v) => set({ textFormatCollapsed: v }),
       toggleTextFormatCollapsed: () =>
         set((s) => ({ textFormatCollapsed: !s.textFormatCollapsed })),
@@ -201,14 +202,10 @@ export const useWorkspace = create<WorkspaceState>()(
         return s.historyStack[idx] ?? null;
       },
 
-      setSongsSearch: (patch) =>
-        set((s) => ({ songsSearch: { ...s.songsSearch, ...patch } })),
-      setBibleSearch: (patch) =>
-        set((s) => ({ bibleSearch: { ...s.bibleSearch, ...patch } })),
-      setMediaSearch: (patch) =>
-        set((s) => ({ mediaSearch: { ...s.mediaSearch, ...patch } })),
-      setTextSearch: (patch) =>
-        set((s) => ({ textSearch: { ...s.textSearch, ...patch } })),
+      setSongsSearch: (patch) => set((s) => ({ songsSearch: { ...s.songsSearch, ...patch } })),
+      setBibleSearch: (patch) => set((s) => ({ bibleSearch: { ...s.bibleSearch, ...patch } })),
+      setMediaSearch: (patch) => set((s) => ({ mediaSearch: { ...s.mediaSearch, ...patch } })),
+      setTextSearch: (patch) => set((s) => ({ textSearch: { ...s.textSearch, ...patch } })),
       setSelectedSongId: (id) => set({ selectedSongId: id }),
       setSelectedTextId: (id) => set({ selectedTextId: id }),
       setActiveTemplateId: (id) => set({ activeTemplateId: id }),
@@ -224,7 +221,9 @@ export const useWorkspace = create<WorkspaceState>()(
         if (typeof window !== "undefined") {
           try {
             window.localStorage.removeItem("vision-active-template");
-          } catch { /* ignore */ }
+          } catch {
+            /* ignore */
+          }
         }
         set(DEFAULTS);
       },
@@ -246,30 +245,72 @@ export const useWorkspace = create<WorkspaceState>()(
       },
       migrate: (persisted: unknown) => {
         try {
-          const p = (persisted && typeof persisted === "object" && !Array.isArray(persisted))
-            ? (persisted as Record<string, unknown>)
-            : undefined;
+          const p =
+            persisted && typeof persisted === "object" && !Array.isArray(persisted)
+              ? (persisted as Record<string, unknown>)
+              : undefined;
           return {
             ...DEFAULTS,
             ...p,
-            leftPanelLayout: (p?.leftPanelLayout && typeof p.leftPanelLayout === "object" ? p.leftPanelLayout : null) as Record<string, number> | null ?? DEFAULTS.leftPanelLayout,
-            sidebarCollapsed: typeof p?.sidebarCollapsed === "boolean" ? p.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
-            leftPanelWidth: typeof p?.leftPanelWidth === "number" ? p.leftPanelWidth : DEFAULTS.leftPanelWidth,
-            textFormatActiveSection: typeof p?.textFormatActiveSection === "string" ? p.textFormatActiveSection : DEFAULTS.textFormatActiveSection,
-            textFormatThemesOpen: typeof p?.textFormatThemesOpen === "boolean" ? p.textFormatThemesOpen : DEFAULTS.textFormatThemesOpen,
-            textFormatSections: p?.textFormatSections && typeof p.textFormatSections === "object" ? { ...DEFAULTS.textFormatSections, ...(p.textFormatSections as Record<string, unknown>) } : DEFAULTS.textFormatSections,
-            songsSearch: p?.songsSearch && typeof p.songsSearch === "object" ? { ...DEFAULTS.songsSearch, ...(p.songsSearch as Record<string, unknown>) } : DEFAULTS.songsSearch,
-            bibleSearch: p?.bibleSearch && typeof p.bibleSearch === "object" ? { ...DEFAULTS.bibleSearch, ...(p.bibleSearch as Record<string, unknown>) } : DEFAULTS.bibleSearch,
-            mediaSearch: p?.mediaSearch && typeof p.mediaSearch === "object" ? { ...DEFAULTS.mediaSearch, ...(p.mediaSearch as Record<string, unknown>) } : DEFAULTS.mediaSearch,
-            textSearch: p?.textSearch && typeof p.textSearch === "object" ? { ...DEFAULTS.textSearch, ...(p.textSearch as Record<string, unknown>) } : DEFAULTS.textSearch,
-            selectedSongId: typeof p?.selectedSongId === "number" ? p.selectedSongId : DEFAULTS.selectedSongId,
-            selectedTextId: typeof p?.selectedTextId === "string" ? p.selectedTextId : DEFAULTS.selectedTextId,
-            activeTemplateId: typeof p?.activeTemplateId === "string" ? p.activeTemplateId : DEFAULTS.activeTemplateId,
-            scrollPositions: p?.scrollPositions && typeof p.scrollPositions === "object" ? { ...DEFAULTS.scrollPositions, ...(p.scrollPositions as Record<string, unknown>) } : DEFAULTS.scrollPositions,
+            leftPanelLayout:
+              ((p?.leftPanelLayout && typeof p.leftPanelLayout === "object"
+                ? p.leftPanelLayout
+                : null) as Record<string, number> | null) ?? DEFAULTS.leftPanelLayout,
+            sidebarCollapsed:
+              typeof p?.sidebarCollapsed === "boolean"
+                ? p.sidebarCollapsed
+                : DEFAULTS.sidebarCollapsed,
+            leftPanelWidth:
+              typeof p?.leftPanelWidth === "number" ? p.leftPanelWidth : DEFAULTS.leftPanelWidth,
+            textFormatActiveSection:
+              typeof p?.textFormatActiveSection === "string"
+                ? p.textFormatActiveSection
+                : DEFAULTS.textFormatActiveSection,
+            textFormatThemesOpen:
+              typeof p?.textFormatThemesOpen === "boolean"
+                ? p.textFormatThemesOpen
+                : DEFAULTS.textFormatThemesOpen,
+            textFormatSections:
+              p?.textFormatSections && typeof p.textFormatSections === "object"
+                ? {
+                    ...DEFAULTS.textFormatSections,
+                    ...(p.textFormatSections as Record<string, unknown>),
+                  }
+                : DEFAULTS.textFormatSections,
+            songsSearch:
+              p?.songsSearch && typeof p.songsSearch === "object"
+                ? { ...DEFAULTS.songsSearch, ...(p.songsSearch as Record<string, unknown>) }
+                : DEFAULTS.songsSearch,
+            bibleSearch:
+              p?.bibleSearch && typeof p.bibleSearch === "object"
+                ? { ...DEFAULTS.bibleSearch, ...(p.bibleSearch as Record<string, unknown>) }
+                : DEFAULTS.bibleSearch,
+            mediaSearch:
+              p?.mediaSearch && typeof p.mediaSearch === "object"
+                ? { ...DEFAULTS.mediaSearch, ...(p.mediaSearch as Record<string, unknown>) }
+                : DEFAULTS.mediaSearch,
+            textSearch:
+              p?.textSearch && typeof p.textSearch === "object"
+                ? { ...DEFAULTS.textSearch, ...(p.textSearch as Record<string, unknown>) }
+                : DEFAULTS.textSearch,
+            selectedSongId:
+              typeof p?.selectedSongId === "number" ? p.selectedSongId : DEFAULTS.selectedSongId,
+            selectedTextId:
+              typeof p?.selectedTextId === "string" ? p.selectedTextId : DEFAULTS.selectedTextId,
+            activeTemplateId:
+              typeof p?.activeTemplateId === "string"
+                ? p.activeTemplateId
+                : DEFAULTS.activeTemplateId,
+            scrollPositions:
+              p?.scrollPositions && typeof p.scrollPositions === "object"
+                ? { ...DEFAULTS.scrollPositions, ...(p.scrollPositions as Record<string, unknown>) }
+                : DEFAULTS.scrollPositions,
             _hydrated: false,
             galleryOpen: false,
-            galleryBucket: typeof p?.galleryBucket === "string" ? p.galleryBucket : DEFAULTS.galleryBucket,
-            galleryQuery: typeof p?.galleryQuery === "string" ? p.galleryQuery : DEFAULTS.galleryQuery,
+            galleryBucket:
+              typeof p?.galleryBucket === "string" ? p.galleryBucket : DEFAULTS.galleryBucket,
+            galleryQuery:
+              typeof p?.galleryQuery === "string" ? p.galleryQuery : DEFAULTS.galleryQuery,
           } as WorkspaceState;
         } catch {
           return { ...DEFAULTS } as WorkspaceState;

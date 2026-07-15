@@ -1,4 +1,11 @@
-import { Image as ImageIcon, BookOpen, Music, Type, PanelRightClose, PanelRightOpen } from "lucide-react";
+import {
+  Image as ImageIcon,
+  BookOpen,
+  Music,
+  Type,
+  PanelRightClose,
+  PanelRightOpen,
+} from "lucide-react";
 import { useWorkspace, type WorkspaceTab } from "./workspace.store";
 import { LibraryPage } from "@/features/library/LibraryPage";
 import { BiblePanel } from "@/features/bible/BiblePanel";
@@ -9,8 +16,13 @@ import { useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
 import { cn } from "@/lib/utils";
 
-
-const TABS: { id: WorkspaceTab; label: string; icon: React.ComponentType<{ className?: string }>; focus: Exclude<FocusZone, null>; shortcutId: string }[] = [
+const TABS: {
+  id: WorkspaceTab;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  focus: Exclude<FocusZone, null>;
+  shortcutId: string;
+}[] = [
   { id: "media", label: "Media", icon: ImageIcon, focus: "media", shortcutId: "tab.media" },
   { id: "bible", label: "Bible", icon: BookOpen, focus: "bible", shortcutId: "tab.bible" },
   { id: "songs", label: "Songs", icon: Music, focus: "songs", shortcutId: "tab.songs" },
@@ -44,7 +56,10 @@ export function WorkspaceTabsPanel() {
             key={t.id}
             tab={t}
             isActive={t.id === activeTab}
-            onClick={() => { setActiveTab(t.id); toggleCollapsed(); }}
+            onClick={() => {
+              setActiveTab(t.id);
+              toggleCollapsed();
+            }}
           />
         ))}
       </div>
@@ -53,7 +68,10 @@ export function WorkspaceTabsPanel() {
 
   return (
     <div
-      className={cn("flex h-full min-h-0 flex-col bg-card", focus.isActive && "ring-1 ring-primary/40")}
+      className={cn(
+        "flex h-full min-h-0 flex-col bg-card",
+        focus.isActive && "ring-1 ring-primary/40",
+      )}
       onFocus={focus.onFocus}
       onMouseDown={focus.onFocus}
       tabIndex={focus.tabIndex}
@@ -130,7 +148,15 @@ function ComingSoon({
 
 type TabDef = (typeof TABS)[number];
 
-function TabRailButton({ tab, isActive, onClick }: { tab: TabDef; isActive: boolean; onClick: () => void }) {
+function TabRailButton({
+  tab,
+  isActive,
+  onClick,
+}: {
+  tab: TabDef;
+  isActive: boolean;
+  onClick: () => void;
+}) {
   const tooltip = useShortcutTooltip(tab.shortcutId, tab.label);
   const Icon = tab.icon;
   return (
@@ -140,7 +166,9 @@ function TabRailButton({ tab, isActive, onClick }: { tab: TabDef; isActive: bool
       aria-label={tooltip}
       className={cn(
         "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition",
-        isActive ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        isActive
+          ? "bg-primary/10 text-primary"
+          : "text-muted-foreground hover:bg-accent hover:text-foreground",
       )}
     >
       <Icon className="h-4 w-4" />
@@ -148,7 +176,15 @@ function TabRailButton({ tab, isActive, onClick }: { tab: TabDef; isActive: bool
   );
 }
 
-function TabBarButton({ tab, isActive, onClick }: { tab: TabDef; isActive: boolean; onClick: () => void }) {
+function TabBarButton({
+  tab,
+  isActive,
+  onClick,
+}: {
+  tab: TabDef;
+  isActive: boolean;
+  onClick: () => void;
+}) {
   const tooltip = useShortcutTooltip(tab.shortcutId, tab.label);
   const Icon = tab.icon;
   return (
@@ -158,7 +194,9 @@ function TabBarButton({ tab, isActive, onClick }: { tab: TabDef; isActive: boole
       aria-label={tooltip}
       className={cn(
         "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition",
-        isActive ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+        isActive
+          ? "bg-background text-foreground shadow-sm"
+          : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
       )}
     >
       <Icon className="h-3.5 w-3.5" />
@@ -166,4 +204,3 @@ function TabBarButton({ tab, isActive, onClick }: { tab: TabDef; isActive: boole
     </button>
   );
 }
-

@@ -36,7 +36,8 @@ export function ShortcutsDialog() {
   const grouped = useMemo(() => {
     const f = filter.toLowerCase();
     const matches = all.filter(
-      (s) => !f || s.label.toLowerCase().includes(f) || s.keys.some((k) => k.toLowerCase().includes(f)),
+      (s) =>
+        !f || s.label.toLowerCase().includes(f) || s.keys.some((k) => k.toLowerCase().includes(f)),
     );
     const map = new Map<ShortcutCategory, typeof all>();
     for (const s of matches) {
@@ -93,7 +94,9 @@ export function ShortcutsDialog() {
             );
           })}
           {[...grouped.values()].every((a) => a.length === 0) && (
-            <div className="py-8 text-center text-sm text-muted-foreground">No matching shortcuts.</div>
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              No matching shortcuts.
+            </div>
           )}
         </div>
       </DialogContent>

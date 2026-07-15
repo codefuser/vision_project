@@ -9,7 +9,5 @@ export const Route = createFileRoute("/playlists")({
       { name: "description", content: "Create and manage media playlists for services." },
     ],
   }),
-  component: () => (
-    <PlaylistsPage />
-  ),
+  component: () => <PlaylistsPage />,
 });

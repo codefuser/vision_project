@@ -34,10 +34,34 @@ export function GlobalShortcuts() {
       void navigate({ to: "/project" });
     }
   };
-  useShortcut({ id: "tab.media",  label: "Open Media tab",  category: "navigation", keys: ["1"], handler: tabShortcut("media") });
-  useShortcut({ id: "tab.bible",  label: "Open Bible tab",  category: "navigation", keys: ["2"], handler: tabShortcut("bible") });
-  useShortcut({ id: "tab.songs",  label: "Open Songs tab",  category: "navigation", keys: ["3"], handler: tabShortcut("songs") });
-  useShortcut({ id: "tab.text",   label: "Open Text tab",   category: "navigation", keys: ["4"], handler: tabShortcut("text") });
+  useShortcut({
+    id: "tab.media",
+    label: "Open Media tab",
+    category: "navigation",
+    keys: ["1"],
+    handler: tabShortcut("media"),
+  });
+  useShortcut({
+    id: "tab.bible",
+    label: "Open Bible tab",
+    category: "navigation",
+    keys: ["2"],
+    handler: tabShortcut("bible"),
+  });
+  useShortcut({
+    id: "tab.songs",
+    label: "Open Songs tab",
+    category: "navigation",
+    keys: ["3"],
+    handler: tabShortcut("songs"),
+  });
+  useShortcut({
+    id: "tab.text",
+    label: "Open Text tab",
+    category: "navigation",
+    keys: ["4"],
+    handler: tabShortcut("text"),
+  });
 
   // ── Search focus (Alt+1..4) — switches to the tab and emits a focus-search event
   // that the relevant panel listens for. Operator-friendly: one keypress goes
@@ -51,20 +75,76 @@ export function GlobalShortcuts() {
       window.dispatchEvent(new CustomEvent("workspace:focus-search", { detail: { tab: id } }));
     }, 60);
   };
-  useShortcut({ id: "search.media", label: "Focus Media search", category: "navigation", keys: ["Alt+1"], handler: focusSearch("media") });
-  useShortcut({ id: "search.bible", label: "Focus Bible search", category: "navigation", keys: ["Alt+2"], handler: focusSearch("bible") });
-  useShortcut({ id: "search.songs", label: "Focus Songs search", category: "navigation", keys: ["Alt+3"], handler: focusSearch("songs") });
-  useShortcut({ id: "search.text",  label: "Focus Text search",  category: "navigation", keys: ["Alt+4"], handler: focusSearch("text") });
+  useShortcut({
+    id: "search.media",
+    label: "Focus Media search",
+    category: "navigation",
+    keys: ["Alt+1"],
+    handler: focusSearch("media"),
+  });
+  useShortcut({
+    id: "search.bible",
+    label: "Focus Bible search",
+    category: "navigation",
+    keys: ["Alt+2"],
+    handler: focusSearch("bible"),
+  });
+  useShortcut({
+    id: "search.songs",
+    label: "Focus Songs search",
+    category: "navigation",
+    keys: ["Alt+3"],
+    handler: focusSearch("songs"),
+  });
+  useShortcut({
+    id: "search.text",
+    label: "Focus Text search",
+    category: "navigation",
+    keys: ["Alt+4"],
+    handler: focusSearch("text"),
+  });
 
   // ── Sidebar navigation — jump directly to a route from anywhere.
   // Avoid browser-reserved combos (Mod+P prints, Mod+Shift+P opens private window,
   // Mod+Shift+L opens downloads in some browsers). Use Alt+Letter + F-keys.
-  const goTo = (to: string) => () => { void navigate({ to }); };
-  useShortcut({ id: "nav.library",   label: "Go to Library",   category: "navigation", keys: ["Alt+L"], handler: goTo("/library") });
-  useShortcut({ id: "nav.playlists", label: "Go to Playlists", category: "navigation", keys: ["Alt+Y"], handler: goTo("/playlists") });
-  useShortcut({ id: "nav.project",   label: "Go to Project",   category: "navigation", keys: ["Alt+J"], handler: goTo("/project") });
-  useShortcut({ id: "nav.settings",  label: "Go to Settings",  category: "navigation", keys: ["Alt+,"], handler: goTo("/settings") });
-  useShortcut({ id: "nav.shortcuts", label: "Open Shortcut Center", category: "navigation", keys: ["F1"], handler: goTo("/shortcuts") });
+  const goTo = (to: string) => () => {
+    void navigate({ to });
+  };
+  useShortcut({
+    id: "nav.library",
+    label: "Go to Library",
+    category: "navigation",
+    keys: ["Alt+L"],
+    handler: goTo("/library"),
+  });
+  useShortcut({
+    id: "nav.playlists",
+    label: "Go to Playlists",
+    category: "navigation",
+    keys: ["Alt+Y"],
+    handler: goTo("/playlists"),
+  });
+  useShortcut({
+    id: "nav.project",
+    label: "Go to Project",
+    category: "navigation",
+    keys: ["Alt+J"],
+    handler: goTo("/project"),
+  });
+  useShortcut({
+    id: "nav.settings",
+    label: "Go to Settings",
+    category: "navigation",
+    keys: ["Alt+,"],
+    handler: goTo("/settings"),
+  });
+  useShortcut({
+    id: "nav.shortcuts",
+    label: "Open Shortcut Center",
+    category: "navigation",
+    keys: ["F1"],
+    handler: goTo("/shortcuts"),
+  });
 
   // ── Projector lifecycle (F9 toggles — Mod+P is reserved for browser print).
   useShortcut({
@@ -72,7 +152,10 @@ export function GlobalShortcuts() {
     label: "Open / Close Projector",
     category: "projector",
     keys: ["F9"],
-    handler: () => { if (projectorOpen) closeProjector(); else void openProjector(); },
+    handler: () => {
+      if (projectorOpen) closeProjector();
+      else void openProjector();
+    },
   });
   useShortcut({
     id: "projector.stop",

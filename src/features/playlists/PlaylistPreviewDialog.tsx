@@ -51,9 +51,7 @@ export function PlaylistPreviewDialog({
           </DialogTitle>
           <DialogDescription>
             {playlist?.items.length ?? 0} item{(playlist?.items.length ?? 0) === 1 ? "" : "s"}
-            {playlist && (
-              <> · Updated {formatRelative(playlist.updatedAt)}</>
-            )}
+            {playlist && <> · Updated {formatRelative(playlist.updatedAt)}</>}
           </DialogDescription>
         </DialogHeader>
 
@@ -82,9 +80,13 @@ export function PlaylistPreviewDialog({
                     </div>
                     <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
                       {it.media?.type === "video" ? (
-                        <><Film className="h-3 w-3" /> Video</>
+                        <>
+                          <Film className="h-3 w-3" /> Video
+                        </>
                       ) : it.media?.type === "image" ? (
-                        <><ImageIcon className="h-3 w-3" /> Image</>
+                        <>
+                          <ImageIcon className="h-3 w-3" /> Image
+                        </>
                       ) : (
                         "Unknown"
                       )}

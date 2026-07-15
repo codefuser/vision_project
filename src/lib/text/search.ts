@@ -39,9 +39,7 @@ export function searchTextItems(
 ): SearchHit[] {
   const q = query.trim().toLowerCase();
   if (!q) {
-    return [...items]
-      .sort((a, b) => b.updatedAt - a.updatedAt)
-      .map((item) => ({ item, score: 0 }));
+    return [...items].sort((a, b) => b.updatedAt - a.updatedAt).map((item) => ({ item, score: 0 }));
   }
   const qTamil = /[A-Za-z]/.test(q) ? convertCompleted(q).converted : "";
   const hits: SearchHit[] = [];
@@ -66,7 +64,10 @@ export function searchTextItems(
       // Word-level fuzzy on title tokens.
       const titleWords = title.split(/\s+/);
       for (const w of titleWords) {
-        if (lev(w, q, 2) <= 2) { score += 15; break; }
+        if (lev(w, q, 2) <= 2) {
+          score += 15;
+          break;
+        }
       }
     }
 

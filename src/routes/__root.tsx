@@ -15,7 +15,6 @@ import { Toaster } from "@/components/ui/sonner";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -82,10 +81,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Church Media — Projection Software" },
-      { name: "description", content: "Offline-first media projection software for churches. Images, posters, and videos." },
+      {
+        name: "description",
+        content:
+          "Offline-first media projection software for churches. Images, posters, and videos.",
+      },
       { name: "theme-color", content: "#0a0a0a" },
       { property: "og:title", content: "Church Media — Projection Software" },
-      { property: "og:description", content: "Offline-first media projection software for churches." },
+      {
+        property: "og:description",
+        content: "Offline-first media projection software for churches.",
+      },
       { property: "og:type", content: "website" },
     ],
     links: [
@@ -134,7 +140,13 @@ function RootComponent() {
       <GlobalErrorBoundary>
         {!isProjectorPopup && <GlobalShortcuts />}
         {!isProjectorPopup && <ShortcutsDialog />}
-        {isProjectorPopup ? <Outlet /> : <AppShell><Outlet /></AppShell>}
+        {isProjectorPopup ? (
+          <Outlet />
+        ) : (
+          <AppShell>
+            <Outlet />
+          </AppShell>
+        )}
         <Toaster position="top-right" richColors closeButton />
       </GlobalErrorBoundary>
     </QueryClientProvider>

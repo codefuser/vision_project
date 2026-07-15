@@ -16,7 +16,6 @@ import {
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import { LogoLayer } from "@/components/LogoLayer";
 
-
 type Mode = "idle" | "single" | "slideshow" | "text";
 
 interface RuntimeItem {
@@ -107,8 +106,22 @@ export function ProjectionWindow() {
       logo,
     };
     channelRef.current?.postMessage(state);
-  }, [mode, items, index, playing, black, muted, volume, playbackRate, loop, videoReady, textOverlay, textStyle, groupedStyles, logo]);
-
+  }, [
+    mode,
+    items,
+    index,
+    playing,
+    black,
+    muted,
+    volume,
+    playbackRate,
+    loop,
+    videoReady,
+    textOverlay,
+    textStyle,
+    groupedStyles,
+    logo,
+  ]);
 
   useEffect(() => {
     broadcastState();
@@ -121,7 +134,6 @@ export function ProjectionWindow() {
     const id = window.setInterval(() => broadcastState(), 250);
     return () => clearInterval(id);
   }, [items, index, broadcastState]);
-
 
   const loadMediaUrl = async (m: MediaRecord): Promise<string> => {
     const rec = await db().blobs.get(m.blobId);
@@ -440,7 +452,6 @@ export function ProjectionWindow() {
         />
       )}
 
-
       {/* Text overlay (Bible / Songs / Text) — same renderer used by Live Preview. */}
       {textOverlay && !black && !cur && (
         <ProjectionTextStage
@@ -450,7 +461,6 @@ export function ProjectionWindow() {
           logo={logo}
         />
       )}
-
 
       {/* Black */}
       {black && <div className="absolute inset-0 bg-black" />}

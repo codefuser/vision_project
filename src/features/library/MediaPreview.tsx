@@ -30,17 +30,24 @@ export function MediaPreview({
   }, [media.blobId]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+      onClick={onClose}
+    >
       <div
         onClick={(e) => e.stopPropagation()}
         className="relative flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg bg-card"
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-2">
           <div className="min-w-0">
-            <div className="truncate text-sm font-medium" title={media.name}>{media.name}</div>
+            <div className="truncate text-sm font-medium" title={media.name}>
+              {media.name}
+            </div>
             <div className="text-xs text-muted-foreground">
-              {media.type === "video" ? formatDuration(media.durationMs) : `${media.width ?? "?"}×${media.height ?? "?"}`} ·{" "}
-              {formatBytes(media.size)}
+              {media.type === "video"
+                ? formatDuration(media.durationMs)
+                : `${media.width ?? "?"}×${media.height ?? "?"}`}{" "}
+              · {formatBytes(media.size)}
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -50,7 +57,11 @@ export function MediaPreview({
             >
               <Play className="h-3.5 w-3.5" /> Project
             </button>
-            <button onClick={onClose} className="rounded-md p-1.5 hover:bg-accent" aria-label="Close">
+            <button
+              onClick={onClose}
+              className="rounded-md p-1.5 hover:bg-accent"
+              aria-label="Close"
+            >
               <X className="h-4 w-4" />
             </button>
           </div>

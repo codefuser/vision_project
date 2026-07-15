@@ -17,7 +17,9 @@ function SettingRow({ def, children, id }: { def: SettingDef; children: ReactNod
           <span className="text-[13px] font-medium text-foreground/90">{def.title}</span>
         )}
         {def.description && (
-          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">{def.description}</p>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
+            {def.description}
+          </p>
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0">{children}</div>
@@ -41,9 +43,13 @@ function ResetBtn({ show, onReset }: { show: boolean; onReset: () => void }) {
 
 /* ───── Premium Toggle (iOS / Figma quality) ───── */
 export function SettingToggle({
-  def, value, onChange,
+  def,
+  value,
+  onChange,
 }: {
-  def: SettingDef; value: boolean; onChange: (v: boolean) => void;
+  def: SettingDef;
+  value: boolean;
+  onChange: (v: boolean) => void;
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as boolean;
@@ -64,7 +70,9 @@ export function SettingToggle({
           transition: "all 250ms cubic-bezier(.22,.9,.33,1)",
           transform: pressed ? "scale(0.95)" : "",
           backgroundColor: value ? "var(--primary)" : "#2B3245",
-          boxShadow: value ? "0 0 12px color-mix(in srgb, var(--primary) 50%, transparent)" : "none",
+          boxShadow: value
+            ? "0 0 12px color-mix(in srgb, var(--primary) 50%, transparent)"
+            : "none",
         }}
         className={cn(
           "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-0 outline-none",
@@ -87,9 +95,13 @@ export function SettingToggle({
 
 /* ───── Premium Slider ───── */
 export function SettingSlider({
-  def, value, onChange,
+  def,
+  value,
+  onChange,
 }: {
-  def: SettingDef; value: number; onChange: (v: number) => void;
+  def: SettingDef;
+  value: number;
+  onChange: (v: number) => void;
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as number;
@@ -101,7 +113,10 @@ export function SettingSlider({
   return (
     <SettingRow def={def} id={id}>
       <ResetBtn show={value !== dv} onReset={() => onChange(dv)} />
-      <span className="w-10 text-right text-[12px] tabular-nums text-muted-foreground">{value}{def.unit ?? ""}</span>
+      <span className="w-10 text-right text-[12px] tabular-nums text-muted-foreground">
+        {value}
+        {def.unit ?? ""}
+      </span>
       <div className="relative h-5 w-24">
         <input
           id={id}
@@ -130,9 +145,13 @@ export function SettingSlider({
 
 /* ───── Premium Select ───── */
 export function SettingSelect({
-  def, value, onChange,
+  def,
+  value,
+  onChange,
 }: {
-  def: SettingDef; value: string; onChange: (v: string) => void;
+  def: SettingDef;
+  value: string;
+  onChange: (v: string) => void;
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as string;
@@ -146,9 +165,19 @@ export function SettingSelect({
           onChange={(e) => onChange(e.target.value)}
           className="h-7 min-w-[120px] appearance-none rounded-md border border-border/40 bg-background/60 px-2.5 pr-6 text-[12px] font-medium text-foreground outline-none transition-all hover:border-border/70 hover:bg-background/80 focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/20"
         >
-          {(def.options ?? []).map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+          {(def.options ?? []).map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
         </select>
-        <svg className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/35" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <svg
+          className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/35"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth={2}
+        >
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </div>
@@ -158,9 +187,13 @@ export function SettingSelect({
 
 /* ───── Premium Input ───── */
 export function SettingInput({
-  def, value, onChange,
+  def,
+  value,
+  onChange,
 }: {
-  def: SettingDef; value: string | number; onChange: (v: string) => void;
+  def: SettingDef;
+  value: string | number;
+  onChange: (v: string) => void;
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key];
@@ -187,9 +220,13 @@ export function SettingInput({
 
 /* ───── Premium Color Picker ───── */
 export function SettingColor({
-  def, value, onChange,
+  def,
+  value,
+  onChange,
 }: {
-  def: SettingDef; value: string; onChange: (v: string) => void;
+  def: SettingDef;
+  value: string;
+  onChange: (v: string) => void;
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as string;
@@ -205,7 +242,10 @@ export function SettingColor({
             onChange={(e) => onChange(e.target.value)}
             className="absolute inset-0 cursor-pointer opacity-0"
           />
-          <div className="h-full w-full ring-1 ring-inset ring-black/10" style={{ backgroundColor: value }} />
+          <div
+            className="h-full w-full ring-1 ring-inset ring-black/10"
+            style={{ backgroundColor: value }}
+          />
         </div>
         <span className="w-14 text-[11px] tabular-nums text-muted-foreground/55">{value}</span>
       </div>
@@ -214,12 +254,22 @@ export function SettingColor({
 }
 
 /* ───── Card Wrapper ───── */
-export function SettingCard({ title, children, className }: { title?: string; children: ReactNode; className?: string }) {
+export function SettingCard({
+  title,
+  children,
+  className,
+}: {
+  title?: string;
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <div className={cn("rounded-lg border border-border/30 bg-card shadow-xs", className)}>
       {title && (
         <div className="border-b border-border/12 px-4 py-2">
-          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">{title}</h3>
+          <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/40">
+            {title}
+          </h3>
         </div>
       )}
       <div className="divide-y divide-border/6">{children}</div>
@@ -231,7 +281,9 @@ export function SettingCard({ title, children, className }: { title?: string; ch
 export function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="rounded-lg border border-border/20 bg-muted/5 p-2.5 text-center">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">{label}</div>
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40">
+        {label}
+      </div>
       <div className="mt-0.5 text-sm font-bold text-foreground">{value}</div>
     </div>
   );

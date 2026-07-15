@@ -10,7 +10,10 @@ export const Route = createFileRoute("/shortcuts")({
   head: () => ({
     meta: [
       { title: "Keyboard Shortcuts — Church Media" },
-      { name: "description", content: "Discover every keyboard shortcut available in the projection workspace." },
+      {
+        name: "description",
+        content: "Discover every keyboard shortcut available in the projection workspace.",
+      },
     ],
   }),
   component: ShortcutsPage,
@@ -30,9 +33,7 @@ const ORDER: { id: ShortcutCategory; label: string; hint: string }[] = [
 ];
 
 function ShortcutsPage() {
-  return (
-    <ShortcutsBody />
-  );
+  return <ShortcutsBody />;
 }
 
 function ShortcutsBody() {
@@ -71,8 +72,9 @@ function ShortcutsBody() {
           <div className="flex-1">
             <h1 className="text-xl font-semibold tracking-tight">Shortcut Center</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Every keyboard shortcut registered across the app. Auto-generated — new shortcuts appear here instantly.
-              Showing <span className="font-medium text-foreground">{visible}</span> of {total}.
+              Every keyboard shortcut registered across the app. Auto-generated — new shortcuts
+              appear here instantly. Showing{" "}
+              <span className="font-medium text-foreground">{visible}</span> of {total}.
             </p>
           </div>
         </div>
@@ -96,7 +98,9 @@ function ShortcutsBody() {
               <section key={cat.id} className="rounded-lg border border-border bg-card">
                 <header className="flex items-baseline justify-between border-b border-border px-4 py-2.5">
                   <h2 className="text-sm font-semibold">{cat.label}</h2>
-                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">{cat.hint} · {items.length}</span>
+                  <span className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                    {cat.hint} · {items.length}
+                  </span>
                 </header>
                 <ul className="divide-y divide-border">
                   {items.map((s) => (

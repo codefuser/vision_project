@@ -49,7 +49,12 @@ export function projectTextSlide(input: ProjectTextInput): ProjectionContent<Liv
     title: `${input.title} (slide ${input.slideIndex + 1}/${input.totalSlides})`,
     source: { module: "text" },
     metadata: { itemId: input.itemId, slideIndex: input.slideIndex },
-    style: { background: style.background, color: style.color, align: style.align, vAlign: style.vAlign },
+    style: {
+      background: style.background,
+      color: style.color,
+      align: style.align,
+      vAlign: style.vAlign,
+    },
     body: { text: input.text },
     createdAt: now,
     updatedAt: now,

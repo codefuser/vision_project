@@ -82,7 +82,8 @@ export const useBibleQueue = create<QueueStore>()(
         return s.items[s.currentIndex] ?? null;
       },
 
-      toggleSermon: () => set((s) => ({ sermonMode: !s.sermonMode, panelOpen: !s.sermonMode ? true : s.panelOpen })),
+      toggleSermon: () =>
+        set((s) => ({ sermonMode: !s.sermonMode, panelOpen: !s.sermonMode ? true : s.panelOpen })),
       setPanelOpen: (v) => set({ panelOpen: v }),
     }),
     {

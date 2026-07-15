@@ -41,7 +41,10 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
     if (filter === "recent-added") {
       media = (await listAllMedia()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
     } else if (filter === "recent-used") {
-      media = (await listAllMedia()).filter((m) => m.lastUsedAt).sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0)).slice(0, 200);
+      media = (await listAllMedia())
+        .filter((m) => m.lastUsedAt)
+        .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+        .slice(0, 200);
     } else if (currentFolderId === null) {
       // "All Media" = master view of every uploaded file, regardless of folder.
       media = await listAllMedia();
@@ -73,7 +76,11 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
   selectAll: (ids) => set({ selection: new Set(ids) }),
 }));
 
-export function filterMedia(items: MediaRecord[], search: string, filter: LibraryFilter): MediaRecord[] {
+export function filterMedia(
+  items: MediaRecord[],
+  search: string,
+  filter: LibraryFilter,
+): MediaRecord[] {
   let out = items;
   if (filter === "images") out = out.filter((m) => m.type === "image");
   else if (filter === "videos") out = out.filter((m) => m.type === "video");

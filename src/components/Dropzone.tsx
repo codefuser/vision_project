@@ -19,8 +19,10 @@ export function Dropzone({ folderId, onDone, className }: Props) {
     setProgress({ done: 0, total: arr.length });
     try {
       const { imported, skipped } = await importFiles(arr, folderId, (p) => setProgress(p));
-      if (imported.length) toast.success(`Imported ${imported.length} file${imported.length > 1 ? "s" : ""}`);
-      if (skipped.length) toast.error(`Skipped ${skipped.length} file${skipped.length > 1 ? "s" : ""}`);
+      if (imported.length)
+        toast.success(`Imported ${imported.length} file${imported.length > 1 ? "s" : ""}`);
+      if (skipped.length)
+        toast.error(`Skipped ${skipped.length} file${skipped.length > 1 ? "s" : ""}`);
       onDone?.();
     } catch (e) {
       toast.error("Import failed: " + (e as Error).message);
@@ -58,16 +60,26 @@ export function Dropzone({ folderId, onDone, className }: Props) {
       <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
       <p className="mt-2 text-sm text-foreground">Drag & drop images, posters, or videos here</p>
       <div className="mt-2 flex flex-wrap items-center justify-center gap-1.5">
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Images</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Images
+        </span>
         {["JPG", "JPEG", "PNG", "WEBP", "GIF"].map((f) => (
-          <span key={f} className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
+          <span
+            key={f}
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground/80"
+          >
             {f}
           </span>
         ))}
         <span className="mx-1 text-muted-foreground/40">·</span>
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Videos</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Videos
+        </span>
         {["MP4", "WEBM", "MOV"].map((f) => (
-          <span key={f} className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground/80">
+          <span
+            key={f}
+            className="rounded border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground/80"
+          >
             {f}
           </span>
         ))}
@@ -83,7 +95,11 @@ export function Dropzone({ folderId, onDone, className }: Props) {
           <div className="text-sm font-medium">
             Importing {progress.done}/{progress.total}
           </div>
-          {progress.current && <div className="max-w-[80%] truncate text-xs text-muted-foreground">{progress.current}</div>}
+          {progress.current && (
+            <div className="max-w-[80%] truncate text-xs text-muted-foreground">
+              {progress.current}
+            </div>
+          )}
           <div className="h-2 w-3/4 overflow-hidden rounded-full bg-muted">
             <div
               className="h-full bg-primary transition-all"

@@ -18,9 +18,7 @@ export function ThemeSection() {
   const galleryOpen = useWorkspace((s) => s.galleryOpen);
   const setGalleryOpen = useWorkspace((s) => s.setGalleryOpen);
   const [activeId, setActiveId] = useState<string | null>(activeTemplateId());
-  const activePreset = activeId
-    ? TEMPLATE_PRESETS.find((t) => t.id === activeId) ?? null
-    : null;
+  const activePreset = activeId ? (TEMPLATE_PRESETS.find((t) => t.id === activeId) ?? null) : null;
 
   const handleApply = (id: string) => {
     applyTemplate(id);
@@ -86,10 +84,7 @@ export function ThemeSection() {
         </div>
       )}
 
-      <ThemeGalleryDialog
-        open={galleryOpen}
-        onOpenChange={setGalleryOpen}
-      />
+      <ThemeGalleryDialog open={galleryOpen} onOpenChange={setGalleryOpen} />
     </div>
   );
 }

@@ -50,14 +50,20 @@ export function BackgroundSection() {
             <Field label="Opacity">
               <NumberInput
                 value={Math.round((bg.opacity ?? 1) * 100)}
-                step={1} min={0} max={100} suffix="%"
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
                 onChange={(v) => setBackground({ opacity: v / 100 })}
               />
             </Field>
             <Field label="Brightness">
               <NumberInput
                 value={Math.round((bg.brightness ?? 1) * 100)}
-                step={1} min={0} max={200} suffix="%"
+                step={1}
+                min={0}
+                max={200}
+                suffix="%"
                 onChange={(v) => setBackground({ brightness: v / 100 })}
               />
             </Field>
@@ -87,7 +93,10 @@ export function BackgroundSection() {
             </button>
             {bg.mediaId && (
               <button
-                onClick={() => { setBackground({ mediaId: null }); setBgName(null); }}
+                onClick={() => {
+                  setBackground({ mediaId: null });
+                  setBgName(null);
+                }}
                 className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition hover:bg-accent"
               >
                 <X className="h-3.5 w-3.5" />
@@ -97,12 +106,17 @@ export function BackgroundSection() {
 
           {/* Fit */}
           <div>
-            <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Fit</div>
+            <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+              Fit
+            </div>
             <div className="flex gap-1">
               {(["cover", "contain", "stretch"] as const).map((f) => (
-                <Toggle key={f} label={f[0].toUpperCase() + f.slice(1)}
+                <Toggle
+                  key={f}
+                  label={f[0].toUpperCase() + f.slice(1)}
                   active={bg.fit === f}
-                  onClick={() => setBackground({ fit: f })} />
+                  onClick={() => setBackground({ fit: f })}
+                />
               ))}
             </div>
           </div>
@@ -110,62 +124,124 @@ export function BackgroundSection() {
           {/* Visual adjustments */}
           <div className="grid grid-cols-2 gap-2">
             <Field label="Opacity">
-              <NumberInput value={Math.round((bg.opacity ?? 1) * 100)} step={1} min={0} max={100} suffix="%"
-                onChange={(v) => setBackground({ opacity: v / 100 })} />
+              <NumberInput
+                value={Math.round((bg.opacity ?? 1) * 100)}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(v) => setBackground({ opacity: v / 100 })}
+              />
             </Field>
             <Field label="Brightness">
-              <NumberInput value={Math.round((bg.brightness ?? 1) * 100)} step={1} min={0} max={200} suffix="%"
-                onChange={(v) => setBackground({ brightness: v / 100 })} />
+              <NumberInput
+                value={Math.round((bg.brightness ?? 1) * 100)}
+                step={1}
+                min={0}
+                max={200}
+                suffix="%"
+                onChange={(v) => setBackground({ brightness: v / 100 })}
+              />
             </Field>
             <Field label="Blur">
-              <NumberInput value={bg.blur ?? 0} step={1} min={0} max={60} suffix="px"
-                onChange={(v) => setBackground({ blur: v })} />
+              <NumberInput
+                value={bg.blur ?? 0}
+                step={1}
+                min={0}
+                max={60}
+                suffix="px"
+                onChange={(v) => setBackground({ blur: v })}
+              />
             </Field>
             <Field label="Zoom">
-              <NumberInput value={Math.round((bg.zoom ?? 1) * 100)} step={5} min={50} max={300} suffix="%"
-                onChange={(v) => setBackground({ zoom: v / 100 })} />
+              <NumberInput
+                value={Math.round((bg.zoom ?? 1) * 100)}
+                step={5}
+                min={50}
+                max={300}
+                suffix="%"
+                onChange={(v) => setBackground({ zoom: v / 100 })}
+              />
             </Field>
             <Field label="Position X">
-              <NumberInput value={bg.positionX ?? 50} step={1} min={0} max={100} suffix="%"
-                onChange={(v) => setBackground({ positionX: v })} />
+              <NumberInput
+                value={bg.positionX ?? 50}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(v) => setBackground({ positionX: v })}
+              />
             </Field>
             <Field label="Position Y">
-              <NumberInput value={bg.positionY ?? 50} step={1} min={0} max={100} suffix="%"
-                onChange={(v) => setBackground({ positionY: v })} />
+              <NumberInput
+                value={bg.positionY ?? 50}
+                step={1}
+                min={0}
+                max={100}
+                suffix="%"
+                onChange={(v) => setBackground({ positionY: v })}
+              />
             </Field>
             <Field label="Contrast">
-              <NumberInput value={Math.round((bg.contrast ?? 1) * 100)} step={1} min={0} max={200} suffix="%"
-                onChange={(v) => setBackground({ contrast: v / 100 })} />
+              <NumberInput
+                value={Math.round((bg.contrast ?? 1) * 100)}
+                step={1}
+                min={0}
+                max={200}
+                suffix="%"
+                onChange={(v) => setBackground({ contrast: v / 100 })}
+              />
             </Field>
           </div>
 
           {/* Overlay tint */}
           <div className="border-t border-border/60 pt-2">
-            <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Overlay Tint</div>
+            <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+              Overlay Tint
+            </div>
             <Row>
               <Field label="Color">
-                <ColorInput value={bg.overlayColor ?? "#000000"}
-                  onChange={(v) => setBackground({ overlayColor: v })} />
+                <ColorInput
+                  value={bg.overlayColor ?? "#000000"}
+                  onChange={(v) => setBackground({ overlayColor: v })}
+                />
               </Field>
               <Field label="Opacity">
-                <NumberInput value={Math.round((bg.overlayOpacity ?? 0) * 100)} step={1} min={0} max={100} suffix="%"
-                  onChange={(v) => setBackground({ overlayOpacity: v / 100 })} />
+                <NumberInput
+                  value={Math.round((bg.overlayOpacity ?? 0) * 100)}
+                  step={1}
+                  min={0}
+                  max={100}
+                  suffix="%"
+                  onChange={(v) => setBackground({ overlayOpacity: v / 100 })}
+                />
               </Field>
             </Row>
           </div>
 
           {/* Video controls */}
           <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-2">
-            <SwitchRow label="Loop video"
+            <SwitchRow
+              label="Loop video"
               checked={bg.videoLoop ?? true}
-              onChange={(v) => setBackground({ videoLoop: v })} />
-            <SwitchRow label="Mute video"
+              onChange={(v) => setBackground({ videoLoop: v })}
+            />
+            <SwitchRow
+              label="Mute video"
               checked={bg.videoMuted ?? true}
-              onChange={(v) => setBackground({ videoMuted: v })} />
+              onChange={(v) => setBackground({ videoMuted: v })}
+            />
             <div className="ml-auto flex items-center gap-1 text-[10px] text-muted-foreground">
               Speed
-              <NumberInput value={bg.videoSpeed ?? 1} step={0.25} min={0.25} max={4} suffix="x"
-                onChange={(v) => setBackground({ videoSpeed: v })} />
+              <NumberInput
+                value={bg.videoSpeed ?? 1}
+                step={0.25}
+                min={0.25}
+                max={4}
+                suffix="x"
+                onChange={(v) => setBackground({ videoSpeed: v })}
+              />
             </div>
           </div>
         </div>
@@ -209,20 +285,33 @@ export function BackgroundSection() {
 }
 
 function BackgroundGallerySection({
-  items, onPick, onSelect, onRemove, onAddColor, currentColor,
+  items,
+  onPick,
+  onSelect,
+  onRemove,
+  onAddColor,
+  currentColor,
 }: {
-  items: BackgroundItem[]; onPick: () => void; onSelect: (it: BackgroundItem) => void;
-  onRemove: (id: string) => void; onAddColor: (c: string) => void; currentColor: string;
+  items: BackgroundItem[];
+  onPick: () => void;
+  onSelect: (it: BackgroundItem) => void;
+  onRemove: (id: string) => void;
+  onAddColor: (c: string) => void;
+  currentColor: string;
 }) {
   if (items.length === 0) {
     return (
       <div className="flex items-center gap-1 pt-1">
-        <button onClick={onPick}
-          className="inline-flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[11px] transition hover:bg-accent">
+        <button
+          onClick={onPick}
+          className="inline-flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[11px] transition hover:bg-accent"
+        >
           <ImageIcon className="h-3 w-3" /> Add background from library
         </button>
-        <button onClick={() => onAddColor(currentColor)}
-          className="inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[11px] transition hover:bg-accent">
+        <button
+          onClick={() => onAddColor(currentColor)}
+          className="inline-flex h-7 cursor-pointer items-center justify-center gap-1 rounded-md border border-dashed border-border bg-background px-2 text-[11px] transition hover:bg-accent"
+        >
           + Color
         </button>
       </div>
@@ -232,7 +321,9 @@ function BackgroundGallerySection({
     <div>
       <div className="mb-1 flex items-center justify-between text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
         <span>Saved ({items.length})</span>
-        <button onClick={onPick} className="cursor-pointer text-primary hover:underline">+ Add</button>
+        <button onClick={onPick} className="cursor-pointer text-primary hover:underline">
+          + Add
+        </button>
       </div>
       <div className="grid grid-cols-4 gap-1.5">
         {items.map((it) => (
@@ -249,9 +340,13 @@ function BackgroundGallerySection({
 }
 
 function BackgroundThumb({
-  item, onSelect, onRemove,
+  item,
+  onSelect,
+  onRemove,
 }: {
-  item: BackgroundItem; onSelect: () => void; onRemove: () => void;
+  item: BackgroundItem;
+  onSelect: () => void;
+  onRemove: () => void;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -263,24 +358,36 @@ function BackgroundThumb({
       if (!m) return;
       const rec = await db().blobs.get(m.thumbBlobId ?? m.blobId);
       if (!rec || cancelled) return;
-      key = (m.thumbBlobId ?? m.blobId);
+      key = m.thumbBlobId ?? m.blobId;
       setUrl(acquireUrl(key, rec.blob));
     })();
-    return () => { cancelled = true; if (key) releaseUrl(key); };
+    return () => {
+      cancelled = true;
+      if (key) releaseUrl(key);
+    };
   }, [item]);
   return (
     <div className="group relative aspect-video overflow-hidden rounded-md border border-border bg-background">
-      <button onClick={onSelect} className="absolute inset-0 cursor-pointer" title={item.name ?? item.color ?? ""}>
+      <button
+        onClick={onSelect}
+        className="absolute inset-0 cursor-pointer"
+        title={item.name ?? item.color ?? ""}
+      >
         {item.kind === "color" ? (
           <div className="h-full w-full" style={{ background: item.color }} />
         ) : url ? (
           <img src={url} alt="" className="h-full w-full object-cover" draggable={false} />
         ) : (
-          <div className="flex h-full items-center justify-center text-[9px] text-muted-foreground">...</div>
+          <div className="flex h-full items-center justify-center text-[9px] text-muted-foreground">
+            ...
+          </div>
         )}
       </button>
-      <button onClick={onRemove}
-        className="absolute right-0.5 top-0.5 hidden h-4 w-4 cursor-pointer items-center justify-center rounded bg-black/60 text-white group-hover:flex" title="Remove">
+      <button
+        onClick={onRemove}
+        className="absolute right-0.5 top-0.5 hidden h-4 w-4 cursor-pointer items-center justify-center rounded bg-black/60 text-white group-hover:flex"
+        title="Remove"
+      >
         <X className="h-2.5 w-2.5" />
       </button>
     </div>

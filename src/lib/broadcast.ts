@@ -5,26 +5,26 @@
  *  the preview is a true mirror of the projector output. */
 export interface TextStyle {
   fontFamily: string;
-  fontSizeVw: number;        // base size in viewport-width units (auto-fit shrinks below this)
+  fontSizeVw: number; // base size in viewport-width units (auto-fit shrinks below this)
   fontWeight: number;
   italic: boolean;
   underline: boolean;
   uppercase: boolean;
   smallCaps: boolean;
   color: string;
-  textOpacity: number;       // 0..1
+  textOpacity: number; // 0..1
   shadow: boolean;
   shadowColor: string;
-  shadowBlur: number;        // px
-  outlineWidth: number;      // px
+  shadowBlur: number; // px
+  outlineWidth: number; // px
   outlineColor: string;
-  background: string;        // CSS color
-  bgOpacity: number;         // 0..1
+  background: string; // CSS color
+  bgOpacity: number; // 0..1
   align: "left" | "center" | "right";
   vAlign: "top" | "middle" | "bottom";
-  lineHeight: number;        // unit-less
-  letterSpacing: number;     // px
-  paddingVw: number;         // % of viewport width margins
+  lineHeight: number; // unit-less
+  letterSpacing: number; // px
+  paddingVw: number; // % of viewport width margins
   textAnimation: TextAnimation;
 }
 
@@ -91,14 +91,14 @@ export interface BackgroundConfig {
   mediaId: string | null;
   fit: "cover" | "contain" | "stretch";
   /** Visual adjustments — applied to the media layer. */
-  opacity: number;     // 0..1
-  blur: number;        // px
-  brightness: number;  // 0..2 (1 = neutral)
+  opacity: number; // 0..1
+  blur: number; // px
+  brightness: number; // 0..2 (1 = neutral)
   /** NEW (additive): css contrast multiplier, defaults 1. */
-  contrast?: number;   // 0..2 (1 = neutral)
-  zoom: number;        // 1..3 scale multiplier
-  positionX: number;   // 0..100 (%, default 50)
-  positionY: number;   // 0..100 (%, default 50)
+  contrast?: number; // 0..2 (1 = neutral)
+  zoom: number; // 1..3 scale multiplier
+  positionX: number; // 0..100 (%, default 50)
+  positionY: number; // 0..100 (%, default 50)
   /** Optional CSS gradient string. When set + kind === "color", renders gradient instead of solid. */
   gradient?: string | null;
   /** Optional animated decorative overlay rendered above the base. */
@@ -114,14 +114,30 @@ export interface BackgroundConfig {
 
 export type BackgroundAnimation =
   | "none"
-  | "golden-stage" | "church-windows" | "cathedral-glass"
-  | "ocean-horizon" | "calm-lake" | "cloud-layers"
-  | "moving-fog" | "night-sky" | "aurora-curtain"
-  | "deep-space" | "mountain-sunrise" | "forest-light"
-  | "candle-glow" | "premium-geo" | "floating-silk"
-  | "liquid-glass" | "elegant-mesh" | "architectural-motion"
-  | "ambient-beams" | "dark-auditorium" | "stage-spotlights"
-  | "luxury-gold" | "premium-bokeh" | "velvet-background"
+  | "golden-stage"
+  | "church-windows"
+  | "cathedral-glass"
+  | "ocean-horizon"
+  | "calm-lake"
+  | "cloud-layers"
+  | "moving-fog"
+  | "night-sky"
+  | "aurora-curtain"
+  | "deep-space"
+  | "mountain-sunrise"
+  | "forest-light"
+  | "candle-glow"
+  | "premium-geo"
+  | "floating-silk"
+  | "liquid-glass"
+  | "elegant-mesh"
+  | "architectural-motion"
+  | "ambient-beams"
+  | "dark-auditorium"
+  | "stage-spotlights"
+  | "luxury-gold"
+  | "premium-bokeh"
+  | "velvet-background"
   | "ethereal-glow";
 
 export const DEFAULT_BACKGROUND: BackgroundConfig = {
@@ -142,7 +158,6 @@ export const DEFAULT_BACKGROUND: BackgroundConfig = {
   videoMuted: true,
   videoSpeed: 1,
 };
-
 
 export interface GroupedStyles {
   reference: SectionStyle;
@@ -198,7 +213,13 @@ export interface LogoBroadcast {
 
 export type ProjectionCommand =
   | { type: "LOAD"; mediaId: string; transition?: string }
-  | { type: "LOAD_PLAYLIST"; playlistId: string; startIndex?: number; shuffle?: boolean; loop?: string }
+  | {
+      type: "LOAD_PLAYLIST";
+      playlistId: string;
+      startIndex?: number;
+      shuffle?: boolean;
+      loop?: string;
+    }
   | { type: "LOAD_TEXT"; overlay: TextOverlay; style?: TextStyle; styles?: GroupedStyles }
   | { type: "UPDATE_TEXT_STYLE"; style: TextStyle }
   | { type: "UPDATE_STYLES"; styles: GroupedStyles }

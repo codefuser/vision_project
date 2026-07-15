@@ -1,9 +1,23 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  Sparkles, Type, Palette, AlignLeft, Sparkle, Play,
-  Layers, ImageIcon, Image as LogoIcon, SlidersHorizontal,
-  Shield, LayoutDashboard, History, RotateCcw, ChevronDown,
-  Eye, EyeOff, PanelRightClose,
+  Sparkles,
+  Type,
+  Palette,
+  AlignLeft,
+  Sparkle,
+  Play,
+  Layers,
+  ImageIcon,
+  Image as LogoIcon,
+  SlidersHorizontal,
+  Shield,
+  LayoutDashboard,
+  History,
+  RotateCcw,
+  ChevronDown,
+  Eye,
+  EyeOff,
+  PanelRightClose,
 } from "lucide-react";
 import { useFocusZone } from "./focus-manager";
 import { useWorkspace } from "./workspace.store";
@@ -46,11 +60,17 @@ export function TextFormattingPanel() {
   const pushHistory = useWorkspace((s) => s.pushHistory);
 
   const songsMode = activeTab === "songs";
-  const visibleGroups: StyleGroup[] = songsMode ? ["tamil"] : (Object.keys(GROUP_LABELS) as StyleGroup[]);
-  const [activeRaw, setActive] = useState<StyleGroup>(() => (wsActiveSection as StyleGroup) || "reference");
+  const visibleGroups: StyleGroup[] = songsMode
+    ? ["tamil"]
+    : (Object.keys(GROUP_LABELS) as StyleGroup[]);
+  const [activeRaw, setActive] = useState<StyleGroup>(
+    () => (wsActiveSection as StyleGroup) || "reference",
+  );
   const active: StyleGroup = songsMode ? "tamil" : activeRaw;
 
-  useEffect(() => { if (!songsMode) setTextFormatActiveSection(activeRaw); }, [activeRaw, songsMode]);
+  useEffect(() => {
+    if (!songsMode) setTextFormatActiveSection(activeRaw);
+  }, [activeRaw, songsMode]);
 
   const style = groups[active];
 
@@ -122,7 +142,11 @@ export function TextFormattingPanel() {
             title={collapsed ? "Expand" : "Collapse"}
             className="inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
           >
-            {collapsed ? <ChevronDown className="h-3.5 w-3.5" /> : <PanelRightClose className="h-3.5 w-3.5" />}
+            {collapsed ? (
+              <ChevronDown className="h-3.5 w-3.5" />
+            ) : (
+              <PanelRightClose className="h-3.5 w-3.5" />
+            )}
           </button>
         </div>
       </div>
@@ -152,7 +176,9 @@ export function TextFormattingPanel() {
                 title={style.visible ? "Hide section in projection" : "Show section in projection"}
                 className={cn(
                   "ml-auto inline-flex h-6 w-7 shrink-0 cursor-pointer items-center justify-center rounded border text-[10px]",
-                  style.visible ? "border-primary/40 bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground",
+                  style.visible
+                    ? "border-primary/40 bg-primary/10 text-primary"
+                    : "border-border bg-background text-muted-foreground",
                 )}
               >
                 {style.visible ? <Eye className="h-3 w-3" /> : <EyeOff className="h-3 w-3" />}
@@ -197,7 +223,11 @@ export function TextFormattingPanel() {
               <LayersSection />
             </AccordionSection>
 
-            <AccordionSection id="background" title="Projection Background" icon={sectionIcons.background}>
+            <AccordionSection
+              id="background"
+              title="Projection Background"
+              icon={sectionIcons.background}
+            >
               <BackgroundSection />
             </AccordionSection>
 
@@ -205,17 +235,26 @@ export function TextFormattingPanel() {
               <LogoSection />
             </AccordionSection>
 
-            <AccordionSection id="advanced-typography" title="Advanced Typography" icon={sectionIcons["advanced-typography"]}>
+            <AccordionSection
+              id="advanced-typography"
+              title="Advanced Typography"
+              icon={sectionIcons["advanced-typography"]}
+            >
               <AdvancedSection active={active} />
             </AccordionSection>
 
             <AccordionSection id="safe-area" title="Safe Area" icon={sectionIcons["safe-area"]}>
               <div className="rounded-md border border-dashed border-border bg-background/40 p-2.5 text-[10px] text-muted-foreground">
-                Safe area guides ensure text stays within broadcast-safe zones. Adjust the margin in Alignment section.
+                Safe area guides ensure text stays within broadcast-safe zones. Adjust the margin in
+                Alignment section.
               </div>
             </AccordionSection>
 
-            <AccordionSection id="quick-presets" title="Quick Presets" icon={sectionIcons["quick-presets"]}>
+            <AccordionSection
+              id="quick-presets"
+              title="Quick Presets"
+              icon={sectionIcons["quick-presets"]}
+            >
               <QuickPresetsSection />
             </AccordionSection>
 

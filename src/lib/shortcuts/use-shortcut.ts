@@ -5,7 +5,9 @@ import { shortcutManager, type ShortcutDef, type ShortcutScope } from "./manager
  * Register a shortcut for the lifetime of a component. The handler ref
  * is updated on every render so closures stay fresh without re-registering.
  */
-export function useShortcut(def: Omit<ShortcutDef, "handler"> & { handler: ShortcutDef["handler"] }) {
+export function useShortcut(
+  def: Omit<ShortcutDef, "handler"> & { handler: ShortcutDef["handler"] },
+) {
   const handlerRef = useRef(def.handler);
   handlerRef.current = def.handler;
   useEffect(() => {

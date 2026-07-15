@@ -1,14 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Folder, FolderOpen, FolderPlus, Home, Pencil, Plus, Trash2 } from "lucide-react";
 import { useLibrary } from "@/stores/library.store";
-import { createFolder, renameFolder, deleteFolderDeep, deleteFolderOnly, moveMedia } from "@/db/repo";
+import {
+  createFolder,
+  renameFolder,
+  deleteFolderDeep,
+  deleteFolderOnly,
+  moveMedia,
+} from "@/db/repo";
 import type { FolderRecord } from "@/db/schema";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { RenameDialog } from "@/components/RenameDialog";
 import { FolderCreateDialog } from "@/components/FolderCreateDialog";
 import { FolderDeleteDialog, type FolderDeleteMode } from "@/components/FolderDeleteDialog";
-
 
 interface Node {
   folder: FolderRecord;
@@ -40,7 +45,10 @@ export function FolderTree() {
 
   const tree = useMemo(() => buildTree(folders), [folders]);
   const [renameTarget, setRenameTarget] = useState<FolderRecord | null>(null);
-  const [createFor, setCreateFor] = useState<{ parentId: string | null; parentLabel?: string } | null>(null);
+  const [createFor, setCreateFor] = useState<{
+    parentId: string | null;
+    parentLabel?: string;
+  } | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FolderRecord | null>(null);
 
   useEffect(() => {
@@ -76,7 +84,11 @@ export function FolderTree() {
           style={{ paddingLeft: depth * 10 + 6 }}
           title={n.folder.name}
         >
-          {active ? <FolderOpen className="h-3.5 w-3.5 shrink-0" /> : <Folder className="h-3.5 w-3.5 shrink-0" />}
+          {active ? (
+            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+          ) : (
+            <Folder className="h-3.5 w-3.5 shrink-0" />
+          )}
           <span className="flex-1 truncate">{n.folder.name}</span>
           <div className="invisible flex items-center gap-0.5 group-hover:visible">
             <button
@@ -112,7 +124,6 @@ export function FolderTree() {
             >
               <Trash2 className="h-3 w-3" />
             </button>
-
           </div>
         </div>
         {n.children.map((c) => renderNode(c, depth + 1))}
@@ -123,7 +134,9 @@ export function FolderTree() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex shrink-0 items-center justify-between gap-1 px-2 py-1.5">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">Folders</div>
+        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Folders
+        </div>
         <button
           onClick={() =>
             setCreateFor({

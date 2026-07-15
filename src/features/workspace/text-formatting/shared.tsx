@@ -2,9 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function NumberInput({
-  value, onChange, step = 1, min, max, suffix,
+  value,
+  onChange,
+  step = 1,
+  min,
+  max,
+  suffix,
 }: {
-  value: number; onChange: (v: number) => void; step?: number; min?: number; max?: number; suffix?: string;
+  value: number;
+  onChange: (v: number) => void;
+  step?: number;
+  min?: number;
+  max?: number;
+  suffix?: string;
 }) {
   return (
     <div className="flex h-7 items-center rounded-md border border-border bg-background px-2 text-xs">
@@ -14,7 +24,10 @@ export function NumberInput({
         step={step}
         min={min}
         max={max}
-        onChange={(e) => { const v = Number(e.target.value); if (!isNaN(v)) onChange(v); }}
+        onChange={(e) => {
+          const v = Number(e.target.value);
+          if (!isNaN(v)) onChange(v);
+        }}
         className="w-full bg-transparent outline-none"
       />
       {suffix && <span className="ml-1 text-[10px] text-muted-foreground">{suffix}</span>}
@@ -23,9 +36,13 @@ export function NumberInput({
 }
 
 export function Select({
-  value, onChange, options,
+  value,
+  onChange,
+  options,
 }: {
-  value: string; onChange: (v: string) => void; options: { label: string; value: string }[];
+  value: string;
+  onChange: (v: string) => void;
+  options: { label: string; value: string }[];
 }) {
   return (
     <select
@@ -34,16 +51,26 @@ export function Select({
       className="h-7 w-full cursor-pointer rounded-md border border-border bg-background px-1.5 text-xs outline-none transition hover:border-muted-foreground/30 focus:border-primary/50"
     >
       {options.map((o) => (
-        <option key={o.value} value={o.value}>{o.label}</option>
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
       ))}
     </select>
   );
 }
 
 export function Toggle({
-  label, active, onClick, size, title,
+  label,
+  active,
+  onClick,
+  size,
+  title,
 }: {
-  label: React.ReactNode; active?: boolean; onClick?: () => void; size?: "sm" | "md"; title?: string;
+  label: React.ReactNode;
+  active?: boolean;
+  onClick?: () => void;
+  size?: "sm" | "md";
+  title?: string;
 }) {
   return (
     <button
@@ -64,15 +91,23 @@ export function Toggle({
 }
 
 export function SwitchRow({
-  label, checked, onChange, disabled,
+  label,
+  checked,
+  onChange,
+  disabled,
 }: {
-  label: string; checked: boolean; onChange: (v: boolean) => void; disabled?: boolean;
+  label: string;
+  checked: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
 }) {
   return (
-    <label className={cn(
-      "flex items-center gap-2 text-[11px]",
-      disabled ? "opacity-50" : "cursor-pointer",
-    )}>
+    <label
+      className={cn(
+        "flex items-center gap-2 text-[11px]",
+        disabled ? "opacity-50" : "cursor-pointer",
+      )}
+    >
       <input
         type="checkbox"
         checked={checked}
@@ -99,9 +134,13 @@ export function Field({ label, children }: { label: string; children: React.Reac
 }
 
 export function ColorInput({
-  value, onChange, swatches,
+  value,
+  onChange,
+  swatches,
 }: {
-  value: string; onChange: (v: string) => void; swatches?: string[];
+  value: string;
+  onChange: (v: string) => void;
+  swatches?: string[];
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
@@ -119,7 +158,10 @@ export function ColorInput({
 
   return (
     <div ref={ref} className="relative">
-      <div className="flex h-7 items-center gap-2 rounded-md border border-border bg-background px-1.5" suppressHydrationWarning>
+      <div
+        className="flex h-7 items-center gap-2 rounded-md border border-border bg-background px-1.5"
+        suppressHydrationWarning
+      >
         {mounted ? (
           <input
             type="color"
@@ -143,7 +185,15 @@ export function ColorInput({
             onClick={() => setExpanded(!expanded)}
             className="cursor-pointer text-muted-foreground hover:text-foreground"
           >
-            <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 9l6 6 6-6"/></svg>
+            <svg
+              className="h-3 w-3"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
           </button>
         )}
       </div>
@@ -153,7 +203,10 @@ export function ColorInput({
             {(swatches ?? DEFAULT_SWATCHES).map((c) => (
               <button
                 key={c}
-                onClick={() => { onChange(c); setExpanded(false); }}
+                onClick={() => {
+                  onChange(c);
+                  setExpanded(false);
+                }}
                 className={cn(
                   "h-6 w-full cursor-pointer rounded border transition hover:scale-110",
                   c === value ? "border-primary ring-1 ring-primary" : "border-border",
@@ -170,20 +223,76 @@ export function ColorInput({
 }
 
 const DEFAULT_SWATCHES = [
-  "#ffffff", "#f5f5f4", "#d4d4d8", "#a1a1aa", "#71717a", "#3f3f46",
-  "#27272a", "#18181b", "#09090b", "#000000",
-  "#fef2f2", "#fee2e2", "#fecaca", "#fca5a5", "#ef4444",
-  "#fff7ed", "#ffedd5", "#fed7aa", "#fb923c", "#f97316",
-  "#fefce8", "#fef9c3", "#fde68a", "#fbbf24", "#eab308",
-  "#f0fdf4", "#dcfce7", "#bbf7d0", "#4ade80", "#22c55e",
-  "#ecfdf5", "#d1fae5", "#a7f3d0", "#2dd4bf", "#14b8a6",
-  "#f0f9ff", "#e0f2fe", "#bae6fd", "#38bdf8", "#0ea5e9",
-  "#eef2ff", "#e0e7ff", "#c7d2fe", "#818cf8", "#6366f1",
-  "#faf5ff", "#ede9fe", "#ddd6fe", "#a78bfa", "#8b5cf6",
-  "#2dd4bf", "#14b8a6", "#0d9488", "#0f766e", "#115e59",
-  "#f43f5e", "#e11d48", "#be123c", "#9f1239", "#881337",
-  "#8b5cf6", "#7c3aed", "#6d28d9", "#5b21b6", "#4c1d95",
-  "#06b6d4", "#0891b2", "#0e7490", "#155e75", "#164e63",
+  "#ffffff",
+  "#f5f5f4",
+  "#d4d4d8",
+  "#a1a1aa",
+  "#71717a",
+  "#3f3f46",
+  "#27272a",
+  "#18181b",
+  "#09090b",
+  "#000000",
+  "#fef2f2",
+  "#fee2e2",
+  "#fecaca",
+  "#fca5a5",
+  "#ef4444",
+  "#fff7ed",
+  "#ffedd5",
+  "#fed7aa",
+  "#fb923c",
+  "#f97316",
+  "#fefce8",
+  "#fef9c3",
+  "#fde68a",
+  "#fbbf24",
+  "#eab308",
+  "#f0fdf4",
+  "#dcfce7",
+  "#bbf7d0",
+  "#4ade80",
+  "#22c55e",
+  "#ecfdf5",
+  "#d1fae5",
+  "#a7f3d0",
+  "#2dd4bf",
+  "#14b8a6",
+  "#f0f9ff",
+  "#e0f2fe",
+  "#bae6fd",
+  "#38bdf8",
+  "#0ea5e9",
+  "#eef2ff",
+  "#e0e7ff",
+  "#c7d2fe",
+  "#818cf8",
+  "#6366f1",
+  "#faf5ff",
+  "#ede9fe",
+  "#ddd6fe",
+  "#a78bfa",
+  "#8b5cf6",
+  "#2dd4bf",
+  "#14b8a6",
+  "#0d9488",
+  "#0f766e",
+  "#115e59",
+  "#f43f5e",
+  "#e11d48",
+  "#be123c",
+  "#9f1239",
+  "#881337",
+  "#8b5cf6",
+  "#7c3aed",
+  "#6d28d9",
+  "#5b21b6",
+  "#4c1d95",
+  "#06b6d4",
+  "#0891b2",
+  "#0e7490",
+  "#155e75",
+  "#164e63",
 ];
 
 export function Divider() {

@@ -1,4 +1,11 @@
-import { AlignLeft, AlignCenter, AlignRight, AlignStartVertical, AlignCenterVertical, AlignEndVertical } from "lucide-react";
+import {
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignStartVertical,
+  AlignCenterVertical,
+  AlignEndVertical,
+} from "lucide-react";
 import { useTextFormat, type StyleGroup } from "@/lib/text-format/store";
 import { cn } from "@/lib/utils";
 import { Field, Toggle } from "./shared";
@@ -27,7 +34,9 @@ export function AlignmentSection({ active }: Props) {
   return (
     <div className="space-y-3">
       <div>
-        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Horizontal</div>
+        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          Horizontal
+        </div>
         <div className="flex gap-1">
           {hAlignments.map((a) => (
             <button
@@ -48,7 +57,9 @@ export function AlignmentSection({ active }: Props) {
       </div>
 
       <div>
-        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Vertical</div>
+        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          Vertical
+        </div>
         <div className="flex gap-1">
           {vAlignments.map((a) => (
             <button

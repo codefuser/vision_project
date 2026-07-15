@@ -12,8 +12,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { useProjection } from "@/stores/projection.store";
 
-export type LogoPosition =
-  | "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom";
+export type LogoPosition = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "custom";
 
 export interface LogoItem {
   id: string;
@@ -22,13 +21,13 @@ export interface LogoItem {
 }
 
 export interface LogoSettings {
-  widthPct: number;     // % of stage width
-  opacity: number;      // 0..1
-  radius: number;       // px
+  widthPct: number; // % of stage width
+  opacity: number; // 0..1
+  radius: number; // px
   shadow: boolean;
   position: LogoPosition;
-  xPct: number;         // when custom
-  yPct: number;         // when custom
+  xPct: number; // when custom
+  yPct: number; // when custom
 }
 
 export const DEFAULT_LOGO_SETTINGS: LogoSettings = {
@@ -76,7 +75,8 @@ async function fileToDownscaledDataUrl(file: File): Promise<string> {
     const w = Math.max(1, Math.round(img.width * scale));
     const h = Math.max(1, Math.round(img.height * scale));
     const canvas = document.createElement("canvas");
-    canvas.width = w; canvas.height = h;
+    canvas.width = w;
+    canvas.height = h;
     const ctx = canvas.getContext("2d")!;
     ctx.drawImage(img, 0, 0, w, h);
     return canvas.toDataURL("image/png");
@@ -89,7 +89,9 @@ function broadcast(s: LogoStore) {
   try {
     const cfg: LogoConfig = { enabled: s.enabled, current: s.current, settings: s.settings };
     useProjection.getState().send({ type: "UPDATE_LOGO", logo: cfg });
-  } catch { /* */ }
+  } catch {
+    /* */
+  }
 }
 
 export const useLogo = create<LogoStore>()(
@@ -99,7 +101,10 @@ export const useLogo = create<LogoStore>()(
       current: null,
       gallery: [],
       settings: DEFAULT_LOGO_SETTINGS,
-      setEnabled: (v) => { set({ enabled: v }); broadcast(get()); },
+      setEnabled: (v) => {
+        set({ enabled: v });
+        broadcast(get());
+      },
       addFromFile: async (file) => {
         const dataUrl = await fileToDownscaledDataUrl(file);
         const item: LogoItem = { id: crypto.randomUUID(), dataUrl, name: file.name };
@@ -127,7 +132,10 @@ export const useLogo = create<LogoStore>()(
         set((s) => ({ settings: { ...s.settings, ...partial } }));
         broadcast(get());
       },
-      clearCurrent: () => { set({ current: null }); broadcast(get()); },
+      clearCurrent: () => {
+        set({ current: null });
+        broadcast(get());
+      },
     }),
     {
       name: "vision-logo",

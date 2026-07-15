@@ -10,7 +10,9 @@ export function LayersSection() {
       <div className="rounded-md border border-border bg-background/40 p-2.5">
         <div className="mb-2.5 flex items-center gap-2 border-b border-border/60 pb-2">
           <Layers className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[11px] font-semibold uppercase tracking-wide">Projection Layers</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide">
+            Projection Layers
+          </span>
           <span className="ml-auto text-[10px] text-muted-foreground">Drag to reorder</span>
         </div>
 
@@ -71,7 +73,9 @@ export function LayersSection() {
       {bg.customBackgroundEnabled && (
         <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-2.5 py-2 text-[10px] text-amber-700 dark:text-amber-300">
           <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
-          <span>Custom Background is ON — applying a theme will NOT change your background image.</span>
+          <span>
+            Custom Background is ON — applying a theme will NOT change your background image.
+          </span>
         </div>
       )}
     </div>
@@ -79,15 +83,25 @@ export function LayersSection() {
 }
 
 function LayerRow({
-  label, enabled, onChange, disabled, subtitle,
+  label,
+  enabled,
+  onChange,
+  disabled,
+  subtitle,
 }: {
-  label: string; enabled: boolean; onChange: (v: boolean) => void; disabled?: boolean; subtitle: string;
+  label: string;
+  enabled: boolean;
+  onChange: (v: boolean) => void;
+  disabled?: boolean;
+  subtitle: string;
 }) {
   return (
-    <div className={cn(
-      "flex items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-accent/30",
-      disabled && "opacity-50",
-    )}>
+    <div
+      className={cn(
+        "flex items-center gap-2 rounded-md px-2 py-1.5 transition hover:bg-accent/30",
+        disabled && "opacity-50",
+      )}
+    >
       {enabled ? (
         <Eye className="h-3 w-3 shrink-0 text-muted-foreground" />
       ) : (

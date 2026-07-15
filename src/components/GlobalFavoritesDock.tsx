@@ -4,7 +4,17 @@
  * in the root layout so the operator can recall favorites from any module
  * during live preaching.
  */
-import { Star, BookOpen, Music, Image as ImageIcon, Type, ChevronRight, ChevronLeft, Send, X } from "lucide-react";
+import {
+  Star,
+  BookOpen,
+  Music,
+  Image as ImageIcon,
+  Type,
+  ChevronRight,
+  ChevronLeft,
+  Send,
+  X,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useBibleStore } from "@/lib/bible/store";
@@ -12,7 +22,11 @@ import { useSongsStore } from "@/lib/songs/store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
 import { useFavoritesDock, type FavoritesGroup } from "@/stores/favorites-dock.store";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
-import { activateBibleFavorite, activateMediaFavorite, activateSongFavorite } from "@/lib/favorites/dispatch";
+import {
+  activateBibleFavorite,
+  activateMediaFavorite,
+  activateSongFavorite,
+} from "@/lib/favorites/dispatch";
 import { getMedia } from "@/db/repo";
 import type { MediaRecord } from "@/db/schema";
 import { cn } from "@/lib/utils";
@@ -31,11 +45,14 @@ export function GlobalFavoritesDock() {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const items = (await Promise.all(mediaFavIds.map((id) => getMedia(id))))
-        .filter((m): m is MediaRecord => !!m);
+      const items = (await Promise.all(mediaFavIds.map((id) => getMedia(id)))).filter(
+        (m): m is MediaRecord => !!m,
+      );
       if (!cancelled) setMediaItems(items);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [mediaFavIds]);
 
   useShortcut({
@@ -92,7 +109,11 @@ export function GlobalFavoritesDock() {
             { id: "songs", label: "Songs", icon: Music },
             { id: "media", label: "Media", icon: ImageIcon },
             { id: "text", label: "Text", icon: Type },
-          ] as { id: FavoritesGroup; label: string; icon: React.ComponentType<{ className?: string }> }[]
+          ] as {
+            id: FavoritesGroup;
+            label: string;
+            icon: React.ComponentType<{ className?: string }>;
+          }[]
         ).map((g) => {
           const Icon = g.icon;
           const active = g.id === group;
@@ -116,8 +137,8 @@ export function GlobalFavoritesDock() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-1">
-        {group === "bible" && (
-          bibleFavorites.length === 0 ? (
+        {group === "bible" &&
+          (bibleFavorites.length === 0 ? (
             <Empty hint="Star a verse in the Bible tab." />
           ) : (
             <ul className="space-y-0.5">
@@ -126,15 +147,16 @@ export function GlobalFavoritesDock() {
                   key={f.id}
                   label={f.ref}
                   sub={f.text}
-                  onActivate={() => activateBibleFavorite(navigate, f.book, f.chapter, f.verse, f.displayMode)}
+                  onActivate={() =>
+                    activateBibleFavorite(navigate, f.book, f.chapter, f.verse, f.displayMode)
+                  }
                   onRemove={() => removeBibleFav(f.id)}
                 />
               ))}
             </ul>
-          )
-        )}
-        {group === "media" && (
-          mediaItems.length === 0 ? (
+          ))}
+        {group === "media" &&
+          (mediaItems.length === 0 ? (
             <Empty hint="Star media in the Library to pin it here." />
           ) : (
             <ul className="space-y-0.5">
@@ -148,10 +170,9 @@ export function GlobalFavoritesDock() {
                 />
               ))}
             </ul>
-          )
-        )}
-        {group === "songs" && (
-          songFavorites.length === 0 ? (
+          ))}
+        {group === "songs" &&
+          (songFavorites.length === 0 ? (
             <Empty hint="Star a song in the Songs tab." />
           ) : (
             <ul className="space-y-0.5">
@@ -164,8 +185,7 @@ export function GlobalFavoritesDock() {
                 />
               ))}
             </ul>
-          )
-        )}
+          ))}
         {group === "text" && <Empty hint="Text module coming soon." />}
       </div>
     </div>
@@ -181,9 +201,15 @@ function Empty({ hint }: { hint: string }) {
 }
 
 function FavRow({
-  label, sub, onActivate, onRemove,
+  label,
+  sub,
+  onActivate,
+  onRemove,
 }: {
-  label: string; sub?: string; onActivate: () => void; onRemove: () => void;
+  label: string;
+  sub?: string;
+  onActivate: () => void;
+  onRemove: () => void;
 }) {
   return (
     <li className="group flex items-center gap-1 rounded px-1.5 py-1 hover:bg-accent/60">

@@ -69,7 +69,10 @@ interface ScreenDetailsLike {
 }
 
 function hasScreenDetailsApi(): boolean {
-  return typeof window !== "undefined" && typeof (window as unknown as { getScreenDetails?: unknown }).getScreenDetails === "function";
+  return (
+    typeof window !== "undefined" &&
+    typeof (window as unknown as { getScreenDetails?: unknown }).getScreenDetails === "function"
+  );
 }
 
 function toInfo(s: ScreenDetailedLike, index: number): ScreenInfo {
@@ -95,7 +98,10 @@ export async function queryWindowManagementPermission(): Promise<DisplayDiagnost
   if (typeof navigator === "undefined" || !navigator.permissions) return "unknown";
   try {
     // The spec name is "window-management"; older Chromium used "window-placement".
-    const names: PermissionName[] = ["window-management" as PermissionName, "window-placement" as PermissionName];
+    const names: PermissionName[] = [
+      "window-management" as PermissionName,
+      "window-placement" as PermissionName,
+    ];
     for (const name of names) {
       try {
         const status = await navigator.permissions.query({ name });
@@ -121,7 +127,8 @@ export async function requestScreenDetails(): Promise<ScreenDetailsLike | null> 
   if (!hasScreenDetailsApi()) return null;
   if (cachedDetails) return cachedDetails;
   try {
-    const fn = (window as unknown as { getScreenDetails: () => Promise<ScreenDetailsLike> }).getScreenDetails;
+    const fn = (window as unknown as { getScreenDetails: () => Promise<ScreenDetailsLike> })
+      .getScreenDetails;
     cachedDetails = await fn.call(window);
     logger.info("Window Management permission granted", {
       screens: cachedDetails?.screens?.length ?? 0,
@@ -146,7 +153,9 @@ export async function getDisplayDiagnostics(): Promise<DisplayDiagnostics> {
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : "";
 
   if (!supported) {
-    warnings.push("This browser does not expose multi-screen details. Use Chrome, Edge, or Opera (v100+) for full projector support.");
+    warnings.push(
+      "This browser does not expose multi-screen details. Use Chrome, Edge, or Opera (v100+) for full projector support.",
+    );
     const w = typeof window !== "undefined" ? window : null;
     const single: ScreenInfo | null = w
       ? {
@@ -180,7 +189,9 @@ export async function getDisplayDiagnostics(): Promise<DisplayDiagnostics> {
   // Reuse cache if available; never prompt the user from a passive read.
   const details = cachedDetails;
   if (!details) {
-    warnings.push("Permission not yet granted. Click \"Detect Displays\" to enable multi-screen detection.");
+    warnings.push(
+      'Permission not yet granted. Click "Detect Displays" to enable multi-screen detection.',
+    );
     return {
       supported,
       permission,
@@ -198,7 +209,9 @@ export async function getDisplayDiagnostics(): Promise<DisplayDiagnostics> {
   const secondaries = all.filter((s) => !s.isPrimary);
 
   if (all.length === 1) {
-    warnings.push("Only one display detected. If a TV/projector is connected via HDMI, switch Windows to Extend mode (Win+P → Extend) — Duplicate mode hides the second screen from the browser.");
+    warnings.push(
+      "Only one display detected. If a TV/projector is connected via HDMI, switch Windows to Extend mode (Win+P → Extend) — Duplicate mode hides the second screen from the browser.",
+    );
   }
 
   return {
@@ -220,7 +233,10 @@ export async function getDisplayDiagnostics(): Promise<DisplayDiagnostics> {
  *   3. First non-primary screen
  *   4. Primary screen (fallback — single-monitor setups)
  */
-export function pickProjectorScreen(diag: DisplayDiagnostics, preferredId?: string | null): ScreenInfo | null {
+export function pickProjectorScreen(
+  diag: DisplayDiagnostics,
+  preferredId?: string | null,
+): ScreenInfo | null {
   if (preferredId) {
     const match = diag.all.find((s) => s.id === preferredId);
     if (match) return match;

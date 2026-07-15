@@ -7,8 +7,14 @@ export type BibleLang = "en" | "ta";
 export type BibleData = string[][][];
 
 const ASSET_URL: Record<BibleLang, string> = {
-  en: (enAsset as { url: string }).url.replace(/^\/__l5e/, "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e"),
-  ta: (taAsset as { url: string }).url.replace(/^\/__l5e/, "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e"),
+  en: (enAsset as { url: string }).url.replace(
+    /^\/__l5e/,
+    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
+  ),
+  ta: (taAsset as { url: string }).url.replace(
+    /^\/__l5e/,
+    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
+  ),
 };
 
 const cache: Partial<Record<BibleLang, BibleData>> = {};
@@ -43,7 +49,12 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
   return p;
 }
 
-export function getVerse(lang: BibleLang, book: number, chapter: number, verse: number): string | null {
+export function getVerse(
+  lang: BibleLang,
+  book: number,
+  chapter: number,
+  verse: number,
+): string | null {
   const d = cache[lang];
   if (!d) return null;
   return d[book]?.[chapter - 1]?.[verse - 1] ?? null;

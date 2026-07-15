@@ -1,15 +1,35 @@
-
 import { useTextFormat, type StyleGroup } from "@/lib/text-format/store";
 import { useWorkspace } from "../workspace.store";
 import { Toggle, Field, Row, NumberInput, Select, ColorInput } from "./shared";
 
 const FONT_FAMILIES = [
-  "Inter", "Roboto", "Georgia", "Times New Roman", "Arial", "Verdana", "Tahoma",
-  "Latha", "Nirmala UI", "Vijaya", "Akshar Unicode",
-  "Noto Sans Tamil", "Noto Serif Tamil", "Noto Sans Tamil UI",
-  "Mukta Malar", "Catamaran", "Hind Madurai", "Meera Inimai", "Pavanam",
-  "Arima Madurai", "Anek Tamil", "Kavivanar", "Pathway Gothic One",
-  "Tiro Tamil", "Mukta", "Baloo Thambi 2", "Cousine",
+  "Inter",
+  "Roboto",
+  "Georgia",
+  "Times New Roman",
+  "Arial",
+  "Verdana",
+  "Tahoma",
+  "Latha",
+  "Nirmala UI",
+  "Vijaya",
+  "Akshar Unicode",
+  "Noto Sans Tamil",
+  "Noto Serif Tamil",
+  "Noto Sans Tamil UI",
+  "Mukta Malar",
+  "Catamaran",
+  "Hind Madurai",
+  "Meera Inimai",
+  "Pavanam",
+  "Arima Madurai",
+  "Anek Tamil",
+  "Kavivanar",
+  "Pathway Gothic One",
+  "Tiro Tamil",
+  "Mukta",
+  "Baloo Thambi 2",
+  "Cousine",
 ];
 
 const WEIGHTS = [
@@ -65,18 +85,40 @@ export function QuickTextSection({ active }: Props) {
 
       {/* Style toggles */}
       <div>
-        <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">Style</div>
+        <div className="mb-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground/80">
+          Style
+        </div>
         <div className="flex flex-wrap gap-1.5">
-          <Toggle label="B" active={style.fontWeight >= 700}
-            onClick={() => setField(active, "fontWeight", style.fontWeight >= 700 ? 500 : 700)} title="Bold" />
-          <Toggle label="I" active={style.italic}
-            onClick={() => setField(active, "italic", !style.italic)} title="Italic" />
-          <Toggle label="U" active={style.underline}
-            onClick={() => setField(active, "underline", !style.underline)} title="Underline" />
-          <Toggle label="Aa" active={style.uppercase}
-            onClick={() => setField(active, "uppercase", !style.uppercase)} title="Uppercase" />
-          <Toggle label="sc" active={style.smallCaps}
-            onClick={() => setField(active, "smallCaps", !style.smallCaps)} title="Small Caps" />
+          <Toggle
+            label="B"
+            active={style.fontWeight >= 700}
+            onClick={() => setField(active, "fontWeight", style.fontWeight >= 700 ? 500 : 700)}
+            title="Bold"
+          />
+          <Toggle
+            label="I"
+            active={style.italic}
+            onClick={() => setField(active, "italic", !style.italic)}
+            title="Italic"
+          />
+          <Toggle
+            label="U"
+            active={style.underline}
+            onClick={() => setField(active, "underline", !style.underline)}
+            title="Underline"
+          />
+          <Toggle
+            label="Aa"
+            active={style.uppercase}
+            onClick={() => setField(active, "uppercase", !style.uppercase)}
+            title="Uppercase"
+          />
+          <Toggle
+            label="sc"
+            active={style.smallCaps}
+            onClick={() => setField(active, "smallCaps", !style.smallCaps)}
+            title="Small Caps"
+          />
         </div>
       </div>
 

@@ -15,9 +15,7 @@
  */
 import { useEffect, useRef } from "react";
 import type { GroupedStyles, SectionStyle, TextOverlay, TextStyle } from "@/lib/broadcast";
-import {
-  DEFAULT_GROUPED_STYLES,
-} from "@/lib/broadcast";
+import { DEFAULT_GROUPED_STYLES } from "@/lib/broadcast";
 import { useBackground } from "@/stores/background.store";
 
 import { cn } from "@/lib/utils";
@@ -32,7 +30,13 @@ interface Props {
   className?: string;
 }
 
-export function TextOverlayRenderer({ overlay, style, styles, withBackground = true, className }: Props) {
+export function TextOverlayRenderer({
+  overlay,
+  style,
+  styles,
+  withBackground = true,
+  className,
+}: Props) {
   const grouped: GroupedStyles = styles ?? DEFAULT_GROUPED_STYLES;
   // Backward-compat: if a legacy `style` is supplied (no grouped), use it as
   // english base and synthesize reference/tamil from it.
@@ -48,7 +52,7 @@ export function TextOverlayRenderer({ overlay, style, styles, withBackground = t
       : grouped;
 
   const isBilingual = overlay.mode === "both" && overlay.textEn && overlay.textTa;
-  const showEnglish = effective.english.visible && (overlay.mode !== "ta");
+  const showEnglish = effective.english.visible && overlay.mode !== "ta";
   const showTamil = effective.tamil.visible && (overlay.mode === "ta" || overlay.mode === "both");
 
   // Reference header — pick based on mode
@@ -64,16 +68,21 @@ export function TextOverlayRenderer({ overlay, style, styles, withBackground = t
     }
   }
 
-  const tamilText = overlay.textTa ?? (overlay.mode === "ta" ? overlay.text : overlay.subtext) ?? "";
-  const englishText = overlay.textEn ?? (overlay.mode === "en" ? overlay.text : !isBilingual ? overlay.text : "") ?? "";
+  const tamilText =
+    overlay.textTa ?? (overlay.mode === "ta" ? overlay.text : overlay.subtext) ?? "";
+  const englishText =
+    overlay.textEn ??
+    (overlay.mode === "en" ? overlay.text : !isBilingual ? overlay.text : "") ??
+    "";
 
   return (
     <div
       className={cn("absolute inset-0 flex flex-col overflow-hidden", className)}
       style={{
-        background: withBackground && effective.background.kind === "color"
-          ? effective.background.color
-          : "transparent",
+        background:
+          withBackground && effective.background.kind === "color"
+            ? effective.background.color
+            : "transparent",
       }}
     >
       {referenceLines.length > 0 && (
@@ -128,7 +137,9 @@ function ReferenceBlock({ lines, style }: { lines: string[]; style: SectionStyle
       {lines.map((l, i) => (
         <div
           key={i}
-          ref={(el) => { lineRefs.current[i] = el; }}
+          ref={(el) => {
+            lineRefs.current[i] = el;
+          }}
           style={{ ...textCss(style), fontSize: 0 }}
         >
           {l}
@@ -147,7 +158,8 @@ function VerseBlock({ text, style, flex }: { text: string; style: SectionStyle; 
     const t = textRef.current;
     if (!stage || !t) return;
     const fit = () => {
-      const w = stage.clientWidth, h = stage.clientHeight;
+      const w = stage.clientWidth,
+        h = stage.clientHeight;
       if (w === 0 || h === 0) return;
       const pad = (style.paddingVw / 100) * w;
       stage.style.padding = `${pad}px`;
@@ -155,13 +167,18 @@ function VerseBlock({ text, style, flex }: { text: string; style: SectionStyle; 
       const maxH = h - pad * 2;
       const startPx = (style.fontSizeVw / 100) * w;
       const minPx = Math.max(10, w * 0.012);
-      let lo = minPx, hi = startPx, best = lo;
+      let lo = minPx,
+        hi = startPx,
+        best = lo;
       for (let i = 0; i < 8; i++) {
         const mid = (lo + hi) / 2;
         t.style.fontSize = `${mid}px`;
         const overflow = t.scrollWidth > maxW + 1 || t.scrollHeight > maxH + 1;
         if (overflow) hi = mid;
-        else { best = mid; lo = mid; }
+        else {
+          best = mid;
+          lo = mid;
+        }
         if (hi - lo < 0.5) break;
       }
       t.style.fontSize = `${best}px`;
@@ -170,12 +187,28 @@ function VerseBlock({ text, style, flex }: { text: string; style: SectionStyle; 
     const ro = new ResizeObserver(() => fit());
     ro.observe(stage);
     return () => ro.disconnect();
-  }, [text, style.fontSizeVw, style.fontFamily, style.fontWeight, style.lineHeight, style.letterSpacing, style.paddingVw]);
+  }, [
+    text,
+    style.fontSizeVw,
+    style.fontFamily,
+    style.fontWeight,
+    style.lineHeight,
+    style.letterSpacing,
+    style.paddingVw,
+  ]);
 
   const vAlignClass =
-    style.vAlign === "top" ? "items-start" : style.vAlign === "bottom" ? "items-end" : "items-center";
+    style.vAlign === "top"
+      ? "items-start"
+      : style.vAlign === "bottom"
+        ? "items-end"
+        : "items-center";
   const justifyClass =
-    style.align === "left" ? "justify-start" : style.align === "right" ? "justify-end" : "justify-center";
+    style.align === "left"
+      ? "justify-start"
+      : style.align === "right"
+        ? "justify-end"
+        : "justify-center";
 
   return (
     <div
@@ -186,7 +219,12 @@ function VerseBlock({ text, style, flex }: { text: string; style: SectionStyle; 
       <div
         ref={textRef}
         className="whitespace-pre-line"
-        style={{ ...textCss(style), maxWidth: "100%", wordBreak: "break-word", textAlign: style.align }}
+        style={{
+          ...textCss(style),
+          maxWidth: "100%",
+          wordBreak: "break-word",
+          textAlign: style.align,
+        }}
       >
         {text}
       </div>
@@ -201,9 +239,10 @@ function textCss(style: SectionStyle): React.CSSProperties {
   const s = useBackground.getState();
   const shadowOn = s.textShadowEnabled;
   const strokeOn = s.textStrokeEnabled;
-  const textShadow = style.shadow && shadowOn
-    ? `0 4px ${style.shadowBlur}px ${mixAlpha(style.shadowColor, 0.6)}`
-    : "none";
+  const textShadow =
+    style.shadow && shadowOn
+      ? `0 4px ${style.shadowBlur}px ${mixAlpha(style.shadowColor, 0.6)}`
+      : "none";
 
   return {
     fontFamily: `"${style.fontFamily}", system-ui, sans-serif`,
@@ -215,17 +254,21 @@ function textCss(style: SectionStyle): React.CSSProperties {
     lineHeight: style.lineHeight,
     letterSpacing: `${style.letterSpacing}px`,
     textShadow,
-    WebkitTextStrokeWidth: strokeOn && style.outlineWidth > 0 ? `${style.outlineWidth}px` : undefined,
+    WebkitTextStrokeWidth:
+      strokeOn && style.outlineWidth > 0 ? `${style.outlineWidth}px` : undefined,
     WebkitTextStrokeColor: strokeOn && style.outlineWidth > 0 ? style.outlineColor : undefined,
   };
 }
-
 
 function mixAlpha(hex: string, alpha: number): string {
   const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex);
   if (!m) return hex;
   let h = m[1];
-  if (h.length === 3) h = h.split("").map((c) => c + c).join("");
+  if (h.length === 3)
+    h = h
+      .split("")
+      .map((c) => c + c)
+      .join("");
   const r = parseInt(h.slice(0, 2), 16);
   const g = parseInt(h.slice(2, 4), 16);
   const b = parseInt(h.slice(4, 6), 16);

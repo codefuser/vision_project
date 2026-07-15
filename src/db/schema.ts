@@ -62,7 +62,16 @@ export type VerticalAlign = "top" | "middle" | "bottom";
 export type VerseSplit = "single" | "range" | "chapter";
 export type SongSearchMode = "title" | "lyrics" | "both";
 export type ScalingMode = "fill" | "fit" | "stretch" | "tile";
-export type AnimationPreset = "none" | "light-rays" | "soft-particles" | "golden-worship" | "blue-nebula" | "aurora" | "floating-dust" | "moving-clouds" | "wave-mesh";
+export type AnimationPreset =
+  | "none"
+  | "light-rays"
+  | "soft-particles"
+  | "golden-worship"
+  | "blue-nebula"
+  | "aurora"
+  | "floating-dust"
+  | "moving-clouds"
+  | "wave-mesh";
 
 export interface AppSettings {
   // General

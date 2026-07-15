@@ -12,9 +12,7 @@ interface AccordionSectionProps {
   children: ReactNode;
 }
 
-export function AccordionSection({
-  id, title, icon, badge, children,
-}: AccordionSectionProps) {
+export function AccordionSection({ id, title, icon, badge, children }: AccordionSectionProps) {
   const [mounted, setMounted] = useState(false);
   const isOpen = useWorkspace((s) => s.textFormatSections[id] ?? false);
   const setOpen = useWorkspace((s) => s.setTextFormatSectionOpen);
@@ -29,7 +27,10 @@ export function AccordionSection({
       )}
     >
       <button
-        onClick={() => { setMounted(true); setOpen(id, !isOpen); }}
+        onClick={() => {
+          setMounted(true);
+          setOpen(id, !isOpen);
+        }}
         className={cn(
           "flex w-full cursor-pointer items-center gap-2 px-3 py-2.5 text-left transition-colors",
           "hover:bg-accent/30",
@@ -37,9 +38,7 @@ export function AccordionSection({
         )}
       >
         {icon && <span className="shrink-0 text-muted-foreground">{icon}</span>}
-        <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide">
-          {title}
-        </span>
+        <span className="flex-1 text-[11px] font-semibold uppercase tracking-wide">{title}</span>
         {badge != null && (
           <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] font-medium text-muted-foreground">
             {badge}
@@ -59,9 +58,7 @@ export function AccordionSection({
           isOpenActual ? "max-h-[2000px] opacity-100" : "max-h-0 opacity-0",
         )}
       >
-        <div className="p-3 pt-2.5">
-          {children}
-        </div>
+        <div className="p-3 pt-2.5">{children}</div>
       </div>
     </div>
   );

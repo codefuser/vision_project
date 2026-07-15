@@ -7,8 +7,8 @@ import { persist, createJSONStorage } from "zustand/middleware";
 
 interface State {
   favorites: string[];
-  recents: string[];                // most recent first, max 12
-  usage: Record<string, number>;    // id -> apply count
+  recents: string[]; // most recent first, max 12
+  usage: Record<string, number>; // id -> apply count
   toggleFavorite: (id: string) => void;
   pushRecent: (id: string) => void;
   isFavorite: (id: string) => boolean;
