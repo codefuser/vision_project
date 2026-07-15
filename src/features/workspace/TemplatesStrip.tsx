@@ -14,8 +14,8 @@ import { ThemeGalleryDialog } from "./ThemeGalleryDialog";
 import { cn } from "@/lib/utils";
 
 const QUICK_IDS = [
-  "cw-navy", "mw-indigo", "pr-candle", "ys-violet",
-  "bs-scholar", "rv-glory", "an-clouds", "mn-dark",
+  "worship-royal-sapphire", "worship-indigo-modern", "prayer-candlelight", "events-youth-pulse",
+  "bible-scholar", "animated-light-rays", "animated-clouds", "minimal-black",
 ];
 
 export function TemplatesStrip() {

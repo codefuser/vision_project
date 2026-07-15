@@ -30,7 +30,7 @@ export const useCustomTemplates = create<CustomTemplatesStore>()(
           id,
           name: name.trim() || "Untitled Theme",
           description,
-          category: "Animated Themes",
+          category: "Worship",
           text: { ...groups.english },
           perGroup: {
             reference: { ...groups.reference },
@@ -50,7 +50,7 @@ export const useCustomTemplates = create<CustomTemplatesStore>()(
           id,
           name: (name?.trim() || `${source.name} (Copy)`),
           description: source.description,
-          category: "Animated Themes",
+          category: source.category ?? "Worship",
         };
         set((s) => ({ templates: [preset, ...s.templates] }));
         return preset;
