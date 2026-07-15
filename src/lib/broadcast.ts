@@ -114,15 +114,17 @@ export interface BackgroundConfig {
 
 export type BackgroundAnimation =
   | "none"
-  | "particles" | "bokeh" | "gradient-shift" | "light-rays"
-  | "floating-cross" | "sparkles" | "soft-glow"
-  | "clouds" | "golden-particles" | "floating-dust" | "fog"
-  | "fire-glow" | "cross-beam" | "water" | "sky-motion"
-  | "stage-lights" | "aurora" | "star-field" | "rain"
-  | "candle-glow" | "sunrise" | "ocean" | "abstract-worship"
-  | "aurora-borealis" | "fireflies" | "ribbon" | "nebula"
-  | "galaxy" | "bloom" | "lens-flare" | "smoke" | "velvet"
-  | "heaven-light" | "snow";
+  | "moving-grid" | "warp-grid" | "neon-grid"
+  | "perspective-tunnel" | "light-tunnel"
+  | "infinite-space" | "galaxy-motion" | "deep-ocean"
+  | "aurora-sky" | "bokeh-lights" | "floating-glass"
+  | "soft-ink" | "paper-texture" | "light-rays-cinematic"
+  | "spotlights" | "blue-nebula" | "golden-worship"
+  | "abstract-lines" | "wave-mesh" | "fluid-motion"
+  | "water-reflection" | "digital-horizon" | "blue-fog"
+  | "golden-dust-cinematic" | "cross-light"
+  | "morning-sky" | "evening-glow" | "dark-theatre"
+  | "stage-ambient" | "minimal-motion";
 
 export const DEFAULT_BACKGROUND: BackgroundConfig = {
   kind: "color",
