@@ -57,14 +57,111 @@ export interface PlaylistRecord {
 }
 
 export interface AppSettings {
+  // General
   theme: ThemeMode;
+  accentColor: string;
+  language: string;
+  autoSave: boolean;
+  startupBehavior: "restore" | "new" | "blank";
+  checkUpdates: boolean;
+  autoLaunch: boolean;
+  recentProjects: number;
+  defaultStartupPage: "library" | "project" | "playlists" | "settings";
+
+  // Appearance
+  compactMode: boolean;
+  sidebarWidth: number;
+  uiScale: number;
+  iconSize: number;
+  blurEffects: boolean;
+  glassEffects: boolean;
+
+  // Projection
   defaultImageDurationMs: number;
   defaultTransition: TransitionType;
   defaultLoopMode: LoopMode;
-  defaultVolume: number; // 0..1
+  defaultVolume: number;
   autoplayVideo: boolean;
   muteOnStart: boolean;
-  language: string;
+  projectorResolution: string;
+  safeMargins: number;
+  fadeDurationMs: number;
+  blackScreen: boolean;
+  logoScreen: boolean;
+  freezeScreen: boolean;
+  blankScreenEnabled: boolean;
+  countdownSeconds: number;
+  autoTransition: boolean;
+
+  // Text Formatting
+  defaultFont: string;
+  fallbackFont: string;
+  fontSize: number;
+  fontWeight: number;
+  lineSpacing: number;
+  letterSpacing: number;
+  shadowEnabled: boolean;
+  outlineEnabled: boolean;
+  glowEnabled: boolean;
+
+  // Themes
+  defaultThemeId: string;
+  animatedThemesEnabled: boolean;
+  themeTransitionSpeed: number;
+  themeAutoApply: boolean;
+
+  // Bible
+  defaultTranslation: string;
+  tamilFirst: boolean;
+  parallelMode: boolean;
+  bookAbbreviations: boolean;
+  verseNumbering: boolean;
+  tanglishSearch: boolean;
+  phoneticSearch: boolean;
+
+  // Songs
+  songsDefaultLanguage: string;
+  tanglishSearchEnabled: boolean;
+  defaultSorting: string;
+  autoLoadLyrics: boolean;
+
+  // Media
+  imageDurationMs: number;
+  videoAutoplay: boolean;
+  mediaLoop: boolean;
+  hardwareAcceleration: boolean;
+  thumbnailQuality: string;
+
+  // Search
+  instantSearch: boolean;
+  maxResults: number;
+  searchHistory: boolean;
+
+  // Performance
+  gpuRendering: boolean;
+  preloadDatasets: boolean;
+  lazyLoading: boolean;
+
+  // Audio
+  outputDevice: string;
+  audioVolume: number;
+  fadeInMs: number;
+  fadeOutMs: number;
+  muteOnStartup: boolean;
+
+  // Video
+  hardwareDecoding: boolean;
+  frameRate: number;
+
+  // Security
+  lockSettings: boolean;
+  requirePassword: boolean;
+  readOnlyMode: boolean;
+
+  // Advanced
+  factoryResetToken: string;
+  developerMode: boolean;
+  logLevel: string;
 }
 
 export interface SettingsRecord {
@@ -81,14 +178,111 @@ export interface LogRecord {
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
+  // General
   theme: "dark",
+  accentColor: "#6366f1",
+  language: "en",
+  autoSave: true,
+  startupBehavior: "restore",
+  checkUpdates: false,
+  autoLaunch: false,
+  recentProjects: 10,
+  defaultStartupPage: "library",
+
+  // Appearance
+  compactMode: false,
+  sidebarWidth: 224,
+  uiScale: 100,
+  iconSize: 16,
+  blurEffects: true,
+  glassEffects: true,
+
+  // Projection
   defaultImageDurationMs: 5000,
   defaultTransition: "fade",
   defaultLoopMode: "none",
   defaultVolume: 0.8,
   autoplayVideo: true,
   muteOnStart: false,
-  language: "en",
+  projectorResolution: "1920x1080",
+  safeMargins: 5,
+  fadeDurationMs: 500,
+  blackScreen: false,
+  logoScreen: false,
+  freezeScreen: false,
+  blankScreenEnabled: false,
+  countdownSeconds: 10,
+  autoTransition: false,
+
+  // Text Formatting
+  defaultFont: "Inter",
+  fallbackFont: "sans-serif",
+  fontSize: 48,
+  fontWeight: 700,
+  lineSpacing: 1.5,
+  letterSpacing: 0,
+  shadowEnabled: true,
+  outlineEnabled: false,
+  glowEnabled: false,
+
+  // Themes
+  defaultThemeId: "worship-royal-sapphire",
+  animatedThemesEnabled: true,
+  themeTransitionSpeed: 300,
+  themeAutoApply: true,
+
+  // Bible
+  defaultTranslation: "en",
+  tamilFirst: true,
+  parallelMode: false,
+  bookAbbreviations: true,
+  verseNumbering: true,
+  tanglishSearch: true,
+  phoneticSearch: false,
+
+  // Songs
+  songsDefaultLanguage: "ta",
+  tanglishSearchEnabled: true,
+  defaultSorting: "title",
+  autoLoadLyrics: true,
+
+  // Media
+  imageDurationMs: 5000,
+  videoAutoplay: true,
+  mediaLoop: false,
+  hardwareAcceleration: true,
+  thumbnailQuality: "high",
+
+  // Search
+  instantSearch: true,
+  maxResults: 100,
+  searchHistory: true,
+
+  // Performance
+  gpuRendering: true,
+  preloadDatasets: true,
+  lazyLoading: true,
+
+  // Audio
+  outputDevice: "default",
+  audioVolume: 0.8,
+  fadeInMs: 300,
+  fadeOutMs: 300,
+  muteOnStartup: false,
+
+  // Video
+  hardwareDecoding: true,
+  frameRate: 60,
+
+  // Security
+  lockSettings: false,
+  requirePassword: false,
+  readOnlyMode: false,
+
+  // Advanced
+  factoryResetToken: "",
+  developerMode: false,
+  logLevel: "info",
 };
 
 export class ChurchMediaDB extends Dexie {
