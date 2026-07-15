@@ -390,7 +390,7 @@ export function BiblePanel() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3">
           {results.map((dh, i) => {
             const h = dh.hit;
             const pair = dh.pair;
@@ -405,7 +405,7 @@ export function BiblePanel() {
                 key={stableKey + ":" + i}
                 onClick={() => { selectIdx(i); project(dh); }}
                 className={cn(
-                  "group relative flex cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
+                  "group relative flex h-full cursor-pointer flex-col rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
                   "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
                   isProjected
                     ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/25"
@@ -415,7 +415,7 @@ export function BiblePanel() {
                 )}
               >
                 {/* Header — single-line bilingual reference */}
-                <div className="flex items-center gap-1.5 border-b border-border/60 bg-muted/40 px-2 py-1">
+                <div className="flex items-center gap-1.5 rounded-t-[inherit] border-b border-border/60 bg-muted/40 px-2 py-1">
                   <span className="truncate text-[11px] font-bold tracking-tight text-primary">
                     {refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary}
                   </span>
@@ -432,12 +432,12 @@ export function BiblePanel() {
 
                 {/* Verse text */}
                 <div className="flex-1 space-y-1.5 px-2.5 py-2">
-                  <p className="line-clamp-3 text-[12.5px] leading-snug text-foreground/95">
+                  <p className="whitespace-pre-wrap text-[12.5px] leading-snug text-foreground/95">
                     {h.text}
                   </p>
                   {pair && (
                     <div className="border-t border-dashed border-border/50 pt-1.5">
-                      <p className="line-clamp-2 text-[12px] leading-snug text-muted-foreground">
+                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-muted-foreground">
                         {pair.text}
                       </p>
                     </div>
@@ -445,7 +445,7 @@ export function BiblePanel() {
                 </div>
 
                 {/* Footer — favorite + project only */}
-                <div className="flex items-center gap-0.5 border-t border-border/40 bg-muted/20 px-1.5 py-1">
+                <div className="mt-auto flex items-center gap-0.5 rounded-b-[inherit] border-t border-border/40 bg-muted/20 px-1.5 py-1">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -492,7 +492,7 @@ export function BiblePanel() {
                   className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left hover:border-primary/40 hover:bg-accent/40"
                 >
                   <div className="text-[11px] font-semibold text-primary">{f.ref}</div>
-                  <div className="line-clamp-2 text-xs text-muted-foreground">{f.text}</div>
+                  <div className="whitespace-pre-wrap text-xs text-muted-foreground">{f.text}</div>
                 </button>
               ))}
             </div>
