@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Save, Sparkles, X, Check, Pencil } from "lucide-react";
+import { Search, Save, Sparkles, X, Check, Pencil, TrendingUp, Sparkle, Clock } from "lucide-react";
 import { TEMPLATE_PRESETS, TEMPLATE_CATEGORIES, type TemplatePreset } from "@/lib/templates/presets";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useThemeFavorites } from "@/stores/theme-favorites.store";
 import { applyTemplate, activeTemplateId } from "@/lib/templates/apply";
 import { cn } from "@/lib/utils";
 import { ThemeGrid } from "./theme-gallery/ThemeGrid";
+import { ThemeCard } from "./theme-gallery/ThemeCard";
+import { ThemeAnimation } from "./theme-gallery/ThemeAnimation";
 import { themeCache } from "./theme-gallery/ThemeCache";
 
 interface Props { open: boolean; onOpenChange: (v: boolean) => void; }
@@ -32,6 +34,12 @@ const BUCKETS: Array<{ key: Bucket; label: string }> = [
   { key: "Seasonal", label: "Seasonal" },
 ];
 
+const STAFF_PICKS = [
+  "animated-aurora-flow", "animated-heaven-light", "animated-nebula",
+  "animated-light-rays", "animated-ocean-waves", "animated-velvet-motion",
+  "animated-aurora-borealis", "animated-fireflies",
+];
+
 export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const custom = useCustomTemplates((s) => s.templates);
   const saveCurrent = useCustomTemplates((s) => s.saveCurrent);
@@ -39,6 +47,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
 
   const favorites = useThemeFavorites((s) => s.favorites);
   const recents = useThemeFavorites((s) => s.recents);
+  const usage = useThemeFavorites((s) => s.usage);
   const toggleFavorite = useThemeFavorites((s) => s.toggleFavorite);
   const reorderFavorites = useThemeFavorites((s) => s.reorderFavorites);
 
@@ -49,6 +58,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const [newName, setNewName] = useState("");
   const [renaming, setRenaming] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
+  const [featuredHover, setFeaturedHover] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -102,6 +112,15 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     return c;
   }, [all, custom, favorites, recents, allBuiltin]);
 
+  const featuredPicks = useMemo(() => {
+    return STAFF_PICKS.map((id) => byId.get(id)).filter(Boolean) as TemplatePreset[];
+  }, [byId]);
+
+  const mostUsed = useMemo(() => {
+    const sorted = Object.entries(usage).sort((a, b) => b[1] - a[1]).slice(0, 6);
+    return sorted.map(([id]) => byId.get(id)).filter(Boolean) as TemplatePreset[];
+  }, [usage, byId]);
+
   const handleApply = useCallback((preset: TemplatePreset) => {
     applyTemplate(preset.id);
     setAppliedId(preset.id);
@@ -125,11 +144,10 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="!max-w-[1360px] h-[92vh] flex flex-col gap-0 p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="!max-w-[1360px] h-[92vh] flex flex-col gap-0 p-0 overflow-hidden" hideCloseButton aria-describedby={undefined}>
         {/* ═══ Header ═══ */}
         <DialogHeader className="shrink-0 border-b border-border/60 px-6 py-5">
           <div className="flex items-center gap-4">
-            {/* Left: Title */}
             <div className="flex items-center gap-3 shrink-0">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Sparkles className="h-4 w-4 text-primary" />
@@ -142,7 +160,6 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               </div>
             </div>
 
-            {/* Center: Search */}
             <div className="relative flex-1 max-w-md mx-auto">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground/50" />
               <Input
@@ -162,7 +179,6 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               )}
             </div>
 
-            {/* Right: Actions */}
             <div className="flex items-center gap-3 shrink-0">
               <Button size="sm" variant="outline" onClick={() => setSaveOpen(true)} className="h-9 gap-2 rounded-xl border-border/60 px-4 text-xs font-medium">
                 <Save className="h-3.5 w-3.5" /> Save Current
@@ -170,7 +186,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               <button
                 onClick={() => onOpenChange(false)}
                 className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border/30 text-muted-foreground/60 transition-all duration-200 hover:border-foreground/20 hover:bg-accent hover:text-foreground hover:shadow-lg active:scale-95"
-                title="Close"
+                title="Close Theme Browser"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -180,12 +196,11 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
 
         {/* ═══ Body ═══ */}
         <div className="flex min-h-0 flex-1">
-          {/* Sidebar */}
           <aside className="w-44 shrink-0 overflow-y-auto border-r border-border/60 bg-muted/[0.03] px-2.5 py-3">
             {BUCKETS.map((btn) => (
               <button
                 key={btn.key}
-                onClick={() => { setBucket(btn.key); searchRef.current?.focus(); }}
+                onClick={() => setBucket(btn.key)}
                 className={cn(
                   "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-xs transition-all duration-150 mb-0.5",
                   bucket === btn.key
@@ -193,40 +208,151 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
                     : "text-muted-foreground/70 hover:bg-accent/50 hover:text-foreground",
                 )}
               >
-                <span className={cn(
-                  "flex-1 truncate",
-                  bucket === btn.key && "text-primary",
-                )}>{btn.label}</span>
+                <span className={cn("flex-1 truncate", bucket === btn.key && "text-primary")}>{btn.label}</span>
                 <span className={cn(
                   "rounded-md px-1.5 py-0.5 text-[10px] font-medium leading-none",
                   bucket === btn.key ? "bg-primary/15 text-primary" : "bg-muted/60 text-muted-foreground/60",
-                )}>
-                  {bucketCounts[btn.key] ?? 0}
-                </span>
+                )}>{bucketCounts[btn.key] ?? 0}</span>
               </button>
             ))}
           </aside>
 
-          {/* Grid */}
-          <main className="flex-1 min-w-0">
-            <ThemeGrid
-              items={bucketList}
-              appliedId={appliedId}
-              favorites={favorites}
-              onApply={handleApply}
-              onToggleFavorite={toggleFavorite}
-              onReorderFavorites={bucket === "Favorites" ? reorderFavorites : undefined}
-              renaming={renaming}
-              onRename={(id, name) => { renameCustom(id, name); setRenaming(null); }}
-              onStartRename={handleStartRename}
-              dragEnabled={bucket === "Favorites" && bucketList.length > 1}
-            />
+          <main className="flex-1 min-w-0 flex flex-col">
+            {/* ═══ Featured Strip ═══ */}
+            {bucket === "All" && !query && (
+              <div className="shrink-0 border-b border-border/40 px-6 py-4">
+                <div className="flex items-center gap-6 mb-3">
+                  <div className="flex items-center gap-2">
+                    <Sparkle className="h-3.5 w-3.5 text-amber-500" />
+                    <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">Staff Picks</span>
+                  </div>
+                  {mostUsed.length >= 3 && (
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">Most Used</span>
+                    </div>
+                  )}
+                  {recents.length > 0 && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-3.5 w-3.5 text-blue-500" />
+                      <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">Recent</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                  {/* Staff Picks row */}
+                  {featuredPicks.slice(0, 6).map((preset) => (
+                    <button
+                      key={preset.id}
+                      onClick={() => handleApply(preset)}
+                      onMouseEnter={() => setFeaturedHover(preset.id)}
+                      onMouseLeave={() => setFeaturedHover(null)}
+                      className={cn(
+                        "group relative shrink-0 w-44 cursor-pointer overflow-hidden rounded-xl transition-all duration-200",
+                        appliedId === preset.id
+                          ? "ring-2 ring-primary/40 shadow-lg shadow-primary/10"
+                          : "hover:shadow-xl hover:-translate-y-0.5",
+                      )}
+                    >
+                      <div className="relative aspect-video overflow-hidden rounded-xl" style={{ background: preset.background.gradient ?? preset.background.color ?? "#000" }}>
+                        <div className={cn(
+                          "absolute inset-0 transition-opacity duration-300",
+                          appliedId === preset.id || featuredHover === preset.id ? "opacity-100" : "opacity-0",
+                        )}>
+                          <ThemeAnimation animation={preset.background.animation ?? "none"} paused={featuredHover !== preset.id && appliedId !== preset.id} />
+                        </div>
+                        {/* Tamil preview */}
+                        <div className="absolute inset-0 flex items-center justify-center px-2">
+                          <span
+                            className="text-[9px] font-semibold leading-tight text-center line-clamp-2"
+                            style={{ color: preset.text.color ?? "#fff", fontFamily: preset.text.fontFamily, textShadow: "0 1px 4px rgba(0,0,0,.6)" }}
+                          >
+                            கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                          </span>
+                        </div>
+                        {appliedId === preset.id && (
+                          <div className="absolute top-1.5 right-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[7px] font-semibold text-primary-foreground shadow-sm">
+                            Active
+                          </div>
+                        )}
+                      </div>
+                      <div className="px-2 py-1.5 text-left bg-card/80 backdrop-blur-sm border-t border-border/30 rounded-b-xl">
+                        <div className="truncate text-[10px] font-semibold text-foreground/80">{preset.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                  {/* Most Used row */}
+                  {mostUsed.slice(0, 4).map((preset) => (
+                    <button
+                      key={`mu-${preset.id}`}
+                      onClick={() => handleApply(preset)}
+                      className="group relative shrink-0 w-36 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                    >
+                      <div className="relative aspect-video overflow-hidden rounded-xl" style={{ background: preset.background.gradient ?? preset.background.color ?? "#000" }}>
+                        <div className={cn("absolute inset-0", mostUsed.length < 4 && "opacity-80")}>
+                          {preset.background.animation && preset.background.animation !== "none" && (
+                            <ThemeAnimation animation={preset.background.animation} paused />
+                          )}
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center px-2">
+                          <span className="text-[8px] font-medium leading-tight text-center line-clamp-2 text-white/90" style={{ fontFamily: preset.text.fontFamily, textShadow: "0 1px 4px rgba(0,0,0,.6)" }}>
+                            கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                          </span>
+                        </div>
+                      </div>
+                      <div className="px-2 py-1 text-left bg-card/60 backdrop-blur-sm border-t border-border/20 rounded-b-xl">
+                        <div className="truncate text-[9px] font-medium text-foreground/60">{preset.name}</div>
+                      </div>
+                    </button>
+                  ))}
+                  {/* Recent row */}
+                  {recents.slice(0, 4).map((id) => {
+                    const preset = byId.get(id);
+                    if (!preset) return null;
+                    return (
+                      <button
+                        key={`re-${preset.id}`}
+                        onClick={() => handleApply(preset)}
+                        className="group relative shrink-0 w-28 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
+                      >
+                        <div className="relative aspect-video overflow-hidden rounded-xl" style={{ background: preset.background.gradient ?? preset.background.color ?? "#000" }}>
+                          <div className="absolute inset-0 flex items-center justify-center px-1">
+                            <span className="text-[7px] font-medium leading-tight text-center line-clamp-2 text-white/80" style={{ fontFamily: preset.text.fontFamily, textShadow: "0 1px 4px rgba(0,0,0,.6)" }}>
+                              கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                            </span>
+                          </div>
+                        </div>
+                        <div className="px-1.5 py-1 text-left bg-card/40 backdrop-blur-sm border-t border-border/10 rounded-b-xl">
+                          <div className="truncate text-[8px] font-medium text-foreground/50">{preset.name}</div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Grid */}
+            <div className="flex-1 min-h-0">
+              <ThemeGrid
+                items={bucketList}
+                appliedId={appliedId}
+                favorites={favorites}
+                onApply={handleApply}
+                onToggleFavorite={toggleFavorite}
+                onReorderFavorites={bucket === "Favorites" ? reorderFavorites : undefined}
+                renaming={renaming}
+                onRename={(id, name) => { renameCustom(id, name); setRenaming(null); }}
+                onStartRename={handleStartRename}
+                dragEnabled={bucket === "Favorites" && bucketList.length > 1}
+              />
+            </div>
           </main>
         </div>
 
         {/* ═══ Save Dialog ═══ */}
         <Dialog open={saveOpen} onOpenChange={setSaveOpen}>
-          <DialogContent className="!max-w-md gap-4 p-6 rounded-2xl" aria-describedby={undefined}>
+          <DialogContent className="!max-w-md gap-4 p-6 rounded-2xl" hideCloseButton aria-describedby={undefined}>
             <div className="flex items-center gap-3 pb-1">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Save className="h-4 w-4 text-primary" />
@@ -255,7 +381,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
 
         {/* ═══ Rename Dialog ═══ */}
         <Dialog open={!!renaming} onOpenChange={(v) => { if (!v) { setRenaming(null); setRenameValue(""); } }}>
-          <DialogContent className="!max-w-sm gap-4 p-6 rounded-2xl" aria-describedby={undefined}>
+          <DialogContent className="!max-w-sm gap-4 p-6 rounded-2xl" hideCloseButton aria-describedby={undefined}>
             <div className="flex items-center gap-3 pb-1">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10">
                 <Pencil className="h-4 w-4 text-primary" />

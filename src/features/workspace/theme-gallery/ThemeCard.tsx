@@ -65,7 +65,7 @@ function ThemeCardInner({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-2xl bg-card transition-all duration-300 select-none",
+        "group relative cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 select-none",
         "will-change-transform",
         isSelected
           ? "ring-2 ring-primary/40 shadow-xl shadow-primary/10 scale-[1.01]"
@@ -73,8 +73,15 @@ function ThemeCardInner({
       )}
       style={{ contain: "layout style" } as React.CSSProperties}
     >
+      {/* Animated border gradient — visible on hover/selected */}
+      <div className={cn(
+        "pointer-events-none absolute -inset-[2px] rounded-[18px] opacity-0 transition-opacity duration-500",
+        "bg-gradient-to-br from-primary/30 via-primary/10 to-primary/30 blur-sm",
+        (hovered || isSelected) && "opacity-100",
+      )} />
+
       {/* ── Preview ── */}
-      <div className="relative overflow-hidden" style={{ aspectRatio: "16 / 9" }}>
+      <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "16 / 9" }}>
         <div className="absolute inset-0" style={{ background: bgGradient ?? bgColor }} />
 
         {isAnimated && visible && (
@@ -83,7 +90,7 @@ function ThemeCardInner({
 
         {/* Tamil preview */}
         <div className="absolute inset-0 flex items-center justify-center px-4 py-3" style={sampleStyle}>
-          <div className="line-clamp-3 text-balance leading-snug">
+          <div className="line-clamp-3 text-balance leading-snug relative z-10">
             <span>கர்த்தர் என்</span>
             <br />
             <span className="opacity-80">மேய்ப்பராயிருக்கிறார்</span>
@@ -112,7 +119,7 @@ function ThemeCardInner({
           </div>
         )}
 
-        {/* Category badge top-right */}
+        {/* Category badge */}
         {!isSelected && (
           <div className="absolute right-3 top-3 z-20">
             <span className={cn(
@@ -151,7 +158,7 @@ function ThemeCardInner({
       </div>
 
       {/* ── Info ── */}
-      <div className="px-3.5 py-3">
+      <div className="relative z-10 bg-card px-3.5 py-3 rounded-b-2xl">
         <div className="truncate text-[13px] font-semibold leading-snug text-foreground/90">
           {preset.name}
         </div>
@@ -159,9 +166,7 @@ function ThemeCardInner({
           <span className="text-[10px] font-medium text-muted-foreground/50 capitalize tracking-wide">
             {preset.category}{preset.mood ? ` · ${preset.mood}` : ""}
           </span>
-          {isFavorite && (
-            <span className="text-[9px] text-yellow-500/70">★</span>
-          )}
+          {isFavorite && <span className="text-[9px] text-yellow-500/70">★</span>}
         </div>
       </div>
     </div>
