@@ -75,7 +75,6 @@ export function BackgroundLayer({ background }: Props) {
   // suppresses everything else.
   const backgroundEnabled = useBackground((s) => s.backgroundEnabled);
   const motionEnabled = useBackground((s) => s.motionEnabled);
-  const particlesEnabled = useBackground((s) => s.particlesEnabled);
 
   const [media, setMedia] = useState<MediaRecord | null>(null);
   const [url, setUrl] = useState<string | null>(null);

@@ -238,32 +238,42 @@ export const useWorkspace = create<WorkspaceState>()(
         return rest;
       },
       onRehydrateStorage: () => () => {
-        useWorkspace.setState({ _hydrated: true });
+        try {
+          useWorkspace.setState({ _hydrated: true });
+        } catch {
+          /* hydration status is best-effort — never crash on rehydrate */
+        }
       },
       migrate: (persisted: unknown) => {
-        const p = persisted as Record<string, unknown> | undefined;
-        return {
-          ...DEFAULTS,
-          ...p,
-          leftPanelLayout: (p?.leftPanelLayout && typeof p.leftPanelLayout === "object" ? p.leftPanelLayout : null) as Record<string, number> | null ?? DEFAULTS.leftPanelLayout,
-          sidebarCollapsed: typeof p?.sidebarCollapsed === "boolean" ? p.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
-          leftPanelWidth: typeof p?.leftPanelWidth === "number" ? p.leftPanelWidth : DEFAULTS.leftPanelWidth,
-          textFormatActiveSection: typeof p?.textFormatActiveSection === "string" ? p.textFormatActiveSection : DEFAULTS.textFormatActiveSection,
-          textFormatThemesOpen: typeof p?.textFormatThemesOpen === "boolean" ? p.textFormatThemesOpen : DEFAULTS.textFormatThemesOpen,
-          textFormatSections: p?.textFormatSections ? { ...DEFAULTS.textFormatSections, ...(p.textFormatSections as object) } : DEFAULTS.textFormatSections,
-          songsSearch: p?.songsSearch ? { ...DEFAULTS.songsSearch, ...(p.songsSearch as object) } : DEFAULTS.songsSearch,
-          bibleSearch: p?.bibleSearch ? { ...DEFAULTS.bibleSearch, ...(p.bibleSearch as object) } : DEFAULTS.bibleSearch,
-          mediaSearch: p?.mediaSearch ? { ...DEFAULTS.mediaSearch, ...(p.mediaSearch as object) } : DEFAULTS.mediaSearch,
-          textSearch: p?.textSearch ? { ...DEFAULTS.textSearch, ...(p.textSearch as object) } : DEFAULTS.textSearch,
-          selectedSongId: typeof p?.selectedSongId === "number" ? p.selectedSongId : DEFAULTS.selectedSongId,
-          selectedTextId: typeof p?.selectedTextId === "string" ? p.selectedTextId : DEFAULTS.selectedTextId,
-          activeTemplateId: typeof p?.activeTemplateId === "string" ? p.activeTemplateId : DEFAULTS.activeTemplateId,
-          scrollPositions: p?.scrollPositions ? { ...DEFAULTS.scrollPositions, ...(p.scrollPositions as object) } : DEFAULTS.scrollPositions,
-          _hydrated: false,
-          galleryOpen: false,
-          galleryBucket: typeof p?.galleryBucket === "string" ? p.galleryBucket : DEFAULTS.galleryBucket,
-          galleryQuery: typeof p?.galleryQuery === "string" ? p.galleryQuery : DEFAULTS.galleryQuery,
-        } as WorkspaceState;
+        try {
+          const p = (persisted && typeof persisted === "object" && !Array.isArray(persisted))
+            ? (persisted as Record<string, unknown>)
+            : undefined;
+          return {
+            ...DEFAULTS,
+            ...p,
+            leftPanelLayout: (p?.leftPanelLayout && typeof p.leftPanelLayout === "object" ? p.leftPanelLayout : null) as Record<string, number> | null ?? DEFAULTS.leftPanelLayout,
+            sidebarCollapsed: typeof p?.sidebarCollapsed === "boolean" ? p.sidebarCollapsed : DEFAULTS.sidebarCollapsed,
+            leftPanelWidth: typeof p?.leftPanelWidth === "number" ? p.leftPanelWidth : DEFAULTS.leftPanelWidth,
+            textFormatActiveSection: typeof p?.textFormatActiveSection === "string" ? p.textFormatActiveSection : DEFAULTS.textFormatActiveSection,
+            textFormatThemesOpen: typeof p?.textFormatThemesOpen === "boolean" ? p.textFormatThemesOpen : DEFAULTS.textFormatThemesOpen,
+            textFormatSections: p?.textFormatSections && typeof p.textFormatSections === "object" ? { ...DEFAULTS.textFormatSections, ...(p.textFormatSections as Record<string, unknown>) } : DEFAULTS.textFormatSections,
+            songsSearch: p?.songsSearch && typeof p.songsSearch === "object" ? { ...DEFAULTS.songsSearch, ...(p.songsSearch as Record<string, unknown>) } : DEFAULTS.songsSearch,
+            bibleSearch: p?.bibleSearch && typeof p.bibleSearch === "object" ? { ...DEFAULTS.bibleSearch, ...(p.bibleSearch as Record<string, unknown>) } : DEFAULTS.bibleSearch,
+            mediaSearch: p?.mediaSearch && typeof p.mediaSearch === "object" ? { ...DEFAULTS.mediaSearch, ...(p.mediaSearch as Record<string, unknown>) } : DEFAULTS.mediaSearch,
+            textSearch: p?.textSearch && typeof p.textSearch === "object" ? { ...DEFAULTS.textSearch, ...(p.textSearch as Record<string, unknown>) } : DEFAULTS.textSearch,
+            selectedSongId: typeof p?.selectedSongId === "number" ? p.selectedSongId : DEFAULTS.selectedSongId,
+            selectedTextId: typeof p?.selectedTextId === "string" ? p.selectedTextId : DEFAULTS.selectedTextId,
+            activeTemplateId: typeof p?.activeTemplateId === "string" ? p.activeTemplateId : DEFAULTS.activeTemplateId,
+            scrollPositions: p?.scrollPositions && typeof p.scrollPositions === "object" ? { ...DEFAULTS.scrollPositions, ...(p.scrollPositions as Record<string, unknown>) } : DEFAULTS.scrollPositions,
+            _hydrated: false,
+            galleryOpen: false,
+            galleryBucket: typeof p?.galleryBucket === "string" ? p.galleryBucket : DEFAULTS.galleryBucket,
+            galleryQuery: typeof p?.galleryQuery === "string" ? p.galleryQuery : DEFAULTS.galleryQuery,
+          } as WorkspaceState;
+        } catch {
+          return { ...DEFAULTS } as WorkspaceState;
+        }
       },
     },
   ),

@@ -119,6 +119,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 import { AppShell } from "@/components/AppShell";
+import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
@@ -130,10 +131,12 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      {!isProjectorPopup && <GlobalShortcuts />}
-      {!isProjectorPopup && <ShortcutsDialog />}
-      {isProjectorPopup ? <Outlet /> : <AppShell><Outlet /></AppShell>}
-      <Toaster position="top-right" richColors closeButton />
+      <GlobalErrorBoundary>
+        {!isProjectorPopup && <GlobalShortcuts />}
+        {!isProjectorPopup && <ShortcutsDialog />}
+        {isProjectorPopup ? <Outlet /> : <AppShell><Outlet /></AppShell>}
+        <Toaster position="top-right" richColors closeButton />
+      </GlobalErrorBoundary>
     </QueryClientProvider>
   );
 }

@@ -1,13 +1,16 @@
-import { useBibleStore } from "@/lib/bible/store";
-import { useSongsStore } from "@/lib/songs/store";
-
 let preloadPromise: Promise<void> | null = null;
 
 export function preloadAllData(): Promise<void> {
   if (preloadPromise) return preloadPromise;
-  preloadPromise = Promise.all([
+  preloadPromise = doPreload().catch(() => {});
+  return preloadPromise;
+}
+
+async function doPreload(): Promise<void> {
+  const { useBibleStore } = await import("@/lib/bible/store");
+  const { useSongsStore } = await import("@/lib/songs/store");
+  await Promise.allSettled([
     useBibleStore.getState().ensureBoth(),
     useSongsStore.getState().ensureLoaded(),
-  ]).then(() => undefined);
-  return preloadPromise;
+  ]);
 }
