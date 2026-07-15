@@ -13,7 +13,7 @@ import {
   Route,
   Mail,
 } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
@@ -22,6 +22,7 @@ import { AppStartupProvider } from "@/components/AppStartupProvider";
 import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
+import { isPreloaded, ensurePreloaded } from "@/features/devhub/devhub-loader";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
@@ -49,12 +50,17 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
   const collapsed = useWorkspace((s) => s.sidebarCollapsed);
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
+  const [preloaded, setPreloaded] = useState(isPreloaded());
 
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
     if (!loaded) void load();
   }, [init, load, loaded]);
+
+  useEffect(() => {
+    if (!preloaded) ensurePreloaded().then(() => setPreloaded(true));
+  }, [preloaded]);
 
   const cycleTheme = () => {
     const order: Array<typeof settings.theme> = ["light", "dark", "system"];
@@ -72,6 +78,19 @@ export function AppShell({ children }: { children: ReactNode }) {
     const Icon = item.icon;
     return <NavItem key={item.to} item={item} active={active} icon={Icon} collapsed={collapsed} />;
   };
+
+  if (!preloaded) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xl">
+          <div className="flex flex-col items-center gap-4">
+            <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p className="text-sm text-muted-foreground">Loading Vision Projector…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-background text-foreground">

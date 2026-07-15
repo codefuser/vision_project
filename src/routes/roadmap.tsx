@@ -1,6 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState, type ComponentType } from "react";
-import { isPreloaded, ensurePreloaded, BlurLoadingOverlay } from "@/features/devhub/devhub-loader";
+import { RoadmapPage } from "@/features/devhub/RoadmapPage";
 
 export const Route = createFileRoute("/roadmap")({
   head: () => ({
@@ -13,28 +12,5 @@ export const Route = createFileRoute("/roadmap")({
       },
     ],
   }),
-  component: RoadmapRoute,
+  component: () => <RoadmapPage />,
 });
-
-let cached: ComponentType | null = null;
-
-function RoadmapRoute() {
-  const [ready, setReady] = useState(!!cached);
-
-  useEffect(() => {
-    if (cached) {
-      setReady(true);
-      return;
-    }
-    (isPreloaded() ? Promise.resolve() : ensurePreloaded())
-      .then(() => import("@/features/devhub/RoadmapPage"))
-      .then((m) => {
-        cached = m.RoadmapPage;
-        setReady(true);
-      });
-  }, []);
-
-  if (!ready || !cached) return <BlurLoadingOverlay message="Loading Roadmap…" />;
-  const Page = cached;
-  return <Page />;
-}
