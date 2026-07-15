@@ -59,11 +59,15 @@ export function TextFormattingPanel() {
   const setBackground = useTextFormat((s) => s.setBackground);
   const resetGroup = useTextFormat((s) => s.resetGroup);
   const reset = useTextFormat((s) => s.reset);
+  const wsActiveSection = useWorkspace((s) => s.textFormatActiveSection);
+  const setTextFormatActiveSection = useWorkspace((s) => s.setTextFormatActiveSection);
   // When Songs tab is active, only Tamil + Background are meaningful.
   const songsMode = activeTab === "songs";
   const visibleGroups: StyleGroup[] = songsMode ? ["tamil"] : (Object.keys(GROUP_LABELS) as StyleGroup[]);
-  const [activeRaw, setActive] = useState<StyleGroup>("reference");
+  const [activeRaw, setActive] = useState<StyleGroup>(() => (wsActiveSection as StyleGroup) || "reference");
   const active: StyleGroup = songsMode ? "tamil" : activeRaw;
+  // Sync active section to workspace store
+  useEffect(() => { if (!songsMode) setTextFormatActiveSection(activeRaw); }, [activeRaw, songsMode]);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [bgName, setBgName] = useState<string | null>(null);
 

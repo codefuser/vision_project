@@ -4,11 +4,12 @@
  * gallery (with 50+ themes, live thumbnails, categories, large preview
  * and custom themes) lives in <ThemeGalleryDialog />.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Sparkles, ChevronDown, ChevronUp, Check, LayoutGrid, Save } from "lucide-react";
 import { TEMPLATE_PRESETS } from "@/lib/templates/presets";
 import { applyTemplate, activeTemplateId } from "@/lib/templates/apply";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { ThemeGalleryDialog } from "./ThemeGalleryDialog";
 import { cn } from "@/lib/utils";
 
@@ -18,8 +19,12 @@ const QUICK_IDS = [
 ];
 
 export function TemplatesStrip() {
-  const [open, setOpen] = useState(true);
-  const [active, setActive] = useState<string | null>(activeTemplateId());
+  const wsActiveTemplate = useWorkspace((s) => s.activeTemplateId);
+  const wsThemesOpen = useWorkspace((s) => s.textFormatThemesOpen);
+  const setTextFormatThemesOpen = useWorkspace((s) => s.setTextFormatThemesOpen);
+  const setActiveTemplateId = useWorkspace((s) => s.setActiveTemplateId);
+  const [open, setOpen] = useState(() => wsThemesOpen);
+  const [active, setActive] = useState<string | null>(wsActiveTemplate ?? activeTemplateId());
   const [galleryOpen, setGalleryOpen] = useState(false);
   const saveCurrent = useCustomTemplates((s) => s.saveCurrent);
   const customCount = useCustomTemplates((s) => s.templates.length);
@@ -28,6 +33,10 @@ export function TemplatesStrip() {
     () => QUICK_IDS.map((id) => TEMPLATE_PRESETS.find((t) => t.id === id)).filter((t): t is NonNullable<typeof t> => !!t),
     [],
   );
+
+  // Sync to workspace store
+  useEffect(() => { setTextFormatThemesOpen(open); }, [open]);
+  useEffect(() => { setActiveTemplateId(active); }, [active]);
 
   const onSaveQuick = () => {
     const name = window.prompt("Theme name:", "My Theme");

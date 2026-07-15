@@ -17,6 +17,7 @@ import {
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { useSongsStore } from "@/lib/songs/store";
 import { useSongsRecent } from "@/stores/songs-recent.store";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { getSongs, type Song } from "@/lib/songs/loader";
 import { searchSongs, type SongHit } from "@/lib/songs/search";
 import { songStem } from "@/lib/songs/normalize";
@@ -76,15 +77,47 @@ export function SongsPanel() {
     setQuery, ensureLoaded, addFavorite, removeFavorite,
     selectSong, removeUserSong,
   } = useSongsStore();
+  const wsSongsSearch = useWorkspace((s) => s.songsSearch);
+  const wsScrollPos = useWorkspace((s) => s.scrollPositions.songs);
+  const wsSelectedSongId = useWorkspace((s) => s.selectedSongId);
+  const setSongsSearch = useWorkspace((s) => s.setSongsSearch);
+  const setScrollPosition = useWorkspace((s) => s.setScrollPosition);
+  const setSelectedSongId = useWorkspace((s) => s.setSelectedSongId);
+
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [results, setResults] = useState<SongHit[]>([]);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
   const [activeSlideById, setActiveSlideById] = useState<Record<number, number>>({});
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<SongFilter>("all");
-  const [authorFilter, setAuthorFilter] = useState<string | null>(null);
+  const [filter, setFilter] = useState<SongFilter>(() => (wsSongsSearch.filter as SongFilter) || "all");
+  const [authorFilter, setAuthorFilter] = useState<string | null>(wsSongsSearch.authorFilter ?? null);
+
+  // Restore persisted query and selection on mount
+  useEffect(() => {
+    if (wsSongsSearch.query) {
+      setQuery(wsSongsSearch.query);
+    }
+    if (wsSelectedSongId != null) {
+      selectSong(wsSelectedSongId);
+    }
+    // Restore scroll position after data loads
+    if (wsScrollPos > 0 && listRef.current) {
+      requestAnimationFrame(() => {
+        if (listRef.current) listRef.current.scrollTop = wsScrollPos;
+      });
+    }
+  }, []);
+  // Sync filter/author changes to workspace store
+  useEffect(() => {
+    setSongsSearch({ filter, authorFilter });
+  }, [filter, authorFilter]);
+  // Sync selectedSongId to workspace store
+  useEffect(() => {
+    setSelectedSongId(selectedSongId);
+  }, [selectedSongId]);
   const projectedRef = useProjection((s) => s.state?.textOverlay?.text ?? null);
   const recent = useSongsRecent((s) => s.items);
   const counts = useSongsRecent((s) => s.counts);
@@ -246,7 +279,7 @@ export function SongsPanel() {
           <Input
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => { setQuery(e.target.value); setSongsSearch({ query: e.target.value }); }}
             placeholder="yesu · anbu · vaazhvu · இயேசு · title · lyric…"
             className="h-8 pl-7 text-sm"
             autoFocus
@@ -342,6 +375,11 @@ export function SongsPanel() {
               onDelete={removeUserSong}
               query={query}
               compact
+              listRef={listRef}
+              onScroll={() => {
+                const el = listRef.current;
+                if (el) setScrollPosition("songs", el.scrollTop);
+              }}
             />
             {selectedSong ? (
               <SlidePane
@@ -384,6 +422,8 @@ interface ListProps {
   onDelete: (id: number) => void;
   query: string;
   compact?: boolean;
+  listRef?: React.RefObject<HTMLDivElement | null>;
+  onScroll?: React.UIEventHandler<HTMLDivElement>;
 }
 
 function SongList(p: ListProps) {
@@ -402,7 +442,7 @@ function SongList(p: ListProps) {
   // Compact mode (split-view left column) — title + first line + match preview + slide count.
   if (p.compact) {
     return (
-      <div className="min-h-0 overflow-y-auto border-r border-border">
+      <div ref={p.listRef} onScroll={p.onScroll} className="min-h-0 overflow-y-auto border-r border-border">
         <ul className="divide-y divide-border/60">
           {p.results.map((h, i) => {
             const song = h.song;

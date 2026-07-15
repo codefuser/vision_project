@@ -24,6 +24,7 @@ import { projectTextSlide } from "@/projection/adapters/text.adapter";
 import { useProjection } from "@/stores/projection.store";
 import { convertCompleted } from "@/lib/text/tanglish";
 import { searchTextItems } from "@/lib/text/search";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -74,18 +75,37 @@ export function TextPanel() {
   const toggleFavorite = useTextItems((s) => s.toggleFavorite);
   const pushRecent = useTextItems((s) => s.pushRecent);
   const projectedText = useProjection((s) => s.state?.textOverlay?.text ?? null);
+  const wsTextSearch = useWorkspace((s) => s.textSearch);
+  const wsSelectedTextId = useWorkspace((s) => s.selectedTextId);
+  const wsScrollPos = useWorkspace((s) => s.scrollPositions.text);
+  const setTextSearch = useWorkspace((s) => s.setTextSearch);
+  const setSelectedTextId = useWorkspace((s) => s.setSelectedTextId);
+  const setScrollPosition = useWorkspace((s) => s.setScrollPosition);
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<TextFilter>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(() => wsSelectedTextId);
+  const [query, setQuery] = useState(() => wsTextSearch.query);
+  const [filter, setFilter] = useState<TextFilter>(() => (wsTextSearch.filter as TextFilter) || "all");
   const [activeSlide, setActiveSlide] = useState(0);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftContent, setDraftContent] = useState("");
   const [typingMode, setTypingMode] = useState<TypingMode>("english");
+  const listRef = useRef<HTMLDivElement>(null);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [savingPending, setSavingPending] = useState(false);
   const [, forceTick] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  // Sync search/filter/selection to workspace store
+  useEffect(() => { setTextSearch({ query, filter }); }, [query, filter]);
+  useEffect(() => { setSelectedTextId(selectedId); }, [selectedId]);
+  // Restore scroll position
+  useEffect(() => {
+    if (wsScrollPos > 0 && listRef.current) {
+      requestAnimationFrame(() => {
+        if (listRef.current) listRef.current.scrollTop = wsScrollPos;
+      });
+    }
+  }, []);
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const next = e.target.value;
@@ -301,7 +321,7 @@ export function TextPanel() {
       <div className="min-h-0 flex-1 overflow-hidden">
         <div className="grid h-full min-h-0 grid-cols-1 @lg:grid-cols-[minmax(220px,1fr)_minmax(280px,1.4fr)_minmax(260px,1.2fr)]">
           {/* LEFT — list */}
-          <div className="min-h-0 overflow-y-auto border-r border-border">
+          <div ref={listRef} onScroll={() => { const el = listRef.current; if (el) setScrollPosition("text", el.scrollTop); }} className="min-h-0 overflow-y-auto border-r border-border">
             {visible.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center text-xs text-muted-foreground">
                 <FileText className="h-7 w-7 opacity-40" />

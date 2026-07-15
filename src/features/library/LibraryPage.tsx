@@ -5,6 +5,7 @@ import { Dropzone } from "@/components/Dropzone";
 import { Thumb } from "@/components/Thumb";
 import { useLibrary, filterMedia, type LibraryFilter } from "@/stores/library.store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { addMediaToPlaylist, deleteMedia, duplicateMedia, listPlaylists, moveMedia, renameMedia } from "@/db/repo";
 import type { MediaRecord, PlaylistRecord } from "@/db/schema";
 import { formatBytes, formatDuration } from "@/lib/files";
@@ -52,6 +53,18 @@ export function LibraryPage() {
   const [deleteTargets, setDeleteTargets] = useState<MediaRecord[] | null>(null);
   const [showMove, setShowMove] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const wsMediaSearch = useWorkspace((s) => s.mediaSearch);
+  const setMediaSearch = useWorkspace((s) => s.setMediaSearch);
+  // Use workspace store for media search/filter persistence
+  useEffect(() => { setMediaSearch({ query: search, filter }); }, [search, filter]);
+  // Restore search/filter from workspace store on mount
+  useEffect(() => {
+    if (wsMediaSearch.query) setSearch(wsMediaSearch.query);
+    if (wsMediaSearch.filter !== "all") setFilter(wsMediaSearch.filter as LibraryFilter);
+    if (wsMediaSearch.currentFolderId) {
+      useLibrary.getState().setFolder(wsMediaSearch.currentFolderId);
+    }
+  }, []);
   const [foldersCollapsed, setFoldersCollapsed] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.localStorage.getItem("church-media-folders-collapsed-v1") === "1";

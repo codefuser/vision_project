@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { useProjection } from "@/stores/projection.store";
 import { useBibleRecent } from "@/stores/bible-recent.store";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
@@ -35,18 +36,42 @@ export function BiblePanel() {
     setLang, setDisplayMode, setQuery, ensureLoaded, ensureBoth,
     addFavorite, removeFavorite,
   } = useBibleStore();
+  const wsBibleSearch = useWorkspace((s) => s.bibleSearch);
+  const wsScrollPos = useWorkspace((s) => s.scrollPositions.bible);
+  const setBibleSearch = useWorkspace((s) => s.setBibleSearch);
+  const setScrollPosition = useWorkspace((s) => s.setScrollPosition);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const [results, setResults] = useState<DisplayHit[]>([]);
-  const [activeIdx, setActiveIdx] = useState(0);
+  const [activeIdx, setActiveIdx] = useState(() => wsScrollPos ? 0 : 0);
   const [searchMs, setSearchMs] = useState<number | null>(null);
   const [chapterCtx, setChapterCtx] = useState<{ book: number; chapter: number } | null>(null);
-  const [searchMode, setSearchMode] = useState<SearchMode>("reference");
+  const [searchMode, setSearchMode] = useState<SearchMode>(() => wsBibleSearch.searchMode as SearchMode || "reference");
   const projectedRef = useProjection((s) => s.state?.textOverlay?.reference ?? null);
   const selectedKeyRef = useRef<string | null>(null);
   const lastQueryRef = useRef<string>("");
 
   const recent = useBibleRecent((s) => s.items);
   const pushRecent = useBibleRecent((s) => s.push);
+
+  // Restore persisted query and sync searchMode
+  useEffect(() => {
+    if (wsBibleSearch.query) {
+      setQuery(wsBibleSearch.query);
+    }
+  }, []);
+  // Sync searchMode changes to workspace store
+  useEffect(() => {
+    setBibleSearch({ searchMode });
+  }, [searchMode]);
+  // Restore scroll position after data loads
+  useEffect(() => {
+    if (wsScrollPos > 0 && listRef.current) {
+      requestAnimationFrame(() => {
+        if (listRef.current) listRef.current.scrollTop = wsScrollPos;
+      });
+    }
+  }, []);
 
   // Load required databases for current mode.
   useEffect(() => {
@@ -332,7 +357,7 @@ export function BiblePanel() {
         <Input
           ref={inputRef}
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => { setQuery(e.target.value); setBibleSearch({ query: e.target.value }); }}
           placeholder={
             searchMode === "reference"
               ? "John 3:16, யோவான் 3, PSA 23"
@@ -377,7 +402,7 @@ export function BiblePanel() {
       </div>
       {error && <div className="border-b border-border px-2 py-1 text-[11px] text-destructive">{error}</div>}
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-2">
+      <div ref={listRef} onScroll={() => { const el = listRef.current; if (el) setScrollPosition("bible", el.scrollTop); }} className="min-h-0 flex-1 overflow-y-auto p-2">
         {loading && (
           <div className="flex h-full items-center justify-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />

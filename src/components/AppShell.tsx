@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { FolderTree, ListVideo, MonitorPlay, Settings as SettingsIcon, Moon, Sun, Monitor, PanelLeftClose, Keyboard } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
 import { GlobalFavoritesDock } from "@/components/GlobalFavoritesDock";
 import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
+import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 
 const PRIMARY_NAV = [
@@ -17,30 +18,18 @@ const PRIMARY_NAV = [
 
 const SETTINGS_NAV = { to: "/settings", label: "Settings", icon: SettingsIcon, shortcutId: "nav.settings" } as const;
 
-const SIDEBAR_KEY = "church-media-sidebar-collapsed-v2";
-
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { settings, update, load, loaded } = useSettings();
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
-  const [collapsed, setCollapsed] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return window.localStorage.getItem(SIDEBAR_KEY) === "1";
-  });
+  const collapsed = useWorkspace((s) => s.sidebarCollapsed);
+  const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
 
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
     if (!loaded) void load();
   }, [init, load, loaded]);
-
-  useEffect(() => {
-    try {
-      window.localStorage.setItem(SIDEBAR_KEY, collapsed ? "1" : "0");
-    } catch {
-      /* ignore */
-    }
-  }, [collapsed]);
 
   const cycleTheme = () => {
     const order: Array<typeof settings.theme> = ["light", "dark", "system"];
