@@ -56,6 +56,20 @@ export interface PlaylistRecord {
   updatedAt: number;
 }
 
+export type ScrollbarStyle = "thin" | "auto" | "hidden";
+export type SpacingMode = "compact" | "normal" | "comfortable";
+export type AspectRatio = "16:9" | "4:3" | "16:10" | "21:9";
+export type TextAlign = "left" | "center" | "right";
+export type VerticalAlign = "top" | "middle" | "bottom";
+export type StrokeJoin = "miter" | "round" | "bevel";
+export type BookNameStyle = "full" | "abbreviated" | "short";
+export type VerseSplit = "single" | "range" | "chapter";
+export type SongSearchMode = "title" | "lyrics" | "both";
+export type GIFPlayback = "animate" | "once" | "pause";
+export type ScalingMode = "fill" | "fit" | "stretch" | "tile";
+export type ScalingAlgorithm = "nearest" | "bilinear" | "bicubic";
+export type DefaultCodec = "h264" | "h265" | "vp9" | "av1";
+
 export interface AppSettings {
   // General
   theme: ThemeMode;
@@ -67,6 +81,7 @@ export interface AppSettings {
   autoLaunch: boolean;
   recentProjects: number;
   defaultStartupPage: "library" | "project" | "playlists" | "settings";
+  telemetry: boolean;
 
   // Appearance
   compactMode: boolean;
@@ -75,6 +90,14 @@ export interface AppSettings {
   iconSize: number;
   blurEffects: boolean;
   glassEffects: boolean;
+  animationsEnabled: boolean;
+  reduceMotion: boolean;
+  roundedCorners: number;
+  blurStrength: number;
+  accentOpacity: number;
+  scrollbarStyle: ScrollbarStyle;
+  cardRadius: number;
+  spacing: SpacingMode;
 
   // Projection
   defaultImageDurationMs: number;
@@ -92,6 +115,12 @@ export interface AppSettings {
   blankScreenEnabled: boolean;
   countdownSeconds: number;
   autoTransition: boolean;
+  defaultDisplay: string;
+  transitionDuration: number;
+  aspectRatio: AspectRatio;
+  refreshRate: number;
+  defaultBackground: string;
+  projectorBrightness: number;
 
   // Text Formatting
   defaultFont: string;
@@ -103,12 +132,45 @@ export interface AppSettings {
   shadowEnabled: boolean;
   outlineEnabled: boolean;
   glowEnabled: boolean;
+  tamilFont: string;
+  englishFont: string;
+  referenceFont: string;
+  italic: boolean;
+  underline: boolean;
+  textAlign: TextAlign;
+  verticalAlign: VerticalAlign;
+  textWidth: number;
+  maxWidth: number;
+  textMargin: number;
+  textPadding: number;
+  shadowBlur: number;
+  shadowOpacity: number;
+  glowColor: string;
+  outlineWidth: number;
+  outlineColor: string;
+  strokeJoin: StrokeJoin;
+  textOpacity: number;
+  referenceOpacity: number;
 
   // Themes
   defaultThemeId: string;
   animatedThemesEnabled: boolean;
   themeTransitionSpeed: number;
   themeAutoApply: boolean;
+  backgroundOpacity: number;
+  backgroundBlur: number;
+  particlesEnabled: boolean;
+  lightRaysEnabled: boolean;
+  starsEnabled: boolean;
+  fogEnabled: boolean;
+  smokeEnabled: boolean;
+  rainEnabled: boolean;
+  snowEnabled: boolean;
+  bokehEnabled: boolean;
+  auroraEnabled: boolean;
+  meshGradientEnabled: boolean;
+  motionBackgroundEnabled: boolean;
+  videoBackgroundEnabled: boolean;
 
   // Bible
   defaultTranslation: string;
@@ -118,12 +180,27 @@ export interface AppSettings {
   verseNumbering: boolean;
   tanglishSearch: boolean;
   phoneticSearch: boolean;
+  defaultVersion: string;
+  tamilVersion: string;
+  englishVersion: string;
+  referencePosition: "top" | "bottom" | "overlay";
+  referenceSize: number;
+  bookNameStyle: BookNameStyle;
+  autoAdvance: boolean;
+  verseSplit: VerseSplit;
+  showReference: boolean;
+  verseAnimation: boolean;
 
   // Songs
   songsDefaultLanguage: string;
   tanglishSearchEnabled: boolean;
   defaultSorting: string;
   autoLoadLyrics: boolean;
+  defaultSearchMode: SongSearchMode;
+  fuzzySearch: boolean;
+  soundSimilarSearch: boolean;
+  autoCapitalization: boolean;
+  songCacheSize: number;
 
   // Media
   imageDurationMs: number;
@@ -131,16 +208,32 @@ export interface AppSettings {
   mediaLoop: boolean;
   hardwareAcceleration: boolean;
   thumbnailQuality: string;
+  gifPlayback: GIFPlayback;
+  imageScaling: ScalingMode;
+  videoScaling: ScalingMode;
 
   // Search
   instantSearch: boolean;
   maxResults: number;
   searchHistory: boolean;
+  cacheSize: number;
+  searchDelay: number;
+  indexAutomatically: boolean;
+  backgroundIndexing: boolean;
 
   // Performance
   gpuRendering: boolean;
   preloadDatasets: boolean;
   lazyLoading: boolean;
+  memoryCache: boolean;
+  themeCache: boolean;
+  imageCache: boolean;
+  videoCache: boolean;
+  songCache: boolean;
+  bibleCache: boolean;
+  preloadSongs: boolean;
+  preloadBible: boolean;
+  databaseOptimization: boolean;
 
   // Audio
   outputDevice: string;
@@ -148,20 +241,52 @@ export interface AppSettings {
   fadeInMs: number;
   fadeOutMs: number;
   muteOnStartup: boolean;
+  masterVolume: number;
+  defaultOutput: string;
+  microphone: string;
+  audioDelay: number;
+  previewVolume: number;
 
   // Video
   hardwareDecoding: boolean;
   frameRate: number;
+  defaultResolution: string;
+  defaultCodec: DefaultCodec;
+  imageQuality: number;
+  videoQuality: number;
+  scalingAlgorithm: ScalingAlgorithm;
+
+  // Keyboard Shortcuts
+  shortcutsCustom: Record<string, string>;
+
+  // Remote Control
+  remoteEnabled: boolean;
+  qrCodeEnabled: boolean;
+  pinCode: string;
+  webRemoteEnabled: boolean;
+  mobileRemoteEnabled: boolean;
+  remoteLatency: number;
+  remoteReconnect: boolean;
+
+  // Backup
+  automaticBackup: boolean;
+  backupInterval: number;
+  cloudBackup: boolean;
+  backupLocation: string;
 
   // Security
   lockSettings: boolean;
   requirePassword: boolean;
   readOnlyMode: boolean;
+  settingsPassword: string;
+  encryptDatabase: boolean;
+  backupEncryption: boolean;
 
   // Advanced
   factoryResetToken: string;
   developerMode: boolean;
   logLevel: string;
+  experimentalFeatures: boolean;
 }
 
 export interface SettingsRecord {
@@ -188,6 +313,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   autoLaunch: false,
   recentProjects: 10,
   defaultStartupPage: "library",
+  telemetry: false,
 
   // Appearance
   compactMode: false,
@@ -196,6 +322,14 @@ export const DEFAULT_SETTINGS: AppSettings = {
   iconSize: 16,
   blurEffects: true,
   glassEffects: true,
+  animationsEnabled: true,
+  reduceMotion: false,
+  roundedCorners: 8,
+  blurStrength: 100,
+  accentOpacity: 100,
+  scrollbarStyle: "thin",
+  cardRadius: 12,
+  spacing: "normal",
 
   // Projection
   defaultImageDurationMs: 5000,
@@ -213,6 +347,12 @@ export const DEFAULT_SETTINGS: AppSettings = {
   blankScreenEnabled: false,
   countdownSeconds: 10,
   autoTransition: false,
+  defaultDisplay: "default",
+  transitionDuration: 500,
+  aspectRatio: "16:9",
+  refreshRate: 60,
+  defaultBackground: "#000000",
+  projectorBrightness: 100,
 
   // Text Formatting
   defaultFont: "Inter",
@@ -224,12 +364,45 @@ export const DEFAULT_SETTINGS: AppSettings = {
   shadowEnabled: true,
   outlineEnabled: false,
   glowEnabled: false,
+  tamilFont: "Noto Sans Tamil",
+  englishFont: "Inter",
+  referenceFont: "Inter",
+  italic: false,
+  underline: false,
+  textAlign: "center",
+  verticalAlign: "middle",
+  textWidth: 80,
+  maxWidth: 90,
+  textMargin: 16,
+  textPadding: 24,
+  shadowBlur: 4,
+  shadowOpacity: 60,
+  glowColor: "#ffffff",
+  outlineWidth: 2,
+  outlineColor: "#000000",
+  strokeJoin: "round",
+  textOpacity: 100,
+  referenceOpacity: 70,
 
   // Themes
   defaultThemeId: "worship-royal-sapphire",
   animatedThemesEnabled: true,
   themeTransitionSpeed: 300,
   themeAutoApply: true,
+  backgroundOpacity: 100,
+  backgroundBlur: 0,
+  particlesEnabled: true,
+  lightRaysEnabled: false,
+  starsEnabled: false,
+  fogEnabled: false,
+  smokeEnabled: false,
+  rainEnabled: false,
+  snowEnabled: false,
+  bokehEnabled: false,
+  auroraEnabled: false,
+  meshGradientEnabled: false,
+  motionBackgroundEnabled: false,
+  videoBackgroundEnabled: false,
 
   // Bible
   defaultTranslation: "en",
@@ -239,12 +412,27 @@ export const DEFAULT_SETTINGS: AppSettings = {
   verseNumbering: true,
   tanglishSearch: true,
   phoneticSearch: false,
+  defaultVersion: "KJV",
+  tamilVersion: "TCV",
+  englishVersion: "KJV",
+  referencePosition: "bottom",
+  referenceSize: 14,
+  bookNameStyle: "abbreviated",
+  autoAdvance: false,
+  verseSplit: "single",
+  showReference: true,
+  verseAnimation: false,
 
   // Songs
   songsDefaultLanguage: "ta",
   tanglishSearchEnabled: true,
   defaultSorting: "title",
   autoLoadLyrics: true,
+  defaultSearchMode: "both",
+  fuzzySearch: true,
+  soundSimilarSearch: false,
+  autoCapitalization: true,
+  songCacheSize: 500,
 
   // Media
   imageDurationMs: 5000,
@@ -252,16 +440,32 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mediaLoop: false,
   hardwareAcceleration: true,
   thumbnailQuality: "high",
+  gifPlayback: "animate",
+  imageScaling: "fit",
+  videoScaling: "fit",
 
   // Search
   instantSearch: true,
   maxResults: 100,
   searchHistory: true,
+  cacheSize: 500,
+  searchDelay: 150,
+  indexAutomatically: true,
+  backgroundIndexing: true,
 
   // Performance
   gpuRendering: true,
   preloadDatasets: true,
   lazyLoading: true,
+  memoryCache: true,
+  themeCache: true,
+  imageCache: true,
+  videoCache: true,
+  songCache: true,
+  bibleCache: true,
+  preloadSongs: true,
+  preloadBible: true,
+  databaseOptimization: true,
 
   // Audio
   outputDevice: "default",
@@ -269,20 +473,52 @@ export const DEFAULT_SETTINGS: AppSettings = {
   fadeInMs: 300,
   fadeOutMs: 300,
   muteOnStartup: false,
+  masterVolume: 100,
+  defaultOutput: "default",
+  microphone: "default",
+  audioDelay: 0,
+  previewVolume: 50,
 
   // Video
   hardwareDecoding: true,
   frameRate: 60,
+  defaultResolution: "1920x1080",
+  defaultCodec: "h264",
+  imageQuality: 90,
+  videoQuality: 80,
+  scalingAlgorithm: "bilinear",
+
+  // Keyboard Shortcuts
+  shortcutsCustom: {},
+
+  // Remote Control
+  remoteEnabled: false,
+  qrCodeEnabled: true,
+  pinCode: "",
+  webRemoteEnabled: true,
+  mobileRemoteEnabled: true,
+  remoteLatency: 0,
+  remoteReconnect: true,
+
+  // Backup
+  automaticBackup: false,
+  backupInterval: 24,
+  cloudBackup: false,
+  backupLocation: "",
 
   // Security
   lockSettings: false,
   requirePassword: false,
   readOnlyMode: false,
+  settingsPassword: "",
+  encryptDatabase: false,
+  backupEncryption: false,
 
   // Advanced
   factoryResetToken: "",
   developerMode: false,
   logLevel: "info",
+  experimentalFeatures: false,
 };
 
 export class ChurchMediaDB extends Dexie {
