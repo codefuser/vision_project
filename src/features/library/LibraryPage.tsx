@@ -9,7 +9,6 @@ import {
   Pencil,
   Info,
   Eye,
-  PanelLeftClose,
   FolderTree as FolderTreeIcon,
   Star,
 } from "lucide-react";
@@ -412,17 +411,10 @@ export function LibraryPage() {
               <FolderTreeIcon className="h-4 w-4" />
             </button>
           ) : (
-            <>
-              <button
-                onClick={() => setFoldersCollapsed(true)}
-                title="Collapse folders"
-                aria-label="Collapse folders"
-                className="absolute right-1 top-1 z-10 inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-              >
-                <PanelLeftClose className="h-3.5 w-3.5" />
-              </button>
-              <FolderTree />
-            </>
+            <FolderTree
+              onToggleCollapse={() => setFoldersCollapsed(true)}
+              collapsed={false}
+            />
           )}
         </aside>
 
