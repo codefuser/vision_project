@@ -225,6 +225,24 @@ function verseHit(
   };
 }
 
+/* ───────── Per-verse normalization cache ───────── */
+
+const normCache = new Map<string, { lower: string; norm: string }>();
+
+function getNorm(
+  text: string,
+  isTamilQuery: boolean,
+): { lower: string; norm: string } {
+  const cached = normCache.get(text);
+  if (cached) return cached;
+  const entry = {
+    lower: text.toLowerCase(),
+    norm: isTamilQuery ? normalizeTamil(text) : normalizeTanglish(text),
+  };
+  normCache.set(text, entry);
+  return entry;
+}
+
 /* ───────── Full-text search with normalization + ranking ───────── */
 
 function fullTextSearch(
@@ -238,7 +256,6 @@ function fullTextSearch(
   const tokensNorm = tokensRaw.map(normalizeForSearch).filter(Boolean);
   const isTamilQuery = /[\u0B80-\u0BFF]/.test(query);
   const hits: VerseHit[] = [];
-  let scanned = 0;
 
   for (let b = 0; b < data.length; b++) {
     const book = BIBLE_BOOKS[b];
@@ -247,10 +264,8 @@ function fullTextSearch(
     for (let c = 0; c < chapters.length; c++) {
       const verses = chapters[c];
       for (let v = 0; v < verses.length; v++) {
-        scanned++;
         const text = verses[v];
-        const lower = text.toLowerCase();
-        const norm = isTamilQuery ? normalizeTamil(text) : normalizeTanglish(text);
+        const { lower, norm } = getNorm(text, isTamilQuery);
 
         let exactHits = 0;
         let normHits = 0;
@@ -272,19 +287,18 @@ function fullTextSearch(
         if (totalHits < tokensRaw.length) continue;
 
         let score = totalHits * 50 + exactHits * 30;
-        if (lower.includes(qLower)) score += 100; // exact phrase bonus
+        if (lower.includes(qLower)) score += 100;
         if (lower.startsWith(tokensRaw[0])) score += 15;
-        score -= Math.floor(text.length / 80); // prefer concise verses
+        score -= Math.floor(text.length / 80);
 
         hits.push(verseHit(book, c + 1, v + 1, text, lang, score, matched));
-        if (hits.length >= limit * 5) break;
+        if (hits.length >= limit) break;
       }
-      if (hits.length >= limit * 5) break;
+      if (hits.length >= limit) break;
     }
-    if (hits.length >= limit * 5) break;
+    if (hits.length >= limit) break;
   }
 
   hits.sort((a, b) => b.score - a.score);
-  void scanned;
   return hits.slice(0, limit);
 }

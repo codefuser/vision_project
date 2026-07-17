@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { BookOpen, Loader2, Star, Send, Languages, Search, Hash } from "lucide-react";
 import {
   Select,
@@ -55,6 +56,7 @@ export function BiblePanel() {
   const setScrollPosition = useWorkspace((s) => s.setScrollPosition);
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const debouncedQuery = useDebounce(query, 150);
   const [results, setResults] = useState<DisplayHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => (wsScrollPos ? 0 : 0));
   const [searchMs, setSearchMs] = useState<number | null>(null);
@@ -130,7 +132,7 @@ export function BiblePanel() {
       };
     };
 
-    const q = query.trim();
+    const q = debouncedQuery.trim();
     const queryChanged = q !== lastQueryRef.current;
     lastQueryRef.current = q;
 
@@ -222,7 +224,7 @@ export function BiblePanel() {
       );
       if (idx >= 0) setActiveIdx(idx);
     }
-  }, [query, loaded, displayMode, lang, searchMode, recent]);
+  }, [debouncedQuery, loaded, displayMode, lang, searchMode, recent]);
 
   // ───────── projection ─────────
   const project = (dh: DisplayHit) => {

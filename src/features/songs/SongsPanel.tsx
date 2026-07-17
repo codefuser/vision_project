@@ -8,6 +8,7 @@
  *                         the library and the song's slides at the same time.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDebounce } from "@/hooks/useDebounce";
 import { Music, Loader2, Star, Send, Search, Plus, Pencil, Trash2, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
@@ -102,6 +103,7 @@ export function SongsPanel() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const debouncedQuery = useDebounce(query, 150);
   const [results, setResults] = useState<SongHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
@@ -164,7 +166,7 @@ export function SongsPanel() {
     if (!loaded) return;
     const songs = getSongs();
     if (!songs) return;
-    const q = query.trim();
+    const q = debouncedQuery.trim();
     const favIds = new Set(favorites.map((f) => f.id));
     const userIds = new Set(userSongs.map((u) => u.id));
     const recentIds = new Set(recent.map((r) => r.songId));
@@ -236,7 +238,7 @@ export function SongsPanel() {
     setSearchMs(performance.now() - t0);
     setResults(hits);
     setActiveIdx(0);
-  }, [query, loaded, recent, userSongs, favorites, filter, authorFilter, counts]);
+  }, [debouncedQuery, loaded, recent, userSongs, favorites, filter, authorFilter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
 

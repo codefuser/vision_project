@@ -1,13 +1,3 @@
-/**
- * Song search — Tamil + Tanglish + fuzzy + sound-alike + partial word.
- *
- * Strategy: every song carries pre-computed consonant skeletons
- * (titleStem / contentStem / slideStems). A query is reduced to the same
- * skeleton form, then substring-matched. Because the skeleton normalizes
- * vowels, voicing (b↔p), aspiration, and Tamil↔Latin spelling, simple
- * substring matching becomes fuzzy + sound-alike + partial-word matching
- * in one pass — fast enough to scan 16k+ songs each keystroke.
- */
 import type { Song } from "./loader";
 import { songLower, songStem } from "./normalize";
 
@@ -18,17 +8,46 @@ export interface SongHit {
   matched: string[];
 }
 
+const queryCache = new Map<string, SongHit[]>();
+const MAX_CACHE = 50;
+
+function cachedSearch(query: string, songs: Song[], limit: number): SongHit[] {
+  const cached = queryCache.get(query);
+  if (cached) return cached.slice(0, limit);
+
+  const hits = runSearch(query, songs, limit);
+  if (hits.length > 0) {
+    if (queryCache.size >= MAX_CACHE) {
+      const firstKey = queryCache.keys().next().value;
+      if (firstKey !== undefined) queryCache.delete(firstKey);
+    }
+    queryCache.set(query, hits);
+    return hits;
+  }
+
+  if (query.length < 20) {
+    const fallback = typoToleranceFallback(query, songs, limit);
+    if (fallback.length > 0) {
+      if (queryCache.size >= MAX_CACHE) {
+        const firstKey = queryCache.keys().next().value;
+        if (firstKey !== undefined) queryCache.delete(firstKey);
+      }
+      queryCache.set(query, fallback);
+    }
+    return fallback;
+  }
+
+  return [];
+}
+
 export function searchSongs(query: string, songs: Song[], limit = 80): SongHit[] {
   const q = query.trim();
   if (!q) return [];
-  const hits = runSearch(q, songs, limit);
-  if (hits.length > 0) return hits;
+  return cachedSearch(q, songs, limit);
+}
 
-  // Typo-tolerance fallback. If nothing matched, try variants of every token
-  // with one character dropped at each position. The skeleton-based matcher
-  // tolerates voicing / vowel mistakes already; this layer adds resilience to
-  // straight-up letter typos (yesuu, yessu, yesuvae, iyesu, esu …).
-  const tokens = q.split(/\s+/).filter(Boolean);
+function typoToleranceFallback(query: string, songs: Song[], limit: number): SongHit[] {
+  const tokens = query.split(/\s+/).filter(Boolean);
   if (tokens.length === 0) return [];
   const variants = new Set<string>();
   for (let i = 0; i < tokens.length; i++) {
@@ -47,7 +66,7 @@ export function searchSongs(query: string, songs: Song[], limit = 80): SongHit[]
     for (const x of h) {
       if (seen.has(x.song.id)) continue;
       seen.add(x.song.id);
-      out.push({ ...x, score: x.score - 50 }); // penalize typo-fallback
+      out.push({ ...x, score: x.score - 50 });
       if (out.length >= limit) break;
     }
     if (out.length >= limit) break;
@@ -113,7 +132,6 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     if (qLower && s.contentLower.includes(qLower)) score += 90;
     score -= Math.min(40, Math.floor(s.content.length / 400));
 
-    // Pick best slide (stem-aware) for jump-to-slide.
     let bestSlide = 0,
       bestScore = -1;
     for (let j = 0; j < s.slides.length; j++) {
@@ -132,6 +150,7 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     }
 
     hits.push({ song: s, score, slideIndex: bestSlide, matched });
+    if (hits.length >= limit) break;
   }
   hits.sort((a, b) => b.score - a.score);
   return hits.slice(0, limit);

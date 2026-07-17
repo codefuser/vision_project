@@ -52,6 +52,7 @@ export function LibraryPage() {
     selection,
     currentFolderId,
     folders,
+    loaded,
     setSearch,
     setFilter,
     toggleSelect,
@@ -105,8 +106,8 @@ export function LibraryPage() {
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    void refreshAll();
-  }, [refreshAll]);
+    if (!loaded) void refreshAll();
+  }, [loaded, refreshAll]);
 
   const visible = useMemo(() => filterMedia(media, search, filter), [media, search, filter]);
   const selectedIds = useMemo(() => Array.from(selection), [selection]);
