@@ -13,7 +13,7 @@ import {
   Route,
   Mail,
 } from "lucide-react";
-import { type ReactNode, useEffect, useState } from "react";
+import { type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
@@ -22,7 +22,7 @@ import { AppStartupProvider } from "@/components/AppStartupProvider";
 import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
-import { isPreloaded, ensurePreloaded } from "@/features/devhub/devhub-loader";
+import { StartupScreen } from "@/components/StartupScreen";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
@@ -46,21 +46,14 @@ const SETTINGS_NAV = {
 
 export function AppShell({ children }: { children: ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { settings, update, load, loaded } = useSettings();
+  const { settings, update } = useSettings();
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
   const collapsed = useWorkspace((s) => s.sidebarCollapsed);
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
-  const [preloaded, setPreloaded] = useState(isPreloaded());
-
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
-    if (!loaded) void load();
-  }, [init, load, loaded]);
-
-  useEffect(() => {
-    if (!preloaded) ensurePreloaded().then(() => setPreloaded(true));
-  }, [preloaded]);
+  }, [init]);
 
   const cycleTheme = () => {
     const order: Array<typeof settings.theme> = ["light", "dark", "system"];
@@ -79,20 +72,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     return <NavItem key={item.to} item={item} active={active} icon={Icon} collapsed={collapsed} />;
   };
 
-  if (!preloaded) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-xl">
-          <div className="flex flex-col items-center gap-4">
-            <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="text-sm text-muted-foreground">Loading Vision Projector…</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
+    <StartupScreen onReady={() => {}}>
     <div className="flex h-screen bg-background text-foreground">
       <aside
         style={{ width: collapsed ? 56 : 224, willChange: "width" }}
@@ -194,7 +175,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </AppStartupProvider>
       </div>
       <GlobalFavoritesDock />
-    </div>
+    </div></StartupScreen>
   );
 }
 
