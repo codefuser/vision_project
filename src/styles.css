@@ -403,6 +403,68 @@
   animation-delay: -14s;
 }
 
+/* ============================================================
+   Startup Loading Screen Animations
+   ============================================================ */
+
+@keyframes startup-logo-breath {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.03); opacity: 0.92; }
+}
+
+@keyframes startup-glow-pulse {
+  0%, 100% { opacity: 0.3; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.15); }
+}
+
+@keyframes startup-arc-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes startup-arc-spin-reverse {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes startup-shimmer {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+
+@keyframes startup-particle-float {
+  0% {
+    transform: translateY(0) translateX(0) scale(1);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.3;
+  }
+  90% {
+    opacity: 0.15;
+  }
+  100% {
+    transform: translateY(-300px) translateX(40px) scale(0.3);
+    opacity: 0;
+  }
+}
+
+@keyframes startup-fade-in-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes startup-complete-glow {
+  0% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+.startup-particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: startup-particle-float linear infinite;
+}
+
 /* === Premium animated themes — subtle, never distracting === */
 @keyframes bg-drift-h {
   0% {
