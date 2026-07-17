@@ -33,13 +33,49 @@ dist-ssr
 
 # ---------------------------------------
 # Markdown Files
-# Keep only README.md
+# Keep only README.md files (root + nested)
 # ---------------------------------------
 *.md
 !README.md
+!**/README.md
 
 # ---------------------------------------
 # Project Analysis
 # Ignore everything inside this folder
 # ---------------------------------------
 PROJECT_ANALYSIS/
+
+# ---------------------------------------
+# Vercel Deployment Output
+# ---------------------------------------
+.vercel/
+
+# ---------------------------------------
+# Lovable.dev Project Config
+# ---------------------------------------
+.lovable/
+
+# ---------------------------------------
+# Test / Temporary Directories
+# ---------------------------------------
+test-isolated/
+coverage/
+tmp/
+temp/
+
+# ---------------------------------------
+# Temp / Backup Files
+# ---------------------------------------
+*.tmp
+*.temp
+*.bak
+
+# ---------------------------------------
+# OS Files (Windows)
+# ---------------------------------------
+Thumbs.db
+
+# ---------------------------------------
+# Environment Files
+# ---------------------------------------
+.env
