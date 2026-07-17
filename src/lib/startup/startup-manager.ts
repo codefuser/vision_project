@@ -1,5 +1,8 @@
 import { preloadAllData } from "@/lib/loader/data-preloader";
 import { ensurePreloaded } from "@/features/devhub/devhub-loader";
+import { closeOrphanedSessions, createSession } from "@/features/history/session-history.repo";
+import { sessionRecorder } from "@/features/history/session-recorder";
+import { useSessionHistory } from "@/features/history/session-history.store";
 
 export interface StartupProgress {
   percent: number;
@@ -120,6 +123,21 @@ export function buildSteps(): StartupStep[] {
       },
     },
     {
+      id: "session-init",
+      label: "Starting Service Session…",
+      weight: 3,
+      run: async () => {
+        // Close any sessions that were left active from a previous page load
+        await closeOrphanedSessions();
+        // Create the new session for this browser session
+        const session = await createSession();
+        // Register the active session ID in the store
+        useSessionHistory.getState().setActiveSessionId(session.id);
+        // Wire up the auto-recorder
+        sessionRecorder.start(session.id);
+      },
+    },
+    {
       id: "songs",
       label: "Loading Songs…",
       weight: 10,
@@ -202,6 +220,7 @@ export function buildSteps(): StartupStep[] {
           import("@/features/devhub/RoadmapPage"),
           import("@/features/devhub/ContactPage"),
           import("@/features/workspace/ProjectionWorkspace"),
+          import("@/features/history/SessionListPage"),
         ]);
       },
     },

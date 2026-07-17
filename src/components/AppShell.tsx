@@ -12,6 +12,7 @@ import {
   Code2,
   Route,
   Mail,
+  History,
 } from "lucide-react";
 import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
@@ -23,10 +24,12 @@ import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { StartupScreen } from "@/components/StartupScreen";
+import { useSessionHistory } from "@/features/history/session-history.store";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
   { to: "/playlists", label: "Playlists", icon: ListVideo, shortcutId: "nav.playlists" },
+  { to: "/history", label: "Service History", icon: History, shortcutId: "nav.history" },
   { to: "/project", label: "Project", icon: MonitorPlay, shortcutId: "nav.project" },
   { to: "/shortcuts", label: "Shortcuts", icon: Keyboard, shortcutId: "nav.shortcuts" },
 ] as const;
@@ -50,6 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
   const collapsed = useWorkspace((s) => s.sidebarCollapsed);
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
+  const activeSessionId = useSessionHistory((s) => s.activeSessionId);
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
@@ -61,15 +65,27 @@ export function AppShell({ children }: { children: ReactNode }) {
     void update({ theme: next });
   };
 
-  const renderNavItem = (item: {
-    to: string;
-    label: string;
-    icon: typeof FolderTree;
-    shortcutId?: string;
-  }) => {
+  const renderNavItem = (
+    item: {
+      to: string;
+      label: string;
+      icon: typeof FolderTree;
+      shortcutId?: string;
+    },
+    badge?: React.ReactNode,
+  ) => {
     const active = pathname === item.to || pathname.startsWith(item.to + "/");
     const Icon = item.icon;
-    return <NavItem key={item.to} item={item} active={active} icon={Icon} collapsed={collapsed} />;
+    return (
+      <NavItem
+        key={item.to}
+        item={item}
+        active={active}
+        icon={Icon}
+        collapsed={collapsed}
+        badge={badge}
+      />
+    );
   };
 
   return (
@@ -118,7 +134,18 @@ export function AppShell({ children }: { children: ReactNode }) {
 
         {/* Primary nav — icons always visible; labels fade with the sidebar width */}
         <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2">
-          {PRIMARY_NAV.map(renderNavItem)}
+          {PRIMARY_NAV.map((item) => {
+            // Attach a live recording dot to the History nav item
+            const badge =
+              item.to === "/history" && activeSessionId ? (
+                <span
+                  className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+                  title="Recording"
+                  aria-label="Session recording"
+                />
+              ) : undefined;
+            return renderNavItem(item, badge);
+          })}
         </nav>
 
         {/* Developer Hub section */}
@@ -184,11 +211,13 @@ const NavItem = memo(({
   active,
   icon: Icon,
   collapsed,
+  badge,
 }: {
   item: { to: string; label: string; shortcutId?: string };
   active: boolean;
   icon: typeof FolderTree;
   collapsed: boolean;
+  badge?: React.ReactNode;
 }) => {
   const tooltip = useShortcutTooltip(item.shortcutId ?? "", item.label);
   return (
@@ -203,7 +232,13 @@ const NavItem = memo(({
           : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
       )}
     >
-      <Icon className="h-4 w-4 shrink-0" />
+      {/* Icon — with an absolute badge dot when sidebar is collapsed */}
+      <span className="relative shrink-0">
+        <Icon className="h-4 w-4" />
+        {badge && collapsed && (
+          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+        )}
+      </span>
       <span
         className={cn(
           "min-w-0 flex-1 truncate whitespace-nowrap transition-[opacity,transform] duration-200 ease-out",
@@ -212,6 +247,10 @@ const NavItem = memo(({
       >
         {item.label}
       </span>
+      {/* Badge shown inline when sidebar is expanded */}
+      {badge && !collapsed && (
+        <span className="ml-auto shrink-0">{badge}</span>
+      )}
     </Link>
   );
 });

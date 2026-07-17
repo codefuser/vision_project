@@ -5,6 +5,72 @@ export type TransitionType = "fade" | "crossfade" | "zoom" | "dissolve" | "none"
 export type LoopMode = "single" | "playlist" | "none";
 export type ThemeMode = "light" | "dark" | "system";
 
+// ─── Session History ──────────────────────────────────────────────────────────
+
+export type SessionEventType =
+  // System lifecycle
+  | "SESSION_STARTED"
+  | "SESSION_ENDED"
+  | "PROJECTOR_OPENED"
+  | "PROJECTOR_CLOSED"
+  // Content projected
+  | "BIBLE_PROJECTED"
+  | "SONG_PROJECTED"
+  | "IMAGE_PROJECTED"
+  | "VIDEO_PROJECTED"
+  | "TEXT_PROJECTED"
+  | "ANNOUNCEMENT_PROJECTED"
+  // Playback transport
+  | "PLAYBACK_STARTED"
+  | "PLAYBACK_PAUSED"
+  | "PLAYBACK_STOPPED"
+  // Screen states
+  | "BLACK_SCREEN_ON"
+  | "BLACK_SCREEN_OFF"
+  | "BLANK_SCREEN_ON"
+  | "BLANK_SCREEN_OFF"
+  // Style / theme
+  | "THEME_CHANGED"
+  | "FONT_CHANGED"
+  // Navigation / queue
+  | "PLAYLIST_OPENED"
+  | "PLAYLIST_ADVANCED"
+  // Misc
+  | "SEARCH_PERFORMED"
+  | "MEDIA_IMPORTED"
+  | "MEDIA_DELETED";
+
+export type SessionStatus = "active" | "ended";
+
+export interface SessionRecord {
+  id: string;
+  name: string;
+  date: string;          // ISO date YYYY-MM-DD — indexed for date filters
+  startedAt: number;     // Unix ms
+  endedAt: number | null; // null = still active
+  status: SessionStatus;
+  version: string;       // App version
+  // Cached counters (updated when session ends or on each log)
+  totalEvents: number;
+  bibleCount: number;
+  songCount: number;
+  imageCount: number;
+  videoCount: number;
+  textCount: number;
+  themeCount: number;
+}
+
+export interface SessionEventRecord {
+  id: string;
+  sessionId: string;           // FK → sessions.id
+  ts: number;                  // Unix ms — monotonically increasing
+  eventType: SessionEventType;
+  label: string;               // Human-readable: "Psalm 23:1", "Appa Pithave"
+  detail: string | null;       // Optional extra text: verse text, theme name
+  module: string;              // Source: "bible", "songs", "media", "system", "theme"
+  metadata: string | null;     // JSON string for restore payloads
+}
+
 export interface FolderRecord {
   id: string;
   name: string;
@@ -273,6 +339,8 @@ export class ChurchMediaDB extends Dexie {
   playlists!: Table<PlaylistRecord, string>;
   settings!: Table<SettingsRecord, "app">;
   logs!: Table<LogRecord, number>;
+  sessions!: Table<SessionRecord, string>;
+  session_events!: Table<SessionEventRecord, string>;
 
   constructor() {
     super("church-media-db");
@@ -283,6 +351,17 @@ export class ChurchMediaDB extends Dexie {
       playlists: "id, name, updatedAt",
       settings: "key",
       logs: "++id, ts, level",
+    });
+    // v2 — Service History & Session Manager
+    this.version(2).stores({
+      folders: "id, parentId, name, updatedAt",
+      media: "id, folderId, type, name, createdAt, lastUsedAt, updatedAt",
+      blobs: "id, kind",
+      playlists: "id, name, updatedAt",
+      settings: "key",
+      logs: "++id, ts, level",
+      sessions: "id, date, startedAt, status",
+      session_events: "id, sessionId, ts, eventType, module",
     });
   }
 }

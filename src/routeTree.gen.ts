@@ -15,11 +15,13 @@ import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as ProjectRouteImport } from './routes/project'
 import { Route as PlaylistsRouteImport } from './routes/playlists'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DeveloperHubRouteImport } from './routes/developer-hub'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ServiceIdRouteImport } from './routes/service.$id'
 import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
+import { Route as HistoryIdRouteImport } from './routes/history.$id'
 
 const ShortcutsRoute = ShortcutsRouteImport.update({
   id: '/shortcuts',
@@ -51,6 +53,11 @@ const LibraryRoute = LibraryRouteImport.update({
   path: '/library',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeveloperHubRoute = DeveloperHubRouteImport.update({
   id: '/developer-hub',
   path: '/developer-hub',
@@ -76,17 +83,24 @@ const PlaylistsIdRoute = PlaylistsIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => PlaylistsRoute,
 } as any)
+const HistoryIdRoute = HistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => HistoryRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/developer-hub': typeof DeveloperHubRoute
+  '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
+  '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
 }
@@ -94,12 +108,14 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/developer-hub': typeof DeveloperHubRoute
+  '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
+  '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
 }
@@ -108,12 +124,14 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/developer-hub': typeof DeveloperHubRoute
+  '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
+  '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
 }
@@ -123,12 +141,14 @@ export interface FileRouteTypes {
     | '/'
     | '/contact'
     | '/developer-hub'
+    | '/history'
     | '/library'
     | '/playlists'
     | '/project'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
+    | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
   fileRoutesByTo: FileRoutesByTo
@@ -136,12 +156,14 @@ export interface FileRouteTypes {
     | '/'
     | '/contact'
     | '/developer-hub'
+    | '/history'
     | '/library'
     | '/playlists'
     | '/project'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
+    | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
   id:
@@ -149,12 +171,14 @@ export interface FileRouteTypes {
     | '/'
     | '/contact'
     | '/developer-hub'
+    | '/history'
     | '/library'
     | '/playlists'
     | '/project'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
+    | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
   fileRoutesById: FileRoutesById
@@ -163,6 +187,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ContactRoute: typeof ContactRoute
   DeveloperHubRoute: typeof DeveloperHubRoute
+  HistoryRoute: typeof HistoryRouteWithChildren
   LibraryRoute: typeof LibraryRoute
   PlaylistsRoute: typeof PlaylistsRouteWithChildren
   ProjectRoute: typeof ProjectRoute
@@ -216,6 +241,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LibraryRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/developer-hub': {
       id: '/developer-hub'
       path: '/developer-hub'
@@ -251,8 +283,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaylistsIdRouteImport
       parentRoute: typeof PlaylistsRoute
     }
+    '/history/$id': {
+      id: '/history/$id'
+      path: '/$id'
+      fullPath: '/history/$id'
+      preLoaderRoute: typeof HistoryIdRouteImport
+      parentRoute: typeof HistoryRoute
+    }
   }
 }
+
+interface HistoryRouteChildren {
+  HistoryIdRoute: typeof HistoryIdRoute
+}
+
+const HistoryRouteChildren: HistoryRouteChildren = {
+  HistoryIdRoute: HistoryIdRoute,
+}
+
+const HistoryRouteWithChildren =
+  HistoryRoute._addFileChildren(HistoryRouteChildren)
 
 interface PlaylistsRouteChildren {
   PlaylistsIdRoute: typeof PlaylistsIdRoute
@@ -270,6 +320,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ContactRoute: ContactRoute,
   DeveloperHubRoute: DeveloperHubRoute,
+  HistoryRoute: HistoryRouteWithChildren,
   LibraryRoute: LibraryRoute,
   PlaylistsRoute: PlaylistsRouteWithChildren,
   ProjectRoute: ProjectRoute,
