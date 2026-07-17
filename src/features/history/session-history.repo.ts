@@ -65,7 +65,6 @@ export async function endSession(
   id: string,
   endedAt: number = Date.now(),
 ): Promise<void> {
-  // Recount from events for accuracy
   const events = await db().session_events.where("sessionId").equals(id).toArray();
   const counts = {
     totalEvents: events.length,
@@ -76,6 +75,22 @@ export async function endSession(
     textCount: events.filter((e) => e.eventType === "TEXT_PROJECTED").length,
     themeCount: events.filter((e) => e.eventType === "THEME_CHANGED").length,
   };
+
+  // If the session has no actual projected media, consider it an empty/spam session
+  // and delete it rather than cluttering the history.
+  const realMediaCount =
+    counts.bibleCount +
+    counts.songCount +
+    counts.imageCount +
+    counts.videoCount +
+    counts.textCount;
+
+  if (realMediaCount === 0) {
+    await db().session_events.where("sessionId").equals(id).delete();
+    await db().sessions.delete(id);
+    return;
+  }
+
   await db().sessions.update(id, {
     endedAt,
     status: "ended",
@@ -87,7 +102,7 @@ export async function renameSession(id: string, name: string): Promise<void> {
   await db().sessions.update(id, { name: name.trim() || "Unnamed Service" });
 }
 
-/** Mark any leftover "active" sessions from a previous browser session as ended. */
+/** Mark any leftover "active" sessions from a previous browser session as ended, and sweep empty sessions. */
 export async function closeOrphanedSessions(): Promise<void> {
   const orphans = await db()
     .sessions.where("status")
@@ -96,6 +111,24 @@ export async function closeOrphanedSessions(): Promise<void> {
   const now = Date.now();
   for (const s of orphans) {
     await endSession(s.id, now);
+  }
+
+  // Sweep and delete all historical empty sessions
+  const emptySessions = await db()
+    .sessions.filter(
+      (s) =>
+        s.status === "ended" &&
+        s.bibleCount === 0 &&
+        s.songCount === 0 &&
+        s.imageCount === 0 &&
+        s.videoCount === 0 &&
+        s.textCount === 0,
+    )
+    .toArray();
+
+  for (const s of emptySessions) {
+    await db().session_events.where("sessionId").equals(s.id).delete();
+    await db().sessions.delete(s.id);
   }
 }
 

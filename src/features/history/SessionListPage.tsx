@@ -29,19 +29,32 @@ function getDateGroup(dateStr: string): string {
 
 type ListItem =
   | { kind: "header"; label: string }
-  | { kind: "session"; session: SessionRecord };
+  | { kind: "session-row"; sessions: SessionRecord[] };
 
 function buildListItems(sessions: SessionRecord[]): ListItem[] {
   const items: ListItem[] = [];
   let lastGroup = "";
+  let currentRow: SessionRecord[] = [];
 
   for (const session of sessions) {
     const group = getDateGroup(session.date);
     if (group !== lastGroup) {
+      if (currentRow.length > 0) {
+        items.push({ kind: "session-row", sessions: currentRow });
+        currentRow = [];
+      }
       items.push({ kind: "header", label: group });
       lastGroup = group;
     }
-    items.push({ kind: "session", session });
+    currentRow.push(session);
+    if (currentRow.length === 2) {
+      items.push({ kind: "session-row", sessions: currentRow });
+      currentRow = [];
+    }
+  }
+
+  if (currentRow.length > 0) {
+    items.push({ kind: "session-row", sessions: currentRow });
   }
 
   return items;
@@ -193,11 +206,14 @@ export function SessionListPage() {
                     {item.kind === "header" ? (
                       <DateGroupHeader label={item.label} />
                     ) : (
-                      <div className="px-4 pb-3">
-                        <SessionCard
-                          session={item.session}
-                          isActive={item.session.id === activeSessionId}
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 pb-4">
+                        {item.sessions.map((session) => (
+                          <SessionCard
+                            key={session.id}
+                            session={session}
+                            isActive={session.id === activeSessionId}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>

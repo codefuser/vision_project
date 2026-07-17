@@ -19,6 +19,7 @@ import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DeveloperHubRouteImport } from './routes/developer-hub'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoryIndexRouteImport } from './routes/history.index'
 import { Route as ServiceIdRouteImport } from './routes/service.$id'
 import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
@@ -73,6 +74,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryIndexRoute = HistoryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => HistoryRoute,
+} as any)
 const ServiceIdRoute = ServiceIdRouteImport.update({
   id: '/service/$id',
   path: '/service/$id',
@@ -103,12 +109,12 @@ export interface FileRoutesByFullPath {
   '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
+  '/history/': typeof HistoryIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/contact': typeof ContactRoute
   '/developer-hub': typeof DeveloperHubRoute
-  '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
@@ -118,6 +124,7 @@ export interface FileRoutesByTo {
   '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
+  '/history': typeof HistoryIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -134,6 +141,7 @@ export interface FileRoutesById {
   '/history/$id': typeof HistoryIdRoute
   '/playlists/$id': typeof PlaylistsIdRoute
   '/service/$id': typeof ServiceIdRoute
+  '/history/': typeof HistoryIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -151,12 +159,12 @@ export interface FileRouteTypes {
     | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
+    | '/history/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/contact'
     | '/developer-hub'
-    | '/history'
     | '/library'
     | '/playlists'
     | '/project'
@@ -166,6 +174,7 @@ export interface FileRouteTypes {
     | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
+    | '/history'
   id:
     | '__root__'
     | '/'
@@ -181,6 +190,7 @@ export interface FileRouteTypes {
     | '/history/$id'
     | '/playlists/$id'
     | '/service/$id'
+    | '/history/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -269,6 +279,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history/': {
+      id: '/history/'
+      path: '/'
+      fullPath: '/history/'
+      preLoaderRoute: typeof HistoryIndexRouteImport
+      parentRoute: typeof HistoryRoute
+    }
     '/service/$id': {
       id: '/service/$id'
       path: '/service/$id'
@@ -295,10 +312,12 @@ declare module '@tanstack/react-router' {
 
 interface HistoryRouteChildren {
   HistoryIdRoute: typeof HistoryIdRoute
+  HistoryIndexRoute: typeof HistoryIndexRoute
 }
 
 const HistoryRouteChildren: HistoryRouteChildren = {
   HistoryIdRoute: HistoryIdRoute,
+  HistoryIndexRoute: HistoryIndexRoute,
 }
 
 const HistoryRouteWithChildren =

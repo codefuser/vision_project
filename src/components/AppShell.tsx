@@ -158,7 +158,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           >
             Developer
           </div>
-          {DEVELOPER_NAV.map(renderNavItem)}
+          {DEVELOPER_NAV.map((item) => renderNavItem(item))}
         </div>
 
         {/* Pinned bottom: Settings */}
