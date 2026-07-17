@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Folder, FolderOpen, Home, Pencil, Plus, Trash2 } from "lucide-react";
 import { useLibrary } from "@/stores/library.store";
 import {
@@ -35,7 +35,7 @@ function buildTree(folders: FolderRecord[]): Node[] {
   return make(null);
 }
 
-export function FolderTree({
+export const FolderTree = memo(function FolderTree({
   onToggleCollapse,
   collapsed,
 }: {
@@ -43,6 +43,7 @@ export function FolderTree({
   collapsed?: boolean;
 }) {
   const folders = useLibrary((s) => s.folders);
+  const loaded = useLibrary((s) => s.loaded);
   const currentFolderId = useLibrary((s) => s.currentFolderId);
   const setFolder = useLibrary((s) => s.setFolder);
   const refreshFolders = useLibrary((s) => s.refreshFolders);
@@ -59,8 +60,8 @@ export function FolderTree({
   const [deleteTarget, setDeleteTarget] = useState<FolderRecord | null>(null);
 
   useEffect(() => {
-    void refreshFolders();
-  }, [refreshFolders]);
+    if (!loaded || folders.length === 0) void refreshFolders();
+  }, [loaded, refreshFolders]);
 
   const siblingNamesFor = (parentId: string | null) =>
     folders.filter((f) => f.parentId === parentId).map((f) => f.name);
@@ -246,4 +247,4 @@ export function FolderTree({
       />
     </div>
   );
-}
+});

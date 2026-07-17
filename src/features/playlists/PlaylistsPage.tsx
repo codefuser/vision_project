@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   Plus,
@@ -20,6 +20,7 @@ import {
   renamePlaylist,
 } from "@/db/repo";
 import type { MediaRecord, PlaylistRecord } from "@/db/schema";
+import { getCachedPlaylists, setCachedPlaylists } from "@/db/cache";
 import { MediaAdapter } from "@/projection";
 import { toast } from "sonner";
 import { RenameDialog } from "@/components/RenameDialog";
@@ -27,17 +28,30 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Thumb } from "@/components/Thumb";
 import { PlaylistPreviewDialog } from "./PlaylistPreviewDialog";
 
+const _playlistLoaded = { current: false };
+
 export function PlaylistsPage() {
-  const [playlists, setPlaylists] = useState<PlaylistRecord[]>([]);
+  const [playlists, setPlaylists] = useState<PlaylistRecord[]>(() => {
+    const cached = getCachedPlaylists();
+    if (cached.loaded) return cached.data;
+    return [];
+  });
   const [renameTarget, setRenameTarget] = useState<PlaylistRecord | null>(null);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<PlaylistRecord | null>(null);
   const [previewTarget, setPreviewTarget] = useState<PlaylistRecord | null>(null);
 
-  const refresh = async () => setPlaylists(await listPlaylists());
+  const refresh = async () => {
+    const data = await listPlaylists();
+    setCachedPlaylists(data);
+    setPlaylists(data);
+  };
 
   useEffect(() => {
-    void refresh();
+    if (!_playlistLoaded.current) {
+      _playlistLoaded.current = true;
+      void refresh();
+    }
   }, []);
 
   const projectPlaylist = async (p: PlaylistRecord) => {

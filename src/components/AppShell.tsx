@@ -13,7 +13,7 @@ import {
   Route,
   Mail,
 } from "lucide-react";
-import { type ReactNode, useEffect } from "react";
+import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
@@ -179,7 +179,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   );
 }
 
-function NavItem({
+const NavItem = memo(({
   item,
   active,
   icon: Icon,
@@ -189,7 +189,7 @@ function NavItem({
   active: boolean;
   icon: typeof FolderTree;
   collapsed: boolean;
-}) {
+}) => {
   const tooltip = useShortcutTooltip(item.shortcutId ?? "", item.label);
   return (
     <Link
@@ -214,7 +214,7 @@ function NavItem({
       </span>
     </Link>
   );
-}
+});
 
 function ProjectorToggleButton({
   projectorOpen,

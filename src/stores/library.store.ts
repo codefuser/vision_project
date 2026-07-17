@@ -1,6 +1,12 @@
 import { create } from "zustand";
 import type { FolderRecord, MediaRecord, MediaType } from "@/db/schema";
 import { listFolders, listMediaInFolder, listAllMedia } from "@/db/repo";
+import {
+  getCachedFolders,
+  setCachedFolders,
+  getCachedMedia,
+  setCachedMedia,
+} from "@/db/cache";
 
 export type LibraryFilter = "all" | "images" | "videos" | "recent-added" | "recent-used";
 
@@ -12,6 +18,7 @@ interface LibraryStore {
   search: string;
   filter: LibraryFilter;
   loading: boolean;
+  loaded: boolean;
   refreshFolders: () => Promise<void>;
   refreshMedia: () => Promise<void>;
   refreshAll: () => Promise<void>;
@@ -31,8 +38,11 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
   search: "",
   filter: "all",
   loading: false,
+  loaded: false,
   refreshFolders: async () => {
-    set({ folders: await listFolders() });
+    const folders = await listFolders();
+    setCachedFolders(folders);
+    set({ folders });
   },
   refreshMedia: async () => {
     set({ loading: true });
@@ -46,12 +56,12 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
         .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
         .slice(0, 200);
     } else if (currentFolderId === null) {
-      // "All Media" = master view of every uploaded file, regardless of folder.
       media = await listAllMedia();
     } else {
       media = await listMediaInFolder(currentFolderId);
     }
-    set({ media, loading: false });
+    setCachedMedia(media);
+    set({ media, loading: false, loaded: true });
   },
   refreshAll: async () => {
     await get().refreshFolders();
