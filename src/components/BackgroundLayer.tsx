@@ -1,18 +1,18 @@
 /**
  * BackgroundLayer — renders a color / gradient / image / video underlay for
- * projected text, plus an optional animated decorative overlay (particles,
- * bokeh, light rays, sparkles, floating cross, soft glow, gradient shift)
- * and a coloured overlay tint.
+ * projected text, plus an optional ThemeAnimation decorative overlay shared
+ * with the Theme Gallery preview, and a coloured overlay tint.
  *
  * Layer order (bottom → top, inside this component):
  *   1. Base color / gradient
  *   2. Media (image or video)
  *   3. Coloured overlay tint
- *   4. Animation decorative overlay
+ *   4. ThemeAnimation scene (shared with ThemeCard preview)
  *
- * Animations are pure CSS (see styles.css `.bg-anim-*`). The media element
- * is keyed on `mediaId` alone so brightness / opacity / zoom slider drags
- * never reload the video.
+ * Uses the same ThemeAnimation component as the Theme Gallery so the
+ * projector output is pixel-identical to the preview card.
+ * The media element is keyed on `mediaId` alone so brightness / opacity /
+ * zoom slider drags never reload the video.
  */
 import { useEffect, useRef, useState } from "react";
 import type { BackgroundConfig, BackgroundAnimation } from "@/lib/broadcast";
@@ -21,6 +21,7 @@ import type { MediaRecord } from "@/db/schema";
 import { getMedia } from "@/db/repo";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import { useBackground } from "@/stores/background.store";
+import { ThemeAnimation } from "@/features/workspace/theme-gallery/ThemeAnimation";
 
 interface Props {
   background: BackgroundConfig;
@@ -141,7 +142,7 @@ export function BackgroundLayer({ background }: Props) {
     return (
       <>
         {overlay}
-        <AnimationOverlay kind={animationKind} />
+        {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
       </>
     );
 
@@ -150,7 +151,7 @@ export function BackgroundLayer({ background }: Props) {
       <>
         <div className="absolute inset-0" style={{ background: bg.gradient ?? bg.color }} />
         {overlay}
-        <AnimationOverlay kind={animationKind} />
+        {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
       </>
     );
   }
@@ -190,17 +191,7 @@ export function BackgroundLayer({ background }: Props) {
         />
       )}
       {overlay}
-      <AnimationOverlay kind={animationKind} />
+      {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
     </>
-  );
-}
-
-function AnimationOverlay({ kind }: { kind: BackgroundAnimation }) {
-  if (!kind || kind === "none") return null;
-  return (
-    <div
-      className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${kind}`}
-      aria-hidden
-    />
   );
 }
