@@ -15,13 +15,12 @@
  * zoom slider drags never reload the video.
  */
 import { useEffect, useRef, useState } from "react";
-import type { BackgroundConfig, BackgroundAnimation } from "@/lib/broadcast";
+import type { BackgroundConfig } from "@/lib/broadcast";
 import { db } from "@/db/schema";
 import type { MediaRecord } from "@/db/schema";
 import { getMedia } from "@/db/repo";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import { useBackground } from "@/stores/background.store";
-import { ThemeAnimation } from "@/features/workspace/theme-gallery/ThemeAnimation";
 
 interface Props {
   background: BackgroundConfig;
@@ -40,7 +39,7 @@ interface Resolved {
   positionX: number;
   positionY: number;
   gradient: string | null;
-  animation: BackgroundAnimation;
+  animation: string;
   overlayColor: string;
   overlayOpacity: number;
   videoLoop: boolean;
@@ -73,11 +72,7 @@ function withDefaults(bg: BackgroundConfig): Resolved {
 
 export function BackgroundLayer({ background }: Props) {
   const bg = withDefaults(background);
-  // Master toggles: if background is globally off, render nothing.
-  // Particles toggle suppresses particle-family animations; motion toggle
-  // suppresses everything else.
   const backgroundEnabled = useBackground((s) => s.backgroundEnabled);
-  const motionEnabled = useBackground((s) => s.motionEnabled);
 
   const [media, setMedia] = useState<MediaRecord | null>(null);
   const [url, setUrl] = useState<string | null>(null);
@@ -128,8 +123,6 @@ export function BackgroundLayer({ background }: Props) {
 
   if (!backgroundEnabled) return null;
 
-  const animationKind: BackgroundAnimation = !motionEnabled ? "none" : bg.animation;
-
   const overlay =
     bg.overlayOpacity > 0 ? (
       <div
@@ -139,19 +132,13 @@ export function BackgroundLayer({ background }: Props) {
     ) : null;
 
   if (bg.kind === "none")
-    return (
-      <>
-        {overlay}
-        {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
-      </>
-    );
+    return <>{overlay}</>;
 
   if (bg.kind === "color" || !media || !url) {
     return (
       <>
         <div className="absolute inset-0" style={{ background: bg.gradient ?? bg.color }} />
         {overlay}
-        {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
       </>
     );
   }
@@ -191,7 +178,6 @@ export function BackgroundLayer({ background }: Props) {
         />
       )}
       {overlay}
-      {animationKind !== "none" && <ThemeAnimation animation={animationKind} />}
     </>
   );
 }

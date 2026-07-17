@@ -1,7 +1,6 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useMemo, useState, useCallback } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { cn } from "@/lib/utils";
-import { ThemeAnimation, getAnimationLabel } from "./ThemeAnimation";
 import { Star, Copy, Trash2, Pencil, Check } from "lucide-react";
 
 interface ThemeCardProps {
@@ -27,32 +26,12 @@ function ThemeCardInner({
   onRename,
   onDelete,
 }: ThemeCardProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [visible, setVisible] = useState(false);
   const [hovered, setHovered] = useState(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el || visible) return;
-    const io = new IntersectionObserver(
-      ([e]) => {
-        if (e.isIntersecting) {
-          setVisible(true);
-          io.disconnect();
-        }
-      },
-      { rootMargin: "200px", threshold: 0 },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [visible]);
 
   const bgGradient = preset.background.gradient;
   const bgColor = preset.background.color ?? "#000000";
   const textColor = preset.text.color ?? "#ffffff";
   const fontFamily = preset.text.fontFamily ?? "Inter";
-  const animation = preset.background.animation ?? "none";
-  const isAnimated = animation !== "none";
   const fontWeight = preset.text.fontWeight ?? 500;
 
   const sampleStyle: React.CSSProperties = useMemo(
@@ -80,7 +59,6 @@ function ThemeCardInner({
 
   return (
     <div
-      ref={ref}
       role="button"
       tabIndex={0}
       onClick={onClick}
@@ -114,10 +92,6 @@ function ThemeCardInner({
       <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "16 / 9" }}>
         <div className="absolute inset-0" style={{ background: bgGradient ?? bgColor }} />
 
-        {isAnimated && visible && (
-          <ThemeAnimation animation={animation} paused={!hovered && !isSelected} />
-        )}
-
         {/* Tamil preview */}
         <div
           className="absolute inset-0 flex items-center justify-center px-4 py-3"
@@ -143,14 +117,6 @@ function ThemeCardInner({
           <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground shadow-lg shadow-primary/20">
             <Check className="h-3 w-3" />
             Active
-          </div>
-        )}
-
-        {/* Animated badge */}
-        {isAnimated && !isSelected && visible && (
-          <div className="absolute bottom-3 left-3 z-20 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[9px] font-medium text-white/80 backdrop-blur-sm">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-green-400" />
-            {getAnimationLabel(animation)}
           </div>
         )}
 

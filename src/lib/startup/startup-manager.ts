@@ -153,7 +153,6 @@ export function buildSteps(): StartupStep[] {
           import("@/features/workspace/theme-gallery/ThemeCache"),
         ]);
         themeCache.prewarm(TEMPLATE_PRESETS);
-        await import("@/features/workspace/theme-gallery/ThemeAnimation");
       },
     },
     {
