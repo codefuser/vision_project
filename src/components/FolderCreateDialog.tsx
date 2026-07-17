@@ -43,10 +43,14 @@ export function FolderCreateDialog({
     }
   }, [open]);
 
+  const INVALID_CHARS = /[<>:"/\\|?*]/;
+
   const validate = (raw: string): string | null => {
     const trimmed = raw.trim();
     if (!trimmed) return "Folder name cannot be empty";
     if (trimmed.length > 200) return "Folder name is too long";
+    if (INVALID_CHARS.test(trimmed))
+      return 'Folder name cannot contain: < > : " / \\ | ? *';
     const lower = trimmed.toLowerCase();
     if (siblingNames.some((n) => n.trim().toLowerCase() === lower))
       return "A folder with this name already exists here";

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Folder, FolderOpen, FolderPlus, Home, Pencil, Plus, Trash2 } from "lucide-react";
+import { Folder, FolderOpen, Home, Pencil, Plus, Trash2 } from "lucide-react";
 import { useLibrary } from "@/stores/library.store";
 import {
   createFolder,
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { RenameDialog } from "@/components/RenameDialog";
 import { FolderCreateDialog } from "@/components/FolderCreateDialog";
 import { FolderDeleteDialog, type FolderDeleteMode } from "@/components/FolderDeleteDialog";
+import { FolderHeader, FolderContextMenu } from "@/components/folder";
 
 interface Node {
   folder: FolderRecord;
@@ -34,7 +35,13 @@ function buildTree(folders: FolderRecord[]): Node[] {
   return make(null);
 }
 
-export function FolderTree() {
+export function FolderTree({
+  onToggleCollapse,
+  collapsed,
+}: {
+  onToggleCollapse?: () => void;
+  collapsed?: boolean;
+}) {
   const folders = useLibrary((s) => s.folders);
   const currentFolderId = useLibrary((s) => s.currentFolderId);
   const setFolder = useLibrary((s) => s.setFolder);
@@ -73,59 +80,74 @@ export function FolderTree() {
     const active = currentFolderId === n.folder.id;
     return (
       <div key={n.folder.id}>
-        <div
-          onClick={() => setFolder(n.folder.id)}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={(e) => onDropMedia(e, n.folder.id)}
-          className={cn(
-            "group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-xs",
-            active ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
-          )}
-          style={{ paddingLeft: depth * 10 + 6 }}
-          title={n.folder.name}
+        <FolderContextMenu
+          folder={n.folder}
+          onRename={() => setRenameTarget(n.folder)}
+          onDelete={() => setDeleteTarget(n.folder)}
         >
-          {active ? (
-            <FolderOpen className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <Folder className="h-3.5 w-3.5 shrink-0" />
-          )}
-          <span className="flex-1 truncate">{n.folder.name}</span>
-          <div className="invisible flex items-center gap-0.5 group-hover:visible">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setCreateFor({ parentId: n.folder.id, parentLabel: n.folder.name });
-              }}
-              className="cursor-pointer rounded p-0.5 hover:bg-background"
-              aria-label="New subfolder"
-              title="New subfolder"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setRenameTarget(n.folder);
-              }}
-              className="cursor-pointer rounded p-0.5 hover:bg-background"
-              aria-label="Rename folder"
-              title="Rename"
-            >
-              <Pencil className="h-3 w-3" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setDeleteTarget(n.folder);
-              }}
-              className="cursor-pointer rounded p-0.5 hover:bg-background"
-              aria-label="Delete folder"
-              title="Delete"
-            >
-              <Trash2 className="h-3 w-3" />
-            </button>
+          <div
+            onClick={() => setFolder(n.folder.id)}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => onDropMedia(e, n.folder.id)}
+            className={cn(
+              "group flex cursor-pointer items-center gap-1.5 rounded-md px-1.5 py-1 text-xs transition-colors",
+              active
+                ? "bg-accent text-accent-foreground"
+                : "hover:bg-accent/50 focus-visible:bg-accent/30",
+            )}
+            style={{ paddingLeft: depth * 10 + 6 }}
+            title={n.folder.name}
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                setFolder(n.folder.id);
+              }
+            }}
+          >
+            {active ? (
+              <FolderOpen className="h-3.5 w-3.5 shrink-0" />
+            ) : (
+              <Folder className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="flex-1 truncate">{n.folder.name}</span>
+            <div className="invisible flex items-center gap-0.5 group-hover:visible group-focus-within:visible">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCreateFor({ parentId: n.folder.id, parentLabel: n.folder.name });
+                }}
+                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="New subfolder"
+                title="New subfolder"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRenameTarget(n.folder);
+                }}
+                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Rename folder"
+                title="Rename"
+              >
+                <Pencil className="h-3 w-3" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDeleteTarget(n.folder);
+                }}
+                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Delete folder"
+                title="Delete"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </div>
           </div>
-        </div>
+        </FolderContextMenu>
         {n.children.map((c) => renderNode(c, depth + 1))}
       </div>
     );
@@ -133,37 +155,37 @@ export function FolderTree() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center justify-between gap-1 px-2 py-1.5">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-          Folders
-        </div>
-        <button
-          onClick={() =>
-            setCreateFor({
-              parentId: currentFolderId,
-              parentLabel:
-                currentFolderId === null
-                  ? "All Media"
-                  : folders.find((f) => f.id === currentFolderId)?.name,
-            })
-          }
-          className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border bg-background px-1.5 py-0.5 text-[10px] font-medium text-foreground hover:bg-accent"
-          aria-label="New folder"
-          title="New folder"
-        >
-          <FolderPlus className="h-3 w-3" />
-          New
-        </button>
-      </div>
+      <FolderHeader
+        onNewFolder={() =>
+          setCreateFor({
+            parentId: currentFolderId,
+            parentLabel:
+              currentFolderId === null
+                ? "All Media"
+                : folders.find((f) => f.id === currentFolderId)?.name,
+          })
+        }
+        onToggleCollapse={onToggleCollapse ?? (() => {})}
+        collapsed={collapsed ?? false}
+      />
       <div className="flex-1 overflow-y-auto px-1 pb-2">
         <div
           onClick={() => setFolder(null)}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => onDropMedia(e, null)}
           className={cn(
-            "flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs",
-            currentFolderId === null ? "bg-accent text-accent-foreground" : "hover:bg-accent/50",
+            "flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 text-xs transition-colors",
+            currentFolderId === null
+              ? "bg-accent text-accent-foreground"
+              : "hover:bg-accent/50 focus-visible:bg-accent/30",
           )}
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              setFolder(null);
+            }
+          }}
         >
           <Home className="h-3.5 w-3.5" />
           <span className="truncate">All Media</span>
