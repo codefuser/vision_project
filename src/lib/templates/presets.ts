@@ -2,7 +2,8 @@ import type { BackgroundConfig, SectionStyle } from "@/lib/broadcast";
 import type { LogoSettings } from "@/stores/logo.store";
 
 export type TemplateCategory =
-  | "Worship" | "Bible" | "Prayer" | "Seasonal" | "Events" | "Modern" | "Minimal" | "Specialty";
+  | "Worship" | "Bible" | "Prayer" | "Seasonal" | "Events"
+  | "Modern" | "Minimal" | "Specialty";
 
 export type ThemeMood =
   | "classic" | "modern" | "warm" | "cool" | "dark" | "light"
@@ -22,14 +23,8 @@ export interface TemplatePreset {
 }
 
 export const TEMPLATE_CATEGORIES: TemplateCategory[] = [
-  "Worship",
-  "Bible",
-  "Prayer",
-  "Seasonal",
-  "Events",
-  "Modern",
-  "Minimal",
-  "Specialty",
+  "Worship", "Bible", "Prayer", "Seasonal", "Events",
+  "Modern", "Minimal", "Specialty",
 ];
 
 const shadowSoft = { shadow: true, shadowColor: "#000000", shadowBlur: 22 };
@@ -117,182 +112,450 @@ const build = (o: BuildOpts): TemplatePreset => {
   };
 };
 
-/* ── Worship — Royal / Regal ── */
-const WORSHIP_ROYAL: BuildOpts[] = [
-  { id: "worship-royal-sapphire", name: "Royal Sapphire", bg: "#0a0a2e", gradient: "radial-gradient(ellipse at 50% 30%,rgba(59,130,246,.18),rgba(30,58,138,.12),#0a0a2e 85%)", color: "#f0f4ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "cool", category: "Worship", tags: ["royal", "sapphire", "blue", "elegant"] },
-  { id: "worship-royal-crimson", name: "Royal Crimson", bg: "#1a0a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(220,38,38,.15),rgba(127,29,29,.1),#1a0a0a 85%)", color: "#fef2f2", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["royal", "crimson", "red", "dramatic"] },
-  { id: "worship-royal-purple", name: "Royal Purple", bg: "#0a001a", gradient: "radial-gradient(ellipse at 50% 35%,rgba(147,51,234,.2),rgba(88,28,135,.12),#0a001a 85%)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["royal", "purple", "regal"] },
-  { id: "worship-royal-gold", name: "Royal Gold", bg: "#1a0e06", gradient: "radial-gradient(ellipse at 50% 50%,rgba(251,191,36,.15),rgba(146,64,14,.08),#1a0e06 85%)", color: "#fffbeb", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Worship", tags: ["royal", "gold", "luxury"] },
-  { id: "worship-royal-emerald", name: "Royal Emerald", bg: "#001a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(16,185,129,.15),rgba(6,78,60,.1),#001a0a 85%)", color: "#ecfdf5", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "cool", category: "Worship", tags: ["royal", "emerald", "green"] },
-  { id: "worship-royal-silver", name: "Royal Silver", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(148,163,184,.2),rgba(71,85,105,.1),#0a0a1a 85%)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "cool", category: "Worship", tags: ["royal", "silver", "elegant"] },
+/* ── SVG pattern helpers ── */
+const svg = (content: string) =>
+  `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">${content}</svg>`)}")`;
+
+const circles = (cx: number, cy: number, r: number, fill: string) =>
+  `<circle cx="${cx}%" cy="${cy}%" r="${r}" fill="${fill}"/>`;
+
+const polygon = (points: string, fill: string, opacity = "0.08") =>
+  `<polygon points="${points}" fill="${fill}" opacity="${opacity}"/>`;
+
+/* ──────── 1. Cathedral Glass ──────── */
+/* Stained-glass coloured blobs on dark base */
+const CATHEDRAL_GLASS =
+  `radial-gradient(circle 350px at 20% 30%,rgba(147,51,234,.15),transparent),` +
+  `radial-gradient(circle 300px at 75% 25%,rgba(59,130,246,.12),transparent),` +
+  `radial-gradient(circle 280px at 85% 70%,rgba(236,72,153,.1),transparent),` +
+  `radial-gradient(circle 250px at 15% 80%,rgba(251,191,36,.08),transparent),` +
+  `linear-gradient(135deg,#0a0a2e,#1a0a3e,#2a0a4e)`;
+
+/* ──────── 2. Morning Light ──────── */
+/* Diagonal light beams striking from upper-left */
+const MORNING_LIGHT =
+  `linear-gradient(135deg,rgba(253,224,71,.08) 0%,rgba(253,224,71,.02) 25%,transparent 40%),` +
+  `linear-gradient(150deg,transparent 30%,rgba(253,224,71,.04) 42%,transparent 55%),` +
+  `linear-gradient(120deg,transparent 50%,rgba(251,146,60,.03) 60%,transparent 70%),` +
+  `linear-gradient(180deg,#0a0a1a,#1a0a2e)`;
+
+/* ──────── 3. Royal Crown ──────── */
+/* Central radiance with gold accent, deep purple base */
+const ROYAL_CROWN =
+  `radial-gradient(ellipse 400px 500px at 50% 30%,rgba(251,191,36,.12),transparent),` +
+  `radial-gradient(ellipse 300px 300px at 50% 60%,rgba(147,51,234,.1),transparent),` +
+  `linear-gradient(180deg,#0a0014,#1a0a2e)`;
+
+/* ──────── 4. Rose Window ──────── */
+/* Circular stained-glass rose window pattern using conic gradient */
+const ROSE_WINDOW =
+  `conic-gradient(from 0deg at 50% 35%,` +
+  `rgba(147,51,234,.08),rgba(59,130,246,.06),rgba(236,72,153,.08),` +
+  `rgba(251,191,36,.06),rgba(16,185,129,.06),rgba(147,51,234,.08)),` +
+  `radial-gradient(circle 200px at 50% 35%,rgba(255,255,255,.03),transparent),` +
+  `linear-gradient(180deg,#0a0a2e,#050518)`;
+
+/* ──────── 5. Gothic Arches ──────── */
+/* Pointed arch shapes using SVG overlay on dark gradient */
+const GOTHIC_ARCHES = svg(
+  `<rect width="100%" height="100%" fill="none"/>` +
+  `<path d="M5,100 L5,40 Q5,5 15,5 L20,5 Q30,5 30,40 L30,100" fill="rgba(148,163,184,.04)"/>` +
+  `<path d="M38,100 L38,30 Q38,0 50,0 L55,0 Q65,0 65,30 L65,100" fill="rgba(148,163,184,.05)"/>` +
+  `<path d="M72,100 L72,40 Q72,5 82,5 L87,5 Q97,5 97,40 L97,100" fill="rgba(148,163,184,.04)"/>`
+) + `,linear-gradient(180deg,#0a0a0a,#1a0a1a)`;
+
+/* ──────── 6. Stone Pillars ──────── */
+/* Vertical pillar-like bands */
+const STONE_PILLARS =
+  `repeating-linear-gradient(90deg,transparent 0,transparent 7%,rgba(148,163,184,.03) 7.5%,rgba(148,163,184,.03) 8%,transparent 8.5%),` +
+  `repeating-linear-gradient(90deg,transparent 0,transparent 12%,rgba(148,163,184,.02) 12.5%,rgba(148,163,184,.02) 13%,transparent 13.5%),` +
+  `linear-gradient(180deg,#1a1a1a,#0a0a0a)`;
+
+/* ──────── 7. Royal Gold ──────── */
+/* Gold mesh gradient with shimmer */
+const ROYAL_GOLD =
+  `radial-gradient(circle 250px at 30% 30%,rgba(253,224,71,.1),transparent),` +
+  `radial-gradient(circle 200px at 70% 60%,rgba(251,191,36,.08),transparent),` +
+  `conic-gradient(from 30deg at 50% 50%,rgba(251,191,36,.02),rgba(217,119,6,.01),rgba(251,191,36,.02),transparent),` +
+  `linear-gradient(135deg,#1a0e06,#0a0604)`;
+
+/* ──────── 8. Royal Sapphire ──────── */
+/* Deep blue with diamond-pattern highlights */
+const ROYAL_SAPPHIRE =
+  `radial-gradient(circle 300px at 20% 20%,rgba(59,130,246,.12),transparent),` +
+  `radial-gradient(circle 250px at 80% 80%,rgba(30,58,138,.1),transparent),` +
+  `conic-gradient(from 45deg at 50% 50%,transparent,rgba(59,130,246,.02),transparent,rgba(59,130,246,.02),transparent),` +
+  `linear-gradient(135deg,#0a0a2e,#050518)`;
+
+/* ──────── 9. Royal Crimson ──────── */
+/* Deep red with corner glow */
+const ROYAL_CRIMSON =
+  `radial-gradient(circle 400px at 80% 20%,rgba(220,38,38,.1),transparent),` +
+  `radial-gradient(circle 200px at 20% 80%,rgba(251,191,36,.06),transparent),` +
+  `linear-gradient(135deg,#1a0505,#0a0202)`;
+
+/* ──────── 10. Royal Emerald ──────── */
+/* Deep green with wave-like gradient bands */
+const ROYAL_EMERALD =
+  `repeating-linear-gradient(160deg,transparent 0,transparent 30px,rgba(16,185,129,.03) 30px,rgba(16,185,129,.03) 32px,transparent 32px),` +
+  `radial-gradient(circle 300px at 50% 30%,rgba(52,211,153,.08),transparent),` +
+  `linear-gradient(135deg,#001a0a,#000a04)`;
+
+/* ──────── 11. Cathedral Vault ──────── */
+/* Dark with arched ceiling light */
+const CATHEDRAL_VAULT =
+  `radial-gradient(ellipse 600px 300px at 50% 0%,rgba(148,163,184,.06),transparent),` +
+  `repeating-linear-gradient(90deg,transparent 0,transparent 40px,rgba(148,163,184,.02) 40px,rgba(148,163,184,.02) 41px,transparent 41px),` +
+  `linear-gradient(180deg,#0a0a0a,#050505)`;
+
+/* ──────── 12. Modern Stage ──────── */
+/* Spotlight from above, warm amber */
+const MODERN_STAGE =
+  `radial-gradient(ellipse 500px 300px at 50% 0%,rgba(251,191,36,.08),transparent),` +
+  `linear-gradient(180deg,rgba(251,191,36,.02),transparent 40%),` +
+  `linear-gradient(180deg,#0a0a12,#030308)`;
+
+/* ──────── 13. Contemporary Blue ──────── */
+/* Modern diagonal split with geometric accent */
+const CONTEMPORARY_BLUE =
+  `linear-gradient(160deg,rgba(59,130,246,.08) 0%,rgba(59,130,246,.08) 35%,transparent 35.5%),` +
+  `radial-gradient(circle 200px at 75% 70%,rgba(99,102,241,.06),transparent),` +
+  `linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 14. Worship Night ──────── */
+/* Deep dark with warm light streaks from bottom */
+const WORSHIP_NIGHT =
+  `linear-gradient(0deg,rgba(251,191,36,.06) 0%,transparent 30%),` +
+  `radial-gradient(ellipse 400px 200px at 50% 100%,rgba(239,68,68,.04),transparent),` +
+  `linear-gradient(180deg,#050005,#0a0005)`;
+
+/* ──────── 15. Praise Rising ──────── */
+/* Warm upward-moving gradient suggests rising */
+const PRAISE_RISING =
+  `linear-gradient(0deg,rgba(251,191,36,.1) 0%,rgba(234,88,12,.04) 40%,transparent 70%),` +
+  `radial-gradient(circle 200px at 30% 80%,rgba(251,146,60,.06),transparent),` +
+  `linear-gradient(180deg,#0a0500,#1a0a00)`;
+
+/* ──────── 16. Glass Worship ──────── */
+/* Frosted glass multi-layer with reflections */
+const GLASS_WORSHIP =
+  `linear-gradient(135deg,rgba(148,163,184,.06) 0%,rgba(99,102,241,.04) 40%,rgba(167,139,250,.03) 60%,rgba(148,163,184,.02) 100%),` +
+  `linear-gradient(170deg,transparent 40%,rgba(255,255,255,.02) 42%,transparent 44%),` +
+  `linear-gradient(180deg,#0a0a1a,#0a0a14)`;
+
+/* ──────── 17. Hexagon Dark ──────── */
+/* Subtle hexagon pattern overlay */
+const HEXAGON_DARK = svg(
+  `<defs><pattern id="h" width="40" height="69.28" patternUnits="userSpaceOnUse">` +
+  `<polygon points="20 0,40 11.55,40 34.64,20 46.19,0 34.64,0 11.55" fill="rgba(148,163,184,.04)"/>` +
+  `<polygon points="20 23.1,40 34.64,40 57.73,20 69.28,0 57.73,0 34.64" fill="rgba(148,163,184,.03)"/>` +
+  `</pattern></defs><rect width="100%" height="100%" fill="url(#h)"/>`
+) + `,linear-gradient(135deg,#050508,#0a0a14)`;
+
+/* ──────── 18. Geometric Blue ──────── */
+/* Triangle mesh pattern */
+const GEOMETRIC_BLUE = svg(
+  `<defs><pattern id="t" width="60" height="52" patternUnits="userSpaceOnUse">` +
+  `<polygon points="30 0,60 15,60 37,30 52,0 37,0 15" fill="rgba(59,130,246,.04)"/>` +
+  `<polygon points="30 26,60 41,60 63,30 78,0 63,0 41" fill="rgba(99,102,241,.03)"/>` +
+  `</pattern></defs><rect width="100%" height="100%" fill="url(#t)"/>`
+) + `,linear-gradient(135deg,#0a0a2e,#050518)`;
+
+/* ──────── 19. Diamond Silver ──────── */
+/* Diamond pattern on silver-dark */
+const DIAMOND_SILVER = svg(
+  `<defs><pattern id="d" width="50" height="50" patternUnits="userSpaceOnUse">` +
+  `<polygon points="25 0,50 25,25 50,0 25" fill="rgba(148,163,184,.03)"/>` +
+  `</pattern></defs><rect width="100%" height="100%" fill="url(#d)"/>`
+) + `,linear-gradient(135deg,#0a0a14,#141420)`;
+
+/* ──────── 20. Polygon Mesh ──────── */
+/* Connected polygon network */
+const POLYGON_MESH = svg(
+  `<line x1="20" y1="20" x2="60" y2="10" stroke="rgba(99,102,241,.04)" stroke-width="1"/>` +
+  `<line x1="60" y1="10" x2="80" y2="40" stroke="rgba(99,102,241,.04)" stroke-width="1"/>` +
+  `<line x1="80" y1="40" x2="50" y2="70" stroke="rgba(99,102,241,.03)" stroke-width="1"/>` +
+  `<line x1="50" y1="70" x2="20" y2="20" stroke="rgba(99,102,241,.03)" stroke-width="1"/>` +
+  `<line x1="20" y1="20" x2="80" y2="80" stroke="rgba(99,102,241,.02)" stroke-width="1"/>` +
+  `<polygon points="20,20 60,10 80,40" fill="rgba(99,102,241,.03)" opacity="0.5"/>`
+) + `,linear-gradient(135deg,#050510,#0a0a1a)`;
+
+/* ──────── 21. Circular Flow ──────── */
+/* Overlapping circles composition */
+const CIRCULAR_FLOW =
+  `radial-gradient(circle 180px at 25% 25%,rgba(99,102,241,.08),transparent),` +
+  `radial-gradient(circle 220px at 75% 30%,rgba(167,139,250,.06),transparent),` +
+  `radial-gradient(circle 160px at 50% 70%,rgba(59,130,246,.05),transparent),` +
+  `radial-gradient(circle 200px at 85% 80%,rgba(139,92,246,.04),transparent),` +
+  `linear-gradient(135deg,#0a0a2e,#050518)`;
+
+/* ──────── 22. Grid Modern ──────── */
+/* Clean modern grid */
+const GRID_MODERN =
+  `repeating-linear-gradient(90deg,transparent 0,transparent 50px,rgba(148,163,184,.02) 50px,rgba(148,163,184,.02) 51px,transparent 51px),` +
+  `repeating-linear-gradient(0deg,transparent 0,transparent 50px,rgba(148,163,184,.02) 50px,rgba(148,163,184,.02) 51px,transparent 51px),` +
+  `linear-gradient(135deg,#0a0a0a,#141414)`;
+
+/* ──────── 23. Luxury Gold ──────── */
+/* Premium gold with shimmer line */
+const LUXURY_GOLD =
+  `linear-gradient(135deg,transparent 35%,rgba(253,224,71,.04) 45%,transparent 55%),` +
+  `radial-gradient(circle 200px at 50% 40%,rgba(251,191,36,.08),transparent),` +
+  `linear-gradient(180deg,#0a0604,#050302)`;
+
+/* ──────── 24. Elegant Dark ──────── */
+/* Sophisticated dark with subtle corner ornament */
+const ELEGANT_DARK = svg(
+  `<path d="M0,0 L30,0 L30,5 L5,5 L5,30 L0,30 Z" fill="rgba(148,163,184,.04)"/>` +
+  `<path d="M100,0 L70,0 L70,5 L95,5 L95,30 L100,30 Z" fill="rgba(148,163,184,.04)"/>`
+) + `,linear-gradient(135deg,#050505,#0a0a0a)`;
+
+/* ──────── 25. Elegant Light ──────── */
+/* Clean light with subtle shadow box */
+const ELEGANT_LIGHT =
+  `radial-gradient(ellipse 300px 200px at 50% 30%,rgba(99,102,241,.03),transparent),` +
+  `linear-gradient(180deg,#f8fafc,#f0f4f8)`;
+
+/* ──────── 26. Premium Dark ──────── */
+/* True black with subtle center radiance */
+const PREMIUM_DARK =
+  `radial-gradient(ellipse 400px 300px at 50% 40%,rgba(148,163,184,.03),transparent),` +
+  `linear-gradient(180deg,#050505,#000000)`;
+
+/* ──────── 27. Premium Light ──────── */
+/* Clean light with soft shadow */
+const PREMIUM_LIGHT =
+  `radial-gradient(ellipse 300px 200px at 50% 30%,rgba(148,163,184,.03),transparent),` +
+  `linear-gradient(180deg,#ffffff,#f8fafc)`;
+
+/* ──────── 28. Ice Crystal ──────── */
+/* Frosty blue crystalline pattern */
+const ICE_CRYSTAL = svg(
+  `<defs><pattern id="i" width="60" height="60" patternUnits="userSpaceOnUse">` +
+  `<path d="M30 0 L35 15 L30 30 L25 15 Z" fill="rgba(147,197,253,.03)"/>` +
+  `<path d="M0 30 L15 35 L30 30 L15 25 Z" fill="rgba(147,197,253,.03)"/>` +
+  `<path d="M60 30 L45 35 L30 30 L45 25 Z" fill="rgba(147,197,253,.03)"/>` +
+  `</pattern></defs><rect width="100%" height="100%" fill="url(#i)"/>`
+) + `,linear-gradient(135deg,#0a1420,#0a1a2e)`;
+
+/* ──────── 29. Wave Motion ──────── */
+/* Gentle wave shapes at bottom */
+const WAVE_MOTION = svg(
+  `<path d="M0,90 Q25,80 50,90 T100,90 L100,100 L0,100 Z" fill="rgba(148,163,184,.03)"/>` +
+  `<path d="M0,95 Q25,88 50,95 T100,95 L100,100 L0,100 Z" fill="rgba(148,163,184,.02)"/>`
+) + `,linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 30. Mountain Silhouette ──────── */
+/* Layered mountain shapes */
+const MOUNTAIN_SILHOUETTE = svg(
+  `<polygon points="0,80 15,45 30,60 45,35 60,50 75,30 90,55 100,40 100,100 0,100" fill="rgba(0,0,0,.15)"/>` +
+  `<polygon points="0,90 20,60 40,75 55,50 70,65 85,45 100,60 100,100 0,100" fill="rgba(0,0,0,.1)"/>`
+) + `,linear-gradient(180deg,#1a0a2e,#3a1a3e)`;
+
+/* ──────── 31. Light Rays ──────── */
+/* Diagonal rays from top-left */
+const LIGHT_RAYS =
+  `linear-gradient(140deg,rgba(253,224,71,.06) 0%,transparent 20%,rgba(253,224,71,.04) 25%,transparent 40%,rgba(253,224,71,.02) 45%,transparent 60%,rgba(253,224,71,.02) 65%,transparent 80%),` +
+  `linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 32. Center Spotlight ──────── */
+/* Strong central radiance */
+const CENTER_SPOTLIGHT =
+  `radial-gradient(ellipse 500px 400px at 50% 40%,rgba(255,255,255,.04),rgba(251,191,36,.02),transparent),` +
+  `linear-gradient(180deg,#0a0a12,#030308)`;
+
+/* ──────── 33. Corner Frame ──────── */
+/* Decorative corner elements framing the content */
+const CORNER_FRAME = svg(
+  `<path d="M5,5 L25,5 L25,10 L10,10 L10,25 L5,25 Z" fill="rgba(148,163,184,.06)"/>` +
+  `<path d="M95,5 L75,5 L75,10 L90,10 L90,25 L95,25 Z" fill="rgba(148,163,184,.06)"/>` +
+  `<path d="M5,95 L25,95 L25,90 L10,90 L10,75 L5,75 Z" fill="rgba(148,163,184,.06)"/>` +
+  `<path d="M95,95 L75,95 L75,90 L90,90 L90,75 L95,75 Z" fill="rgba(148,163,184,.06)"/>`
+) + `,linear-gradient(135deg,#0a0a14,#0a0a0a)`;
+
+/* ──────── 34. Radiant Burst ──────── */
+/* Lines radiating from center */
+const RADIANT_BURST =
+  `conic-gradient(from 0deg at 50% 40%,rgba(253,224,71,.02) 0deg,transparent 10deg,rgba(253,224,71,.02) 20deg,transparent 30deg,rgba(253,224,71,.02) 40deg,transparent 50deg,rgba(253,224,71,.02) 60deg,transparent 70deg,rgba(253,224,71,.02) 80deg,transparent 90deg,rgba(253,224,71,.02) 100deg,transparent 110deg,rgba(253,224,71,.02) 120deg,transparent 130deg,rgba(253,224,71,.02) 140deg,transparent 150deg,rgba(253,224,71,.01) 160deg,transparent 170deg,rgba(253,224,71,.01) 180deg,transparent 190deg,rgba(253,224,71,.01) 200deg,transparent 210deg,rgba(253,224,71,.01) 220deg,transparent 230deg,rgba(253,224,71,.01) 240deg,transparent 250deg,rgba(253,224,71,.01) 260deg,transparent 270deg,rgba(253,224,71,.01) 280deg,transparent 290deg,rgba(253,224,71,.01) 300deg,transparent 310deg,rgba(253,224,71,.01) 320deg,transparent 330deg,rgba(253,224,71,.01) 340deg,transparent 350deg),` +
+  `radial-gradient(ellipse 300px 200px at 50% 40%,rgba(253,224,71,.04),transparent),` +
+  `linear-gradient(180deg,#0a0014,#05000a)`;
+
+/* ──────── 36. Bible Parchment ──────── */
+/* Warm parchment texture */
+const BIBLE_PARCHMENT =
+  `repeating-linear-gradient(0deg,transparent 0,transparent 3px,rgba(0,0,0,.01) 3px,rgba(0,0,0,.01) 4px,transparent 4px),` +
+  `radial-gradient(ellipse 400px 300px at 50% 40%,rgba(251,191,36,.04),transparent),` +
+  `linear-gradient(135deg,#2a1a0a,#1a0e06)`;
+
+/* ──────── 37. Scripture Light ──────── */
+/* Warm golden light on dark */
+const SCRIPTURE_LIGHT =
+  `radial-gradient(ellipse 350px 250px at 50% 30%,rgba(253,224,71,.06),transparent),` +
+  `linear-gradient(180deg,rgba(253,224,71,.02),transparent 50%),` +
+  `linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 38. Candlelight Prayer ──────── */
+/* Warm glow from bottom center */
+const CANDLELIGHT_PRAYER =
+  `radial-gradient(ellipse 300px 350px at 50% 85%,rgba(251,191,36,.08),rgba(251,146,60,.03),transparent),` +
+  `linear-gradient(180deg,#0a0500,#050200)`;
+
+/* ──────── 39. Silent Prayer ──────── */
+/* Deep blue, calm, minimal */
+const SILENT_PRAYER =
+  `radial-gradient(ellipse 250px 200px at 50% 40%,rgba(99,102,241,.03),transparent),` +
+  `linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 40. Ancient Scroll ──────── */
+/* Vintage scroll tones with horizontal lines suggesting text */
+const ANCIENT_SCROLL =
+  `repeating-linear-gradient(0deg,transparent 0,transparent 40px,rgba(0,0,0,.02) 40px,rgba(0,0,0,.02) 41px,transparent 41px),` +
+  `radial-gradient(ellipse 500px 300px at 50% 50%,rgba(251,191,36,.03),transparent),` +
+  `linear-gradient(135deg,#1a1410,#0a0806)`;
+
+/* ──────── 41. Easter Glory ──────── */
+/* Gold burst on dark */
+const EASTER_GLORY =
+  `radial-gradient(circle 350px at 50% 30%,rgba(253,224,71,.1),rgba(255,255,255,.02),transparent),` +
+  `linear-gradient(135deg,rgba(253,224,71,.04),transparent 50%),` +
+  `linear-gradient(180deg,#0a0a1a,#050510)`;
+
+/* ──────── 42. Advent Hope ──────── */
+/* Deep purple with anticipation glow */
+const ADVENT_HOPE =
+  `radial-gradient(ellipse 300px 250px at 50% 30%,rgba(147,51,234,.08),transparent),` +
+  `linear-gradient(180deg,rgba(147,51,234,.03),transparent 60%),` +
+  `linear-gradient(180deg,#0a0014,#05000a)`;
+
+/* ──────── 43. Christmas Joy ──────── */
+/* Red and gold festive */
+const CHRISTMAS_JOY =
+  `radial-gradient(circle 250px at 30% 30%,rgba(220,38,38,.08),transparent),` +
+  `radial-gradient(circle 200px at 70% 60%,rgba(251,191,36,.06),transparent),` +
+  `linear-gradient(135deg,#0a000a,#1a0505)`;
+
+/* ──────── 44. Thanksgiving Harvest ──────── */
+/* Warm autumn gradient mesh */
+const THANKSGIVING =
+  `radial-gradient(circle 250px at 20% 30%,rgba(251,191,36,.08),transparent),` +
+  `radial-gradient(circle 200px at 80% 70%,rgba(234,88,12,.06),transparent),` +
+  `radial-gradient(circle 180px at 50% 50%,rgba(180,120,60,.04),transparent),` +
+  `linear-gradient(135deg,#1a0e00,#0a0500)`;
+
+/* ──────── 45. Youth Rally ──────── */
+/* Vibrant energetic mesh */
+const YOUTH_RALLY =
+  `radial-gradient(circle 250px at 25% 30%,rgba(59,130,246,.1),transparent),` +
+  `radial-gradient(circle 200px at 75% 60%,rgba(16,185,129,.08),transparent),` +
+  `radial-gradient(circle 180px at 50% 80%,rgba(139,92,246,.06),transparent),` +
+  `linear-gradient(135deg,#0a0a2e,#050518)`;
+
+/* ──────── 46. Baptism ──────── */
+/* Clean blue-white, water theme */
+const BAPTISM =
+  `radial-gradient(ellipse 300px 200px at 50% 30%,rgba(147,197,253,.05),transparent),` +
+  `linear-gradient(170deg,rgba(147,197,253,.03),transparent 50%),` +
+  `linear-gradient(180deg,#0a1420,#050e15)`;
+
+/* ──────── 47. Wedding ──────── */
+/* Elegant white-gold */
+const WEDDING =
+  `radial-gradient(circle 250px at 50% 30%,rgba(253,224,71,.06),transparent),` +
+  `linear-gradient(170deg,transparent 40%,rgba(255,255,255,.02) 42%,transparent 44%),` +
+  `linear-gradient(135deg,#1a1a2e,#0a0a1a)`;
+
+/* ──────── 48. High Contrast ──────── */
+/* Pure black, maximum readability */
+const HIGH_CONTRAST = `#000000`;
+
+/* ──────── 49. Broadcast Ready ──────── */
+/* TV-optimized with subtle scan line */
+const BROADCAST =
+  `repeating-linear-gradient(0deg,transparent 0,transparent 2px,rgba(0,0,0,.02) 2px,rgba(0,0,0,.02) 3px,transparent 3px),` +
+  `radial-gradient(ellipse 400px 300px at 50% 40%,rgba(59,130,246,.03),transparent),` +
+  `linear-gradient(180deg,#050508,#0a0a0a)`;
+
+/* ──────── 50. Minimal Warm ──────── */
+/* Warm beige with subtle texture */
+const MINIMAL_WARM =
+  `repeating-linear-gradient(90deg,transparent 0,transparent 4px,rgba(0,0,0,.01) 4px,rgba(0,0,0,.01) 5px,transparent 5px),` +
+  `linear-gradient(135deg,#f5f0e8,#f0e8dc)`;
+
+/* ──────── Theme definitions ──────── */
+
+const THEMES: BuildOpts[] = [
+  /* === Cathedral / Church === */
+  { id: "cathedral-glass", name: "Cathedral Glass", bg: "#0a0a2e", gradient: CATHEDRAL_GLASS, color: "#f0e6ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", letterSpacing: 2, category: "Worship", mood: "dramatic", tags: ["cathedral", "stained glass", "colorful"] },
+  { id: "morning-light", name: "Morning Light", bg: "#0a0a1a", gradient: MORNING_LIGHT, color: "#fefce8", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Worship", mood: "warm", tags: ["morning", "light", "beams"] },
+  { id: "gothic-arches", name: "Gothic Arches", bg: "#0a0a0a", gradient: GOTHIC_ARCHES, color: "#e2e8f0", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "classic", tags: ["gothic", "arches", "cathedral"] },
+  { id: "stone-pillars", name: "Stone Pillars", bg: "#1a1a1a", gradient: STONE_PILLARS, color: "#f1f5f9", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "classic", tags: ["stone", "pillars", "traditional"] },
+  { id: "rose-window", name: "Rose Window", bg: "#0a0a2e", gradient: ROSE_WINDOW, color: "#f3e8ff", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", letterSpacing: 2, category: "Worship", mood: "dramatic", tags: ["rose", "window", "circular"] },
+  { id: "cathedral-vault", name: "Cathedral Vault", bg: "#0a0a0a", gradient: CATHEDRAL_VAULT, color: "#e2e8f0", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Worship", mood: "dark", tags: ["vaulted", "ceiling", "arched"] },
+
+  /* === Royal / Luxury === */
+  { id: "royal-crown", name: "Royal Crown", bg: "#0a0014", gradient: ROYAL_CROWN, color: "#fef3c7", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "dramatic", tags: ["royal", "crown", "purple"] },
+  { id: "royal-gold", name: "Royal Gold", bg: "#1a0e06", gradient: ROYAL_GOLD, color: "#fffbeb", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "luxury", tags: ["royal", "gold", "premium"] },
+  { id: "royal-sapphire", name: "Royal Sapphire", bg: "#0a0a2e", gradient: ROYAL_SAPPHIRE, color: "#f0f4ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "cool", tags: ["royal", "sapphire", "blue"] },
+  { id: "royal-crimson", name: "Royal Crimson", bg: "#1a0505", gradient: ROYAL_CRIMSON, color: "#fef2f2", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "dramatic", tags: ["royal", "crimson", "red"] },
+  { id: "royal-emerald", name: "Royal Emerald", bg: "#001a0a", gradient: ROYAL_EMERALD, color: "#ecfdf5", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "cool", tags: ["royal", "emerald", "green"] },
+  { id: "luxury-gold", name: "Luxury Gold", bg: "#0a0604", gradient: LUXURY_GOLD, color: "#fef3c7", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "luxury", tags: ["luxury", "gold", "premium"] },
+
+  /* === Contemporary Worship === */
+  { id: "modern-stage", name: "Modern Stage", bg: "#0a0a12", gradient: MODERN_STAGE, color: "#fef3c7", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", category: "Worship", mood: "modern", tags: ["modern", "stage", "spotlight"] },
+  { id: "contemporary-blue", name: "Contemporary Blue", bg: "#0a0a1a", gradient: CONTEMPORARY_BLUE, color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "modern", tags: ["contemporary", "blue", "clean"] },
+  { id: "worship-night", name: "Worship Night", bg: "#050005", gradient: WORSHIP_NIGHT, color: "#fef2f2", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "dramatic", tags: ["night", "worship", "ambient"] },
+  { id: "praise-rising", name: "Praise Rising", bg: "#0a0500", gradient: PRAISE_RISING, color: "#fffbeb", fontEn: "Montserrat", fontTa: "Catamaran", weight: 600, shadow: "soft", category: "Worship", mood: "warm", tags: ["praise", "rising", "warm"] },
+  { id: "glass-worship", name: "Glass Worship", bg: "#0a0a1a", gradient: GLASS_WORSHIP, color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Worship", mood: "modern", tags: ["glass", "frosted", "modern"] },
+  /* === Geometric / Pattern === */
+  { id: "hexagon-dark", name: "Hexagon Dark", bg: "#050508", gradient: HEXAGON_DARK, color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "dark", tags: ["hexagon", "pattern", "geometric"] },
+  { id: "geometric-blue", name: "Geometric Blue", bg: "#0a0a2e", gradient: GEOMETRIC_BLUE, color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "cool", tags: ["geometric", "blue", "mesh"] },
+  { id: "diamond-silver", name: "Diamond Silver", bg: "#0a0a14", gradient: DIAMOND_SILVER, color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "cool", tags: ["diamond", "silver", "pattern"] },
+  { id: "polygon-mesh", name: "Polygon Mesh", bg: "#050510", gradient: POLYGON_MESH, color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "modern", tags: ["polygon", "mesh", "network"] },
+  { id: "circular-flow", name: "Circular Flow", bg: "#0a0a2e", gradient: CIRCULAR_FLOW, color: "#f0e6ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Modern", mood: "cool", tags: ["circular", "flow", "circles"] },
+  { id: "grid-modern", name: "Grid Modern", bg: "#0a0a0a", gradient: GRID_MODERN, color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "dark", tags: ["grid", "modern", "clean"] },
+
+  /* === Premium / Elegant === */
+  { id: "elegant-dark", name: "Elegant Dark", bg: "#050505", gradient: ELEGANT_DARK, color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Modern", mood: "dark", tags: ["elegant", "dark", "sophisticated"] },
+  { id: "elegant-light", name: "Elegant Light", bg: "#f8fafc", gradient: ELEGANT_LIGHT, color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", category: "Modern", mood: "light", tags: ["elegant", "light", "clean"] },
+  { id: "premium-dark", name: "Premium Dark", bg: "#000000", gradient: PREMIUM_DARK, color: "#f8fafc", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Modern", mood: "dark", tags: ["premium", "dark", "luxury"] },
+  { id: "premium-light", name: "Premium Light", bg: "#ffffff", gradient: PREMIUM_LIGHT, color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", category: "Modern", mood: "light", tags: ["premium", "light", "clean"] },
+  { id: "corner-frame", name: "Corner Frame", bg: "#0a0a14", gradient: CORNER_FRAME, color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Modern", mood: "dark", tags: ["corner", "frame", "elegant"] },
+  { id: "light-rays", name: "Light Rays", bg: "#0a0a1a", gradient: LIGHT_RAYS, color: "#fefce8", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Worship", mood: "warm", tags: ["light", "rays", "beams"] },
+
+  /* === Nature / Organic === */
+  { id: "wave-motion", name: "Wave Motion", bg: "#0a0a1a", gradient: WAVE_MOTION, color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Specialty", mood: "cool", tags: ["wave", "ocean", "flow"] },
+  { id: "mountain-silhouette", name: "Mountain Silhouette", bg: "#1a0a2e", gradient: MOUNTAIN_SILHOUETTE, color: "#fce7f3", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Specialty", mood: "dramatic", tags: ["mountain", "silhouette", "landscape"] },
+  { id: "ice-crystal", name: "Ice Crystal", bg: "#0a1420", gradient: ICE_CRYSTAL, color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", category: "Specialty", mood: "cool", tags: ["ice", "crystal", "frost"] },
+  { id: "radiant-burst", name: "Radiant Burst", bg: "#0a0014", gradient: RADIANT_BURST, color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Worship", mood: "dramatic", tags: ["radiant", "burst", "glory"] },
+
+  /* === Bible / Scripture === */
+  { id: "bible-parchment", name: "Bible Parchment", bg: "#2a1a0a", gradient: BIBLE_PARCHMENT, color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "soft", category: "Bible", mood: "classic", tags: ["parchment", "vintage", "scroll"] },
+  { id: "scripture-light", name: "Scripture Light", bg: "#0a0a1a", gradient: SCRIPTURE_LIGHT, color: "#fefce8", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Bible", mood: "warm", tags: ["scripture", "light", "word"] },
+  { id: "ancient-scroll", name: "Ancient Scroll", bg: "#1a1410", gradient: ANCIENT_SCROLL, color: "#fef3c7", fontEn: "Georgia", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Bible", mood: "earthy", tags: ["ancient", "scroll", "vintage"] },
+
+  /* === Prayer === */
+  { id: "candlelight-prayer", name: "Candlelight Prayer", bg: "#0a0500", gradient: CANDLELIGHT_PRAYER, color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Prayer", mood: "warm", tags: ["candle", "prayer", "warm"] },
+  { id: "silent-prayer", name: "Silent Prayer", bg: "#0a0a1a", gradient: SILENT_PRAYER, color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", category: "Prayer", mood: "serene", tags: ["silent", "prayer", "peaceful"] },
+
+  /* === Seasonal / Events === */
+  { id: "easter-glory", name: "Easter Glory", bg: "#0a0a1a", gradient: EASTER_GLORY, color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 600, shadow: "deep", category: "Seasonal", mood: "warm", tags: ["easter", "glory", "resurrection"] },
+  { id: "advent-hope", name: "Advent Hope", bg: "#0a0014", gradient: ADVENT_HOPE, color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Seasonal", mood: "dramatic", tags: ["advent", "hope", "purple"] },
+  { id: "christmas-joy", name: "Christmas Joy", bg: "#0a000a", gradient: CHRISTMAS_JOY, color: "#fef2f2", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", category: "Seasonal", mood: "warm", tags: ["christmas", "joy", "festive"] },
+  { id: "thanksgiving", name: "Thanksgiving", bg: "#1a0e00", gradient: THANKSGIVING, color: "#fff7ed", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "soft", category: "Seasonal", mood: "warm", tags: ["thanksgiving", "harvest", "autumn"] },
+
+  /* === Events === */
+  { id: "youth-rally", name: "Youth Rally", bg: "#0a0a2e", gradient: YOUTH_RALLY, color: "#e0e7ff", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "soft", category: "Events", mood: "vibrant", tags: ["youth", "rally", "vibrant"] },
+  { id: "baptism", name: "Baptism", bg: "#0a1420", gradient: BAPTISM, color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", category: "Events", mood: "serene", tags: ["baptism", "water", "clean"] },
+  { id: "wedding", name: "Wedding", bg: "#1a1a2e", gradient: WEDDING, color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", category: "Events", mood: "warm", tags: ["wedding", "gold", "elegant"] },
+
+  /* === Minimal === */
+  { id: "minimal-black", name: "Minimal Black", bg: "#000000", color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "soft", category: "Minimal", mood: "dark", tags: ["minimal", "black", "clean"] },
+  { id: "minimal-white", name: "Minimal White", bg: "#ffffff", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "none", category: "Minimal", mood: "light", tags: ["minimal", "white", "clean"] },
+  { id: "minimal-warm", name: "Warm Minimal", bg: "#f5f0e8", gradient: MINIMAL_WARM, color: "#1a1410", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "none", category: "Minimal", mood: "warm", tags: ["minimal", "warm", "beige"] },
+
+  /* === Specialty === */
+  { id: "high-contrast", name: "High Contrast", bg: "#000000", gradient: HIGH_CONTRAST, color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 700, shadow: "none", category: "Specialty", mood: "dark", tags: ["high contrast", "accessible", "bold"] },
+  { id: "broadcast-ready", name: "Broadcast Ready", bg: "#050508", gradient: BROADCAST, color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", category: "Specialty", mood: "modern", tags: ["broadcast", "tv", "professional"] },
 ];
 
-/* ── Worship — Cathedral / Church ── */
-const WORSHIP_CATHEDRAL: BuildOpts[] = [
-  { id: "worship-cathedral-stone", name: "Cathedral Stone", bg: "#1a1a1a", gradient: "linear-gradient(135deg,#1a1a1a 0%,#2a2a2a 30%,#222 60%,#1a1a1a 100%)", color: "#f1f5f9", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "classic", category: "Worship", tags: ["cathedral", "stone", "classic"] },
-  { id: "worship-stained-glass", name: "Stained Glass", bg: "#0a0a2e", gradient: "linear-gradient(135deg,rgba(147,51,234,.15),rgba(59,130,246,.1),rgba(236,72,153,.08),rgba(251,191,36,.1))", color: "#f0e6ff", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["stained", "glass", "colorful"] },
-  { id: "worship-marble-pillars", name: "Marble Pillars", bg: "#2a2a2a", gradient: "linear-gradient(180deg,#3a3a3a 0%,#4a4a4a 25%,#353535 50%,#2a2a2a 100%)", color: "#f8fafc", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "classic", category: "Worship", tags: ["marble", "pillars", "grand"] },
-  { id: "worship-vaulted-ceiling", name: "Vaulted Ceiling", bg: "#0a0a0a", gradient: "radial-gradient(ellipse at 50% 0%,rgba(148,163,184,.08) 0%,transparent 60%),linear-gradient(180deg,#0a0a0a,#050505)", color: "#e2e8f0", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", letterSpacing: 2, mood: "dark", category: "Worship", tags: ["vaulted", "ceiling", "cathedral"] },
-  { id: "worship-organ-pipes", name: "Organ Pipes", bg: "#050505", gradient: "repeating-linear-gradient(90deg,transparent,transparent 4%,rgba(148,163,184,.03) 4%,rgba(148,163,184,.03) 5%),linear-gradient(180deg,#1a1a1a,#050505)", color: "#e2e8f0", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dark", category: "Worship", tags: ["organ", "pipes", "church"] },
-  { id: "worship-choir-loft", name: "Choir Loft", bg: "#1a0a0a", gradient: "radial-gradient(ellipse at 50% 60%,rgba(251,191,36,.06),transparent 70%),linear-gradient(180deg,#1a0a0a,#0a0505)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Worship", tags: ["choir", "loft", "warm"] },
-];
-
-/* ── Worship — Contemporary ── */
-const WORSHIP_CONTEMPORARY: BuildOpts[] = [
-  { id: "worship-modern-stage", name: "Modern Stage", bg: "#0a0a12", gradient: "radial-gradient(ellipse at 50% 80%,rgba(251,191,36,.08),transparent 60%),linear-gradient(180deg,#0a0a12,#030308)", color: "#fef3c7", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "modern", category: "Worship", tags: ["modern", "stage", "contemporary"] },
-  { id: "worship-auditorium", name: "Auditorium", bg: "#050508", gradient: "radial-gradient(ellipse at 50% 40%,rgba(99,102,241,.08),transparent 60%),linear-gradient(180deg,#0a0a14,#050508)", color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Worship", tags: ["auditorium", "stage", "blue"] },
-  { id: "worship-worship-night", name: "Worship Night", bg: "#0a0005", gradient: "radial-gradient(ellipse at 50% 70%,rgba(239,68,68,.06),rgba(251,191,36,.04),transparent 70%),linear-gradient(180deg,#0a0005,#050002)", color: "#fef2f2", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["night", "worship", "ambient"] },
-  { id: "worship-praise-rising", name: "Praise Rising", bg: "#1a0a00", gradient: "linear-gradient(180deg,rgba(251,191,36,.08),rgba(234,88,12,.04),#1a0a00 80%)", color: "#fffbeb", fontEn: "Montserrat", fontTa: "Catamaran", weight: 600, shadow: "soft", mood: "warm", category: "Worship", tags: ["praise", "rising", "warm"] },
-  { id: "worship-worship-dawn", name: "Worship Dawn", bg: "#1a1410", gradient: "linear-gradient(180deg,rgba(251,146,60,.06),rgba(251,191,36,.04),rgba(147,51,234,.02),#1a1410 90%)", color: "#ffedd5", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Worship", tags: ["dawn", "morning", "gentle"] },
-  { id: "worship-sunlight-beams", name: "Sunlight Beams", bg: "#0a0a1a", gradient: "linear-gradient(135deg,rgba(253,224,71,.08),transparent 40%,rgba(147,197,253,.04) 70%,transparent),linear-gradient(180deg,#0a0a1a,#050510)", color: "#fefce8", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Worship", tags: ["sunlight", "beams", "light"] },
-];
-
-/* ── Worship — Traditional ── */
-const WORSHIP_TRADITIONAL: BuildOpts[] = [
-  { id: "worship-hymn-books", name: "Hymn Books", bg: "#0a0a2e", gradient: "radial-gradient(ellipse at 50% 30%,rgba(251,191,36,.08),#0a0a2e 80%)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "classic", category: "Worship", tags: ["hymn", "traditional", "classic"] },
-  { id: "worship-gospel-joy", name: "Gospel Joy", bg: "#1a0a00", gradient: "linear-gradient(135deg,rgba(251,191,36,.12),rgba(234,88,12,.08),rgba(220,38,38,.04))", color: "#fff7ed", fontEn: "Montserrat", fontTa: "Catamaran", weight: 600, shadow: "soft", mood: "warm", category: "Worship", tags: ["gospel", "joy", "vibrant"] },
-  { id: "worship-revival-fire", name: "Revival Fire", bg: "#0a0000", gradient: "radial-gradient(ellipse at 50% 80%,rgba(239,68,68,.12),rgba(251,146,60,.06),transparent 70%),linear-gradient(180deg,#1a0505,#0a0000)", color: "#fef2f2", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["revival", "fire", "passion"] },
-  { id: "worship-sanctuary", name: "Sanctuary", bg: "#14100a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(180,120,60,.08),transparent 70%),linear-gradient(180deg,#1a1410,#0a0806)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Worship", tags: ["sanctuary", "wood", "warm"] },
-  { id: "worship-altar-call", name: "Altar Call", bg: "#0a0500", gradient: "radial-gradient(ellipse at 50% 60%,rgba(251,191,36,.1),rgba(180,120,60,.04),transparent 70%),linear-gradient(180deg,#0a0500,#050200)", color: "#fefce8", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Worship", tags: ["altar", "prayer", "soft"] },
-];
-
-/* ── Worship — Sacred ── */
-const WORSHIP_SACRED: BuildOpts[] = [
-  { id: "worship-holy-light", name: "Holy Light", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.06),rgba(253,224,71,.04),transparent 70%),linear-gradient(180deg,#0a0a1a,#050510)", color: "#f0f4ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "gentle", category: "Worship", tags: ["holy", "light", "sacred"] },
-  { id: "worship-divine-mercy", name: "Divine Mercy", bg: "#0a1420", gradient: "radial-gradient(ellipse at 50% 40%,rgba(147,197,253,.08),rgba(59,130,246,.04),transparent 70%),linear-gradient(180deg,#0a1420,#050a12)", color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "gentle", category: "Worship", tags: ["divine", "mercy", "peaceful"] },
-  { id: "worship-sacred-heart", name: "Sacred Heart", bg: "#1a0505", gradient: "radial-gradient(ellipse at 50% 40%,rgba(220,38,38,.1),rgba(251,191,36,.04),transparent 70%),linear-gradient(180deg,#1a0505,#0a0202)", color: "#fef2f2", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["sacred", "heart", "love"] },
-  { id: "worship-trinity", name: "Trinity", bg: "#0a0a1a", gradient: "linear-gradient(135deg,rgba(59,130,246,.08),rgba(147,51,234,.06),rgba(251,191,36,.04)),linear-gradient(180deg,#0a0a1a,#050510)", color: "#f0f4ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "cool", category: "Worship", tags: ["trinity", "three", "divine"] },
-  { id: "worship-pentecost", name: "Pentecost", bg: "#1a0500", gradient: "radial-gradient(ellipse at 50% 60%,rgba(239,68,68,.1),rgba(251,146,60,.06),transparent 70%),linear-gradient(180deg,#1a0500,#0a0200)", color: "#fef2f2", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "deep", mood: "vibrant", category: "Worship", tags: ["pentecost", "fire", "spirit"] },
-  { id: "worship-advent-purple", name: "Advent Purple", bg: "#0a0014", gradient: "radial-gradient(ellipse at 50% 30%,rgba(147,51,234,.12),rgba(88,28,135,.06),#0a0014 85%)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Worship", tags: ["advent", "purple", "hope"] },
-  { id: "worship-easter-joy", name: "Easter Joy", bg: "#0a0a2e", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.12),rgba(255,255,255,.04),#0a0a2e 85%)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Worship", tags: ["easter", "joy", "gold"] },
-  { id: "worship-christmas-star", name: "Christmas Star", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 30% 20%,rgba(253,224,71,.1),transparent 60%),linear-gradient(180deg,#0a0a1a,#050510)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", letterSpacing: 2, mood: "warm", category: "Worship", tags: ["christmas", "star", "nativity"] },
-];
-
-/* ── Bible ── */
-const BIBLE_THEMES: BuildOpts[] = [
-  { id: "bible-ancient-parchment", name: "Ancient Parchment", bg: "#2a1a0a", gradient: "linear-gradient(180deg,#3a2a1a,#2a1a0a,#1a0e06)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "soft", mood: "classic", category: "Bible", tags: ["parchment", "ancient", "scroll"] },
-  { id: "bible-scripture-scroll", name: "Scripture Scroll", bg: "#1a1410", gradient: "linear-gradient(135deg,#2a2018,#1a1410,#0a0806)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "soft", mood: "classic", category: "Bible", tags: ["scroll", "scripture", "vintage"] },
-  { id: "bible-scholar", name: "Bible Scholar", bg: "#0a1a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(34,197,94,.06),#0a1a0a 85%)", color: "#ecfdf5", fontEn: "Georgia", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "earthy", category: "Bible", tags: ["scholar", "study", "green"] },
-  { id: "bible-torah-scroll", name: "Torah Scroll", bg: "#0a0a2e", gradient: "linear-gradient(135deg,rgba(59,130,246,.06),rgba(30,58,138,.04),#0a0a2e)", color: "#e0e7ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "classic", category: "Bible", tags: ["torah", "scroll", "blue"] },
-  { id: "bible-gospel-light", name: "Gospel Light", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.08),rgba(255,255,255,.02),#0a0a1a 85%)", color: "#fefce8", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Bible", tags: ["gospel", "light", "radiant"] },
-  { id: "bible-scripture-study", name: "Scripture Study", bg: "#1a1410", gradient: "radial-gradient(ellipse at 50% 40%,rgba(251,191,36,.06),transparent 70%),linear-gradient(180deg,#1a1410,#0a0806)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "soft", mood: "warm", category: "Bible", tags: ["study", "learning", "warm"] },
-  { id: "bible-bible-journey", name: "Bible Journey", bg: "#0a1a0a", gradient: "linear-gradient(135deg,rgba(34,197,94,.04),rgba(22,163,74,.03),#0a1a0a)", color: "#ecfdf5", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "earthy", category: "Bible", tags: ["journey", "nature", "growth"] },
-  { id: "bible-word-of-god", name: "Word of God", bg: "#0a000a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(220,38,38,.08),rgba(251,191,36,.04),#0a000a 85%)", color: "#fef2f2", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 600, shadow: "deep", mood: "dramatic", category: "Bible", tags: ["word", "god", "bible"] },
-  { id: "bible-biblical-times", name: "Biblical Times", bg: "#1a1410", gradient: "linear-gradient(180deg,#2a1a0a,#1a1410,#0a0806)", color: "#fef3c7", fontEn: "Georgia", fontTa: "Noto Serif Tamil", weight: 400, shadow: "soft", mood: "earthy", category: "Bible", tags: ["biblical", "times", "historical"] },
-  { id: "bible-covenant", name: "Covenant", bg: "#00001a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(99,102,241,.08),rgba(147,51,234,.04),#00001a 85%)", color: "#e0e7ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "cool", category: "Bible", tags: ["covenant", "promise", "blue"] },
-  { id: "bible-prophecy", name: "Prophecy", bg: "#0a0014", gradient: "radial-gradient(ellipse at 50% 30%,rgba(147,51,234,.1),rgba(251,191,36,.04),#0a0014 85%)", color: "#f3e8ff", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Bible", tags: ["prophecy", "vision", "purple"] },
-  { id: "bible-wisdom", name: "Wisdom", bg: "#0a0a2e", gradient: "linear-gradient(135deg,rgba(99,102,241,.06),rgba(148,163,184,.04),#0a0a2e)", color: "#e0e7ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "cool", category: "Bible", tags: ["wisdom", "proverbs", "elegant"] },
-  { id: "bible-psalm", name: "Psalm", bg: "#0a1420", gradient: "radial-gradient(ellipse at 50% 40%,rgba(147,197,253,.06),rgba(59,130,246,.03),#0a1420 85%)", color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "serene", category: "Bible", tags: ["psalm", "peaceful", "blue"] },
-  { id: "bible-proverb", name: "Proverb", bg: "#1a1400", gradient: "radial-gradient(ellipse at 50% 30%,rgba(251,191,36,.08),rgba(146,64,14,.04),#1a1400 85%)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "soft", mood: "warm", category: "Bible", tags: ["proverb", "wisdom", "gold"] },
-  { id: "bible-revelation", name: "Revelation", bg: "#0a0005", gradient: "radial-gradient(ellipse at 50% 30%,rgba(147,51,234,.1),rgba(239,68,68,.04),transparent 70%),linear-gradient(180deg,#0a0005,#050002)", color: "#f3e8ff", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 600, shadow: "deep", mood: "dramatic", category: "Bible", tags: ["revelation", "apocalypse", "vision"] },
-];
-
-/* ── Prayer ── */
-const PRAYER_THEMES: BuildOpts[] = [
-  { id: "prayer-candlelight", name: "Candlelight Prayer", bg: "#0a0500", gradient: "radial-gradient(ellipse at 50% 80%,rgba(251,191,36,.08),rgba(234,88,12,.03),transparent 60%),linear-gradient(180deg,#0a0500,#050200)", color: "#fef3c7", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Prayer", tags: ["candle", "prayer", "quiet"] },
-  { id: "prayer-silent", name: "Silent Prayer", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(99,102,241,.04),transparent 70%),linear-gradient(180deg,#0a0a1a,#050510)", color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", mood: "serene", category: "Prayer", tags: ["silent", "quiet", "peaceful"] },
-  { id: "prayer-meditation", name: "Meditation", bg: "#001a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(52,211,153,.04),transparent 70%),linear-gradient(180deg,#001a0a,#000a04)", color: "#ecfdf5", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", mood: "serene", category: "Prayer", tags: ["meditation", "calm", "green"] },
-  { id: "prayer-contemplation", name: "Contemplation", bg: "#0a0014", gradient: "radial-gradient(ellipse at 50% 30%,rgba(167,139,250,.04),transparent 70%),linear-gradient(180deg,#0a0014,#05000a)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "gentle", category: "Prayer", tags: ["contemplation", "purple", "soft"] },
-  { id: "prayer-intercession", name: "Intercession", bg: "#0a0005", gradient: "radial-gradient(ellipse at 50% 40%,rgba(239,68,68,.06),rgba(251,191,36,.03),transparent 70%),linear-gradient(180deg,#0a0005,#050002)", color: "#fef2f2", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Prayer", tags: ["intercession", "prayer", "earnest"] },
-  { id: "prayer-gratitude", name: "Gratitude", bg: "#1a0e06", gradient: "radial-gradient(ellipse at 50% 50%,rgba(251,191,36,.06),transparent 60%),linear-gradient(180deg,#1a0e06,#0a0604)", color: "#fffbeb", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Prayer", tags: ["gratitude", "thankful", "warm"] },
-  { id: "prayer-surrender", name: "Surrender", bg: "#0a0a14", gradient: "radial-gradient(ellipse at 50% 30%,rgba(255,255,255,.03),transparent 70%),linear-gradient(180deg,#0a0a14,#05050a)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", mood: "gentle", category: "Prayer", tags: ["surrender", "peace", "white"] },
-  { id: "prayer-seek-first", name: "Seek First", bg: "#0a0a00", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.06),transparent 60%),linear-gradient(180deg,#0a0a00,#050500)", color: "#fefce8", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Prayer", tags: ["seek", "kingdom", "gold"] },
-  { id: "prayer-quiet-time", name: "Quiet Time", bg: "#0a0a12", gradient: "linear-gradient(180deg,rgba(148,163,184,.03),#0a0a12)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "serene", category: "Prayer", tags: ["quiet", "time", "still"] },
-  { id: "prayer-sanctuary-peace", name: "Sanctuary Peace", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(147,197,253,.04),rgba(167,139,250,.02),transparent 60%),linear-gradient(180deg,#0a0a1a,#050510)", color: "#f0f4ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "serene", category: "Prayer", tags: ["sanctuary", "peace", "calm"] },
-];
-
-/* ── Seasonal ── */
-const SEASONAL_THEMES: BuildOpts[] = [
-  { id: "seasonal-advent-hope", name: "Advent Hope", bg: "#0a0014", gradient: "radial-gradient(ellipse at 50% 30%,rgba(147,51,234,.1),rgba(30,27,75,.06),#0a0014 85%)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Seasonal", tags: ["advent", "hope", "purple"] },
-  { id: "seasonal-christmas-joy", name: "Christmas Joy", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(220,38,38,.08),rgba(251,191,36,.04),rgba(16,185,129,.02),#0a0a1a 85%)", color: "#fef2f2", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Seasonal", tags: ["christmas", "joy", "holiday"] },
-  { id: "seasonal-epiphany", name: "Epiphany", bg: "#0a0a2e", gradient: "radial-gradient(ellipse at 30% 20%,rgba(253,224,71,.1),transparent 60%),linear-gradient(180deg,#0a0a2e,#050518)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "warm", category: "Seasonal", tags: ["epiphany", "star", "reveal"] },
-  { id: "seasonal-lent", name: "Lent", bg: "#0a050a", gradient: "linear-gradient(180deg,rgba(147,51,234,.06),rgba(88,28,135,.04),#0a050a)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "dark", category: "Seasonal", tags: ["lent", "repentance", "purple"] },
-  { id: "seasonal-easter-glory", name: "Easter Glory", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.12),rgba(255,255,255,.04),#0a0a1a 85%)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 600, shadow: "deep", mood: "warm", category: "Seasonal", tags: ["easter", "glory", "resurrection"] },
-  { id: "seasonal-pentecost-fire", name: "Pentecost Fire", bg: "#0a0000", gradient: "radial-gradient(ellipse at 50% 60%,rgba(239,68,68,.1),rgba(251,146,60,.06),transparent 70%),linear-gradient(180deg,#1a0202,#0a0000)", color: "#fef2f2", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "deep", mood: "vibrant", category: "Seasonal", tags: ["pentecost", "fire", "spirit"] },
-  { id: "seasonal-harvest-gold", name: "Harvest Gold", bg: "#1a1400", gradient: "radial-gradient(ellipse at 50% 50%,rgba(251,191,36,.08),rgba(217,119,6,.04),#1a1400 85%)", color: "#fffbeb", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "soft", mood: "warm", category: "Seasonal", tags: ["harvest", "gold", "thanksgiving"] },
-  { id: "seasonal-thanksgiving", name: "Thanksgiving", bg: "#1a0e00", gradient: "linear-gradient(135deg,rgba(251,191,36,.08),rgba(234,88,12,.06),rgba(180,120,60,.04))", color: "#fff7ed", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "soft", mood: "warm", category: "Seasonal", tags: ["thanksgiving", "harvest", "autumn"] },
-  { id: "seasonal-new-year", name: "New Year", bg: "#0a0a2e", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.08),rgba(148,163,184,.04),#0a0a2e 85%)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Seasonal", tags: ["new year", "fresh", "start"] },
-  { id: "seasonal-summer-praise", name: "Summer Praise", bg: "#0a1a1a", gradient: "radial-gradient(ellipse at 50% 30%,rgba(103,232,249,.06),rgba(251,191,36,.04),#0a1a1a 85%)", color: "#ecfeff", fontEn: "Montserrat", fontTa: "Catamaran", weight: 500, shadow: "soft", mood: "vibrant", category: "Seasonal", tags: ["summer", "praise", "bright"] },
-];
-
-/* ── Events ── */
-const EVENTS_THEMES: BuildOpts[] = [
-  { id: "events-youth-rally", name: "Youth Rally", bg: "#0a0a2e", gradient: "linear-gradient(135deg,rgba(59,130,246,.1),rgba(16,185,129,.06),rgba(139,92,246,.04))", color: "#e0e7ff", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "soft", mood: "vibrant", category: "Events", tags: ["youth", "rally", "vibrant"] },
-  { id: "events-conference", name: "Conference", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(99,102,241,.06),transparent 60%),linear-gradient(180deg,#0a0a1a,#050510)", color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "modern", category: "Events", tags: ["conference", "event", "modern"] },
-  { id: "events-camp-meeting", name: "Camp Meeting", bg: "#0a1a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(34,197,94,.04),rgba(22,163,74,.03),#0a1a0a 85%)", color: "#ecfdf5", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "earthy", category: "Events", tags: ["camp", "outdoor", "nature"] },
-  { id: "events-revival", name: "Revival", bg: "#0a0000", gradient: "radial-gradient(ellipse at 50% 60%,rgba(239,68,68,.1),rgba(251,146,60,.06),transparent 60%),linear-gradient(180deg,#1a0202,#0a0000)", color: "#fef2f2", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "deep", mood: "vibrant", category: "Events", tags: ["revival", "fire", "passion"] },
-  { id: "events-wedding", name: "Wedding", bg: "#1a1a2e", gradient: "radial-gradient(ellipse at 50% 30%,rgba(253,224,71,.08),rgba(255,255,255,.04),#1a1a2e 85%)", color: "#fefce8", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Events", tags: ["wedding", "gold", "elegant"] },
-  { id: "events-baptism", name: "Baptism", bg: "#0a1420", gradient: "radial-gradient(ellipse at 50% 40%,rgba(147,197,253,.06),rgba(59,130,246,.03),#0a1420 85%)", color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "serene", category: "Events", tags: ["baptism", "water", "clean"] },
-  { id: "events-communion", name: "Communion", bg: "#0a0505", gradient: "radial-gradient(ellipse at 50% 40%,rgba(220,38,38,.06),rgba(251,191,36,.03),#0a0505 85%)", color: "#fef2f2", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Events", tags: ["communion", "sacrament", "red"] },
-  { id: "events-memorial", name: "Memorial", bg: "#0a0a14", gradient: "linear-gradient(180deg,rgba(148,163,184,.04),#0a0a14)", color: "#e2e8f0", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "gentle", category: "Events", tags: ["memorial", "remembrance", "gentle"] },
-  { id: "events-ordination", name: "Ordination", bg: "#0a0014", gradient: "radial-gradient(ellipse at 50% 30%,rgba(147,51,234,.08),rgba(251,191,36,.04),#0a0014 85%)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "dramatic", category: "Events", tags: ["ordination", "calling", "purple"] },
-  { id: "events-mission", name: "Mission", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(251,191,36,.04),rgba(59,130,246,.03),#0a0a1a 85%)", color: "#f0f4ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Events", tags: ["mission", "global", "world"] },
-];
-
-/* ── Modern ── */
-const MODERN_THEMES: BuildOpts[] = [
-  { id: "modern-glass-worship", name: "Glass Worship", bg: "#0a0a1a", gradient: "linear-gradient(135deg,rgba(148,163,184,.06),rgba(99,102,241,.04),rgba(167,139,250,.03),#0a0a1a)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "modern", category: "Modern", tags: ["glass", "frosted", "modern"] },
-  { id: "modern-edge", name: "Edge", bg: "#050505", gradient: "linear-gradient(135deg,#0a0a1a,#050505,#0a0a0a)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "dark", category: "Modern", tags: ["edge", "sharp", "dark"] },
-  { id: "modern-monochrome", name: "Monochrome", bg: "#050505", gradient: "linear-gradient(180deg,rgba(148,163,184,.04),#050505)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "dark", category: "Modern", tags: ["monochrome", "black", "white"] },
-  { id: "modern-monochrome-light", name: "Monochrome Light", bg: "#f8fafc", gradient: "linear-gradient(180deg,rgba(148,163,184,.08),#f8fafc)", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "none", mood: "light", category: "Modern", tags: ["monochrome", "light", "clean"] },
-  { id: "modern-premium-dark", name: "Premium Dark", bg: "#000000", gradient: "radial-gradient(ellipse at 50% 30%,rgba(148,163,184,.04),transparent 70%),linear-gradient(180deg,#050505,#000000)", color: "#f8fafc", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "dark", category: "Modern", tags: ["premium", "dark", "luxury"] },
-  { id: "modern-premium-light", name: "Premium Light", bg: "#fafafa", gradient: "radial-gradient(ellipse at 50% 30%,rgba(99,102,241,.04),transparent 70%),linear-gradient(180deg,#ffffff,#f0f0f0)", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", mood: "light", category: "Modern", tags: ["premium", "light", "clean"] },
-  { id: "modern-luxury", name: "Luxury", bg: "#050302", gradient: "radial-gradient(ellipse at 50% 30%,rgba(251,191,36,.08),transparent 60%),linear-gradient(180deg,#0a0604,#050302)", color: "#fef3c7", fontEn: "Playfair Display", fontTa: "Noto Serif Tamil", weight: 500, shadow: "deep", mood: "luxury", category: "Modern", tags: ["luxury", "gold", "premium"] },
-  { id: "modern-sleek", name: "Sleek", bg: "#050508", gradient: "linear-gradient(135deg,rgba(99,102,241,.04),rgba(139,92,246,.03),#050508)", color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Modern", tags: ["sleek", "tech", "modern"] },
-  { id: "modern-contemporary", name: "Contemporary", bg: "#0a0a1a", gradient: "linear-gradient(180deg,rgba(59,130,246,.06),#0a0a1a)", color: "#e0e7ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Modern", tags: ["contemporary", "blue", "clean"] },
-  { id: "modern-urban", name: "Urban", bg: "#0a0a0a", gradient: "linear-gradient(180deg,rgba(148,163,184,.04),#0a0a0a)", color: "#e2e8f0", fontEn: "Montserrat", fontTa: "Catamaran", weight: 600, shadow: "deep", mood: "dark", category: "Modern", tags: ["urban", "city", "modern"] },
-  { id: "modern-minimalist", name: "Minimalist", bg: "#fafafa", gradient: "linear-gradient(180deg,#ffffff,#f5f5f5)", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", mood: "light", category: "Modern", tags: ["minimalist", "clean", "simple"] },
-  { id: "modern-pure-white", name: "Pure White", bg: "#ffffff", gradient: "radial-gradient(ellipse at 50% 30%,rgba(148,163,184,.03),transparent 70%)", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", mood: "light", category: "Modern", tags: ["pure", "white", "clean"] },
-  { id: "modern-deep-black", name: "Deep Black", bg: "#000000", gradient: "radial-gradient(ellipse at 50% 30%,rgba(148,163,184,.02),transparent 60%)", color: "#f8fafc", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "dark", category: "Modern", tags: ["deep", "black", "pure"] },
-  { id: "modern-charcoal", name: "Charcoal", bg: "#0a0a0a", gradient: "linear-gradient(180deg,#141414,#0a0a0a,#050505)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "dark", category: "Modern", tags: ["charcoal", "gray", "dark"] },
-  { id: "modern-slate", name: "Slate", bg: "#0a0a14", gradient: "linear-gradient(180deg,rgba(148,163,184,.04),#0a0a14)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "cool", category: "Modern", tags: ["slate", "blue-gray", "modern"] },
-];
-
-/* ── Minimal ── */
-const MINIMAL_THEMES: BuildOpts[] = [
-  { id: "minimal-black", name: "Minimal Black", bg: "#000000", color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "soft", mood: "dark", category: "Minimal", tags: ["black", "minimal", "clean"] },
-  { id: "minimal-white", name: "Minimal White", bg: "#ffffff", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "none", mood: "light", category: "Minimal", tags: ["white", "minimal", "clean"] },
-  { id: "minimal-warm-gray", name: "Warm Minimal", bg: "#1a1410", gradient: "linear-gradient(180deg,#1a1410,#14100a)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "warm", category: "Minimal", tags: ["warm", "gray", "minimal"] },
-  { id: "minimal-cool-gray", name: "Cool Minimal", bg: "#0a0a14", gradient: "linear-gradient(180deg,#0a0a14,#050510)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "cool", category: "Minimal", tags: ["cool", "gray", "minimal"] },
-  { id: "minimal-soft-gray", name: "Soft Gray", bg: "#141414", gradient: "radial-gradient(ellipse at 50% 30%,rgba(148,163,184,.03),#141414)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "dark", category: "Minimal", tags: ["soft", "gray", "subtle"] },
-  { id: "minimal-warm-cream", name: "Warm Cream", bg: "#f5f0e8", gradient: "radial-gradient(ellipse at 50% 30%,rgba(251,191,36,.03),#f5f0e8)", color: "#1a1410", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "none", mood: "warm", category: "Minimal", tags: ["cream", "warm", "soft"] },
-  { id: "minimal-frost", name: "Frost", bg: "#0a1420", gradient: "linear-gradient(180deg,rgba(147,197,253,.04),#0a1420)", color: "#e0f2fe", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "cool", category: "Minimal", tags: ["frost", "cold", "blue"] },
-  { id: "minimal-shadow", name: "Shadow", bg: "#050505", gradient: "radial-gradient(ellipse at 50% 60%,rgba(0,0,0,.2),#050505)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", mood: "dark", category: "Minimal", tags: ["shadow", "dark", "depth"] },
-  { id: "minimal-airy", name: "Airy", bg: "#f0f4f8", gradient: "linear-gradient(180deg,#f8fafc,#f0f4f8)", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", mood: "light", category: "Minimal", tags: ["airy", "light", "open"] },
-  { id: "minimal-pure", name: "Pure", bg: "#fafafa", color: "#1a1a1a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "none", mood: "light", category: "Minimal", tags: ["pure", "clean", "simple"] },
-  { id: "minimal-subtle", name: "Subtle", bg: "#0a0a0a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(255,255,255,.02),#0a0a0a)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 300, shadow: "deep", mood: "dark", category: "Minimal", tags: ["subtle", "dark", "soft"] },
-  { id: "minimal-clean", name: "Clean", bg: "#ffffff", color: "#0f172a", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "none", mood: "light", category: "Minimal", tags: ["clean", "white", "modern"] },
-];
-
-/* ── Specialty ── */
-const SPECIALTY_THEMES: BuildOpts[] = [
-  { id: "specialty-high-contrast-black", name: "High Contrast Black", bg: "#000000", color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 700, shadow: "none", mood: "dark", category: "Specialty", tags: ["high contrast", "accessible", "bold"] },
-  { id: "specialty-high-contrast-white", name: "High Contrast White", bg: "#ffffff", color: "#000000", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 700, shadow: "none", mood: "light", category: "Specialty", tags: ["high contrast", "accessible", "bold"] },
-  { id: "specialty-large-print", name: "Large Print", bg: "#050505", color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 700, shadow: "deep", mood: "dark", category: "Specialty", tags: ["large print", "readable", "big"] },
-  { id: "specialty-accessible", name: "Accessible", bg: "#0a0a1a", color: "#f0f4ff", fontEn: "Open Sans", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "cool", category: "Specialty", tags: ["accessible", "wcag", "readable"] },
-  { id: "specialty-dark-mode", name: "Dark Mode", bg: "#000000", gradient: "radial-gradient(ellipse at 50% 30%,rgba(99,102,241,.03),#000000)", color: "#e2e8f0", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 400, shadow: "deep", mood: "dark", category: "Specialty", tags: ["dark mode", "eye-friendly"] },
-  { id: "specialty-outdoor", name: "Outdoor Bright", bg: "#f0f4f8", color: "#0f172a", fontEn: "Montserrat", fontTa: "Catamaran", weight: 700, shadow: "none", mood: "light", category: "Specialty", tags: ["outdoor", "bright", "sunlight"] },
-  { id: "specialty-projector", name: "Projector Optimized", bg: "#050505", color: "#ffffff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "dark", category: "Specialty", tags: ["projector", "optimized", "clear"] },
-  { id: "specialty-stream", name: "Stream Ready", bg: "#0a0a1a", gradient: "radial-gradient(ellipse at 50% 40%,rgba(99,102,241,.04),#0a0a1a)", color: "#f0f4ff", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 500, shadow: "deep", mood: "modern", category: "Specialty", tags: ["stream", "broadcast", "video"] },
-  { id: "specialty-broadcast", name: "Broadcast", bg: "#0a0a0a", gradient: "linear-gradient(180deg,rgba(59,130,246,.04),#0a0a0a)", color: "#f1f5f9", fontEn: "Inter", fontTa: "Noto Sans Tamil", weight: 600, shadow: "deep", mood: "modern", category: "Specialty", tags: ["broadcast", "tv", "professional"] },
-  { id: "specialty-dawn-light", name: "Dawn Light", bg: "#f5f0e8", gradient: "linear-gradient(135deg,rgba(251,146,60,.04),rgba(253,224,71,.03),#f5f0e8)", color: "#1a1410", fontEn: "Lora", fontTa: "Noto Serif Tamil", weight: 400, shadow: "none", mood: "warm", category: "Specialty", tags: ["dawn", "light", "morning"] },
-  { id: "specialty-evening-calm", name: "Evening Calm", bg: "#0a0a1a", gradient: "linear-gradient(180deg,rgba(147,51,234,.04),rgba(30,27,75,.03),#0a0a1a)", color: "#f3e8ff", fontEn: "Cormorant Garamond", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "serene", category: "Specialty", tags: ["evening", "calm", "sunset"] },
-  { id: "specialty-vintage", name: "Vintage Worship", bg: "#1a1410", gradient: "linear-gradient(135deg,#2a2018,#1a1410,#0a0806)", color: "#fef3c7", fontEn: "Georgia", fontTa: "Noto Serif Tamil", weight: 400, shadow: "deep", mood: "classic", category: "Specialty", tags: ["vintage", "classic", "warm"] },
-];
-
-const ALL_THEMES: BuildOpts[] = [
-  ...WORSHIP_ROYAL,
-  ...WORSHIP_CATHEDRAL,
-  ...WORSHIP_CONTEMPORARY,
-  ...WORSHIP_TRADITIONAL,
-  ...WORSHIP_SACRED,
-  ...BIBLE_THEMES,
-  ...PRAYER_THEMES,
-  ...SEASONAL_THEMES,
-  ...EVENTS_THEMES,
-  ...MODERN_THEMES,
-  ...MINIMAL_THEMES,
-  ...SPECIALTY_THEMES,
-];
-
-export const TEMPLATE_PRESETS: TemplatePreset[] = ALL_THEMES.map(build);
+export const TEMPLATE_PRESETS: TemplatePreset[] = THEMES.map(build);
