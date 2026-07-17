@@ -12,6 +12,7 @@ import { useCustomTemplates } from "@/stores/custom-templates.store";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { ThemeGalleryDialog } from "./ThemeGalleryDialog";
 import { cn } from "@/lib/utils";
+import { ThemeAnimation } from "@/features/workspace/theme-gallery/ThemeAnimation";
 
 const QUICK_IDS = [
   "worship-royal-sapphire",
@@ -105,9 +106,9 @@ export function TemplatesStrip() {
                 >
                   <div className="relative flex h-12 items-center justify-center" style={bgStyle}>
                     {t.background.animation && t.background.animation !== "none" && (
-                      <div
-                        className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${t.background.animation}`}
-                      />
+                      <div className="pointer-events-none absolute inset-0 overflow-hidden">
+                        <ThemeAnimation animation={t.background.animation} />
+                      </div>
                     )}
                     <span
                       className="relative z-10 text-[18px] font-bold leading-none"
