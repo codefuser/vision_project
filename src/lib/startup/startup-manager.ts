@@ -144,6 +144,18 @@ export function buildSteps(): StartupStep[] {
       },
     },
     {
+      id: "themes",
+      label: "Preloading Theme Library…",
+      weight: 6,
+      run: async () => {
+        const [{ TEMPLATE_PRESETS }, { themeCache }] = await Promise.all([
+          import("@/lib/templates/presets"),
+          import("@/features/workspace/theme-gallery/ThemeCache"),
+        ]);
+        themeCache.prewarm(TEMPLATE_PRESETS);
+      },
+    },
+    {
       id: "library",
       label: "Preparing Media Library…",
       weight: 8,

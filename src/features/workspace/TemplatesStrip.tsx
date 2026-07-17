@@ -104,10 +104,8 @@ export function TemplatesStrip() {
                   )}
                 >
                   <div className="relative flex h-12 items-center justify-center" style={bgStyle}>
-                    {t.background.animation && t.background.animation !== "none" && (
-                      <div
-                        className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${t.background.animation}`}
-                      />
+                    {t.background.gradient && (
+                      <div className="pointer-events-none absolute inset-0" style={{ background: t.background.gradient }} />
                     )}
                     <span
                       className="relative z-10 text-[18px] font-bold leading-none"

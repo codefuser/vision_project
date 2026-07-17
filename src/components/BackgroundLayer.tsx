@@ -1,21 +1,21 @@
 /**
  * BackgroundLayer — renders a color / gradient / image / video underlay for
- * projected text, plus an optional animated decorative overlay (particles,
- * bokeh, light rays, sparkles, floating cross, soft glow, gradient shift)
- * and a coloured overlay tint.
+ * projected text, plus an optional ThemeAnimation decorative overlay shared
+ * with the Theme Gallery preview, and a coloured overlay tint.
  *
  * Layer order (bottom → top, inside this component):
  *   1. Base color / gradient
  *   2. Media (image or video)
  *   3. Coloured overlay tint
- *   4. Animation decorative overlay
+ *   4. ThemeAnimation scene (shared with ThemeCard preview)
  *
- * Animations are pure CSS (see styles.css `.bg-anim-*`). The media element
- * is keyed on `mediaId` alone so brightness / opacity / zoom slider drags
- * never reload the video.
+ * Uses the same ThemeAnimation component as the Theme Gallery so the
+ * projector output is pixel-identical to the preview card.
+ * The media element is keyed on `mediaId` alone so brightness / opacity /
+ * zoom slider drags never reload the video.
  */
 import { useEffect, useRef, useState } from "react";
-import type { BackgroundConfig, BackgroundAnimation } from "@/lib/broadcast";
+import type { BackgroundConfig } from "@/lib/broadcast";
 import { db } from "@/db/schema";
 import type { MediaRecord } from "@/db/schema";
 import { getMedia } from "@/db/repo";
@@ -39,7 +39,7 @@ interface Resolved {
   positionX: number;
   positionY: number;
   gradient: string | null;
-  animation: BackgroundAnimation;
+  animation: string;
   overlayColor: string;
   overlayOpacity: number;
   videoLoop: boolean;
@@ -72,11 +72,7 @@ function withDefaults(bg: BackgroundConfig): Resolved {
 
 export function BackgroundLayer({ background }: Props) {
   const bg = withDefaults(background);
-  // Master toggles: if background is globally off, render nothing.
-  // Particles toggle suppresses particle-family animations; motion toggle
-  // suppresses everything else.
   const backgroundEnabled = useBackground((s) => s.backgroundEnabled);
-  const motionEnabled = useBackground((s) => s.motionEnabled);
 
   const [media, setMedia] = useState<MediaRecord | null>(null);
   const [url, setUrl] = useState<string | null>(null);
@@ -127,8 +123,6 @@ export function BackgroundLayer({ background }: Props) {
 
   if (!backgroundEnabled) return null;
 
-  const animationKind: BackgroundAnimation = !motionEnabled ? "none" : bg.animation;
-
   const overlay =
     bg.overlayOpacity > 0 ? (
       <div
@@ -138,19 +132,13 @@ export function BackgroundLayer({ background }: Props) {
     ) : null;
 
   if (bg.kind === "none")
-    return (
-      <>
-        {overlay}
-        <AnimationOverlay kind={animationKind} />
-      </>
-    );
+    return <>{overlay}</>;
 
   if (bg.kind === "color" || !media || !url) {
     return (
       <>
         <div className="absolute inset-0" style={{ background: bg.gradient ?? bg.color }} />
         {overlay}
-        <AnimationOverlay kind={animationKind} />
       </>
     );
   }
@@ -190,17 +178,6 @@ export function BackgroundLayer({ background }: Props) {
         />
       )}
       {overlay}
-      <AnimationOverlay kind={animationKind} />
     </>
-  );
-}
-
-function AnimationOverlay({ kind }: { kind: BackgroundAnimation }) {
-  if (!kind || kind === "none") return null;
-  return (
-    <div
-      className={`pointer-events-none absolute inset-0 overflow-hidden bg-anim-${kind}`}
-      aria-hidden
-    />
   );
 }
