@@ -408,21 +408,21 @@
    ============================================================ */
 
 @keyframes startup-logo-breath {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.03); opacity: 0.92; }
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.03); }
 }
 
 @keyframes startup-glow-pulse {
-  0%, 100% { opacity: 0.3; transform: scale(1); }
-  50% { opacity: 0.6; transform: scale(1.15); }
+  0%, 100% { opacity: 0.25; transform: scale(1); }
+  50% { opacity: 0.55; transform: scale(1.2); }
 }
 
-@keyframes startup-arc-spin {
-  to { transform: rotate(360deg); }
-}
-
-@keyframes startup-arc-spin-reverse {
-  to { transform: rotate(-360deg); }
+@keyframes startup-bar-wave {
+  0%, 100% { transform: scaleY(0.35); }
+  20% { transform: scaleY(0.85); }
+  40% { transform: scaleY(0.45); }
+  60% { transform: scaleY(0.95); }
+  80% { transform: scaleY(0.5); }
 }
 
 @keyframes startup-shimmer {
@@ -436,10 +436,10 @@
     opacity: 0;
   }
   10% {
-    opacity: 0.3;
+    opacity: 0.2;
   }
   90% {
-    opacity: 0.15;
+    opacity: 0.1;
   }
   100% {
     transform: translateY(-300px) translateX(40px) scale(0.3);
@@ -450,12 +450,6 @@
 @keyframes startup-fade-in-up {
   0% { opacity: 0; transform: translateY(12px); }
   100% { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes startup-complete-glow {
-  0% { opacity: 0.6; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.2); }
-  100% { opacity: 0; transform: scale(1.5); }
 }
 
 .startup-particle {
