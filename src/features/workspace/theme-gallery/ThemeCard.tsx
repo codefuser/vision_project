@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from "react";
+import { memo, useMemo, useState } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { cn } from "@/lib/utils";
 import { Star, Copy, Trash2, Pencil, Check } from "lucide-react";
@@ -42,7 +42,7 @@ function ThemeCardInner({
       fontSize: "clamp(11px, 2.4vw, 20px)",
       lineHeight: 1.3,
       textShadow: preset.text.shadow
-        ? `${preset.text.shadowColor ?? "#000"} 0 ${Math.min(preset.text.shadowBlur ?? 20, 30) * 0.15}px ${Math.min(preset.text.shadowBlur ?? 20, 30) * 0.3}px`
+        ? `${preset.text.shadowColor ?? "#000"} 0 2px 4px`
         : "none",
       textAlign: (preset.text.align ?? "center") as React.CSSProperties["textAlign"],
     }),
@@ -52,7 +52,6 @@ function ThemeCardInner({
       fontWeight,
       preset.text.shadow,
       preset.text.shadowColor,
-      preset.text.shadowBlur,
       preset.text.align,
     ],
   );
@@ -71,133 +70,96 @@ function ThemeCardInner({
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
       className={cn(
-        "group relative cursor-pointer overflow-hidden rounded-2xl transition-all duration-300 select-none",
+        "group relative cursor-pointer overflow-hidden rounded-xl transition-transform duration-200 select-none bg-card border border-border/50",
         "will-change-transform",
         isSelected
-          ? "ring-2 ring-primary/40 shadow-xl shadow-primary/10 scale-[1.01]"
-          : "shadow-sm hover:shadow-2xl hover:-translate-y-1 hover:scale-[1.015]",
+          ? "ring-2 ring-primary border-transparent scale-[1.01]"
+          : "hover:border-primary/50 hover:scale-[1.01]",
       )}
-      style={{ contain: "layout style" } as React.CSSProperties}
+      style={{ contentVisibility: "auto" } as React.CSSProperties}
     >
-      {/* Animated border gradient — visible on hover/selected */}
-      <div
-        className={cn(
-          "pointer-events-none absolute -inset-[2px] rounded-[18px] opacity-0 transition-opacity duration-500",
-          "bg-gradient-to-br from-primary/30 via-primary/10 to-primary/30 blur-sm",
-          (hovered || isSelected) && "opacity-100",
-        )}
-      />
-
-      {/* ── Preview ── */}
-      <div className="relative overflow-hidden rounded-2xl" style={{ aspectRatio: "16 / 9" }}>
-        <div className="absolute inset-0" style={{ background: bgGradient ?? bgColor }} />
-
-        {/* Tamil preview */}
+      <div className="relative overflow-hidden w-full h-full" style={{ aspectRatio: "16 / 9", background: bgGradient ?? bgColor }}>
+        {/* Scripture sample preview */}
         <div
-          className="absolute inset-0 flex items-center justify-center px-4 py-3"
+          className="absolute inset-0 flex flex-col items-center justify-center p-4 text-center"
           style={sampleStyle}
         >
-          <div className="line-clamp-3 text-balance leading-snug relative z-10">
-            <span>கர்த்தர் என்</span>
-            <br />
-            <span className="opacity-80">மேய்ப்பராயிருக்கிறார்</span>
+          <div className="relative z-10 text-balance leading-snug max-w-[95%] mx-auto flex flex-col items-center">
+            <div className="text-[clamp(8px,1.6vw,14px)] font-semibold opacity-70 tracking-wider uppercase mb-0.5 text-center">
+              Psalm 23:1
+            </div>
+            <div className="text-[clamp(10px,2.2vw,18px)] leading-tight text-center">
+              கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+            </div>
           </div>
         </div>
 
-        {/* Darken overlay on hover */}
-        <div
-          className={cn(
-            "absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent transition-opacity duration-300",
-            hovered ? "opacity-100" : "opacity-0",
-          )}
-        />
+        {/* Hover actions overlay */}
+        {hovered && (
+          <div className="absolute inset-0 bg-black/40 flex items-start justify-end p-2 gap-1 z-20">
+            <ActionBtn
+              onClick={(e) => {
+                e.stopPropagation();
+                onFavorite();
+              }}
+              title={isFavorite ? "Remove from favourites" : "Add to favourites"}
+            >
+              <Star className={cn("h-4 w-4", isFavorite && "fill-yellow-400 text-yellow-400")} />
+            </ActionBtn>
+            <ActionBtn
+              onClick={(e) => {
+                e.stopPropagation();
+                onDuplicate();
+              }}
+              title="Duplicate"
+            >
+              <Copy className="h-4 w-4" />
+            </ActionBtn>
+            {isCustom && onRename && (
+              <ActionBtn
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRename();
+                }}
+                title="Rename"
+              >
+                <Pencil className="h-4 w-4" />
+              </ActionBtn>
+            )}
+            {isCustom && (
+              <ActionBtn
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete();
+                }}
+                title="Delete"
+                hoverBg="hover:bg-red-500 hover:text-white text-red-100"
+              >
+                <Trash2 className="h-4 w-4" />
+              </ActionBtn>
+            )}
+          </div>
+        )}
 
         {/* Active badge */}
         {isSelected && (
-          <div className="absolute left-3 top-3 z-20 flex items-center gap-1.5 rounded-full bg-primary px-3 py-1 text-[10px] font-semibold text-primary-foreground shadow-lg shadow-primary/20">
+          <div className="absolute left-2 top-2 z-20 flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-bold text-primary-foreground shadow-sm">
             <Check className="h-3 w-3" />
-            Active
+            ACTIVE
           </div>
         )}
-
-        {/* Category badge */}
-        {!isSelected && (
-          <div className="absolute right-3 top-3 z-20">
-            <span
-              className={cn(
-                "rounded-full px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider backdrop-blur-sm",
-                isCustom ? "bg-purple-500/20 text-purple-200" : "bg-white/10 text-white/70",
-              )}
-            >
-              {isCustom ? "Custom" : preset.category}
-            </span>
-          </div>
-        )}
-
-        {/* Hover actions */}
-        <div
-          className={cn(
-            "absolute right-3 top-3 z-20 flex items-center gap-1 transition-all duration-200",
-            hovered
-              ? "translate-y-0 opacity-100"
-              : "translate-y-[-6px] opacity-0 pointer-events-none",
-          )}
-        >
-          <ActionBtn
-            onClick={(e) => {
-              e.stopPropagation();
-              onFavorite();
-            }}
-            title={isFavorite ? "Remove from favourites" : "Add to favourites"}
-          >
-            <Star className={cn("h-3.5 w-3.5", isFavorite && "fill-yellow-300 text-yellow-300")} />
-          </ActionBtn>
-          <ActionBtn
-            onClick={(e) => {
-              e.stopPropagation();
-              onDuplicate();
-            }}
-            title="Duplicate"
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </ActionBtn>
-          {isCustom && onRename && (
-            <ActionBtn
-              onClick={(e) => {
-                e.stopPropagation();
-                onRename();
-              }}
-              title="Rename"
-            >
-              <Pencil className="h-3.5 w-3.5" />
-            </ActionBtn>
-          )}
-          {isCustom && (
-            <ActionBtn
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete();
-              }}
-              title="Delete"
-              hoverBg="hover:bg-red-500/80"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </ActionBtn>
-          )}
-        </div>
       </div>
 
       {/* ── Info ── */}
-      <div className="relative z-10 bg-card px-3.5 py-3 rounded-b-2xl">
-        <div className="truncate text-[13px] font-semibold leading-snug text-foreground/90">
+      <div className="relative z-10 px-3 py-2.5">
+        <div className="truncate text-sm font-semibold text-foreground">
           {preset.name}
         </div>
-        <div className="mt-1 flex items-center gap-2">
-          <span className="text-[10px] font-medium text-muted-foreground/50 capitalize tracking-wide">
-            {preset.category}
-            {preset.mood ? ` · ${preset.mood}` : ""}
+        <div className="mt-0.5 flex items-center gap-1.5">
+          <span className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            {isCustom ? "Custom" : preset.category}
           </span>
-          {isFavorite && <span className="text-[9px] text-yellow-500/70">★</span>}
+          {isFavorite && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
         </div>
       </div>
     </div>
@@ -220,8 +182,8 @@ function ActionBtn({
       onClick={onClick}
       title={title}
       className={cn(
-        "flex h-7 w-7 items-center justify-center rounded-full bg-black/40 text-white/80 shadow-sm backdrop-blur-sm transition-all duration-150",
-        "hover:bg-white/20 hover:text-white active:scale-90",
+        "flex h-8 w-8 items-center justify-center rounded-md bg-black/60 text-white/90 transition-colors",
+        "hover:bg-white/20 hover:text-white",
         hoverBg,
       )}
     >

@@ -13,15 +13,14 @@ import { useWorkspace } from "@/features/workspace/workspace.store";
 import { ThemeGalleryDialog } from "./ThemeGalleryDialog";
 import { cn } from "@/lib/utils";
 
+import { useThemeFavorites } from "@/stores/theme-favorites.store";
+
 const QUICK_IDS = [
-  "worship-royal-sapphire",
-  "worship-indigo-modern",
-  "prayer-candlelight",
-  "events-youth-pulse",
-  "bible-scholar",
-  "worship-royal-sapphire",
-  "worship-indigo-modern",
-  "minimal-black",
+  "sunset",
+  "aurora",
+  "sunrise",
+  "ocean",
+  "galaxy",
 ];
 
 export function TemplatesStrip() {
@@ -35,14 +34,23 @@ export function TemplatesStrip() {
   const [active, setActive] = useState<string | null>(wsActiveTemplate ?? activeTemplateId());
   const saveCurrent = useCustomTemplates((s) => s.saveCurrent);
   const customCount = useCustomTemplates((s) => s.templates.length);
+  const recents = useThemeFavorites((s) => s.recents);
+  const customThemes = useCustomTemplates((s) => s.templates);
 
-  const quick = useMemo(
-    () =>
-      QUICK_IDS.map((id) => TEMPLATE_PRESETS.find((t) => t.id === id)).filter(
-        (t): t is NonNullable<typeof t> => !!t,
-      ),
-    [],
-  );
+  const quick = useMemo(() => {
+    // Combine recents with default quick IDs
+    const allIds = Array.from(new Set([...recents, ...QUICK_IDS]));
+    
+    return allIds.map((id) => {
+      // Check built-in themes
+      const builtin = TEMPLATE_PRESETS.find((t) => t.id === id);
+      if (builtin) return builtin;
+      // Check custom themes
+      const custom = customThemes.find((t) => t.id === id);
+      if (custom) return custom;
+      return null;
+    }).filter((t): t is NonNullable<typeof t> => !!t).slice(0, 10);
+  }, [recents, customThemes]);
 
   // Sync to workspace store
   useEffect(() => {

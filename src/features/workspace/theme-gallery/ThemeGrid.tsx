@@ -80,12 +80,26 @@ export function ThemeGrid({
     }));
   }, [items, startRow, endRow, cols]);
 
+  const scrollRaf = useRef<number | null>(null);
+
   const handleScroll = useCallback(() => {
     const el = containerRef.current;
     if (el) {
-      setScrollTop(el.scrollTop);
-      setDims((d) => ({ ...d, h: el.clientHeight }));
+      if (scrollRaf.current !== null) return;
+      scrollRaf.current = requestAnimationFrame(() => {
+        setScrollTop(el.scrollTop);
+        setDims((d) => ({ ...d, h: el.clientHeight }));
+        scrollRaf.current = null;
+      });
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (scrollRaf.current !== null) {
+        cancelAnimationFrame(scrollRaf.current);
+      }
+    };
   }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
@@ -135,7 +149,8 @@ export function ThemeGrid({
               top: row * rowHeight,
               left: col * (cardWidth + GAP),
               width: cardWidth,
-            }}
+              contain: "layout paint",
+            } as React.CSSProperties}
             draggable={dragEnabled}
             onDragStart={dragEnabled ? (e) => handleDragStart(e, absIndex) : undefined}
             onDragOver={

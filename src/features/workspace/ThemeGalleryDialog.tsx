@@ -15,7 +15,6 @@ import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { ThemeGrid } from "./theme-gallery/ThemeGrid";
 import { ThemeCard } from "./theme-gallery/ThemeCard";
-import { ThemeAnimation } from "./theme-gallery/ThemeAnimation";
 import { themeCache } from "./theme-gallery/ThemeCache";
 
 interface Props {
@@ -33,7 +32,6 @@ type Bucket =
   | "Bible"
   | "Worship"
   | "Prayer"
-  | "Animated"
   | "Seasonal";
 
 const BUCKETS: Array<{ key: Bucket; label: string }> = [
@@ -41,7 +39,6 @@ const BUCKETS: Array<{ key: Bucket; label: string }> = [
   { key: "Recent", label: "Recent" },
   { key: "Custom", label: "Custom" },
   { key: "All", label: "All Themes" },
-  { key: "Animated", label: "Animated" },
   { key: "Modern", label: "Modern" },
   { key: "Classic", label: "Classic" },
   { key: "Worship", label: "Worship" },
@@ -51,14 +48,14 @@ const BUCKETS: Array<{ key: Bucket; label: string }> = [
 ];
 
 const STAFF_PICKS = [
-  "animated-aurora-flow",
-  "animated-heaven-light",
-  "animated-nebula",
-  "animated-light-rays",
-  "animated-ocean-waves",
-  "animated-velvet-motion",
-  "animated-aurora-borealis",
-  "animated-fireflies",
+  "cathedral-stained-glass",
+  "royal-gold",
+  "royal-purple",
+  "mountain-peak",
+  "hexagon-mesh",
+  "easter-glory",
+  "candlelight-prayer",
+  "christmas-joy",
 ];
 
 export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
@@ -85,6 +82,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
   const [renameValue, setRenameValue] = useState("");
   const [featuredHover, setFeaturedHover] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -92,6 +90,10 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
       themeCache.prewarm(TEMPLATE_PRESETS);
       themeCache.prewarm(custom);
       setTimeout(() => searchRef.current?.focus(), 100);
+      const t = setTimeout(() => setMounted(true), 50);
+      return () => clearTimeout(t);
+    } else {
+      setMounted(false);
     }
   }, [open, custom]);
 
@@ -153,7 +155,7 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
     c.Recent = recents.length;
     c.Classic = all.filter((t) => t.mood === "classic").length;
     for (const cat of TEMPLATE_CATEGORIES) {
-      if (["Modern", "Bible", "Worship", "Prayer", "Animated", "Seasonal"].includes(cat)) {
+      if (["Modern", "Bible", "Worship", "Prayer", "Seasonal"].includes(cat)) {
         c[cat as Bucket] = allBuiltin.filter((t) => t.category === cat).length;
       }
     }
@@ -296,195 +298,197 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
             ))}
           </aside>
 
-          <main className="flex-1 min-w-0 flex flex-col">
-            {/* ═══ Featured Strip ═══ */}
-            {bucket === "All" && !query && (
-              <div className="shrink-0 border-b border-border/40 px-6 py-4">
-                <div className="flex items-center gap-6 mb-3">
-                  <div className="flex items-center gap-2">
-                    <Sparkle className="h-3.5 w-3.5 text-amber-500" />
-                    <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
-                      Staff Picks
-                    </span>
-                  </div>
-                  {mostUsed.length >= 3 && (
-                    <div className="flex items-center gap-2">
-                      <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                        Most Used
-                      </span>
-                    </div>
-                  )}
-                  {recents.length > 0 && (
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-3.5 w-3.5 text-blue-500" />
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-                        Recent
-                      </span>
-                    </div>
-                  )}
-                </div>
-                <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
-                  {/* Staff Picks row */}
-                  {featuredPicks.slice(0, 6).map((preset) => (
-                    <button
-                      key={preset.id}
-                      onClick={() => handleApply(preset)}
-                      onMouseEnter={() => setFeaturedHover(preset.id)}
-                      onMouseLeave={() => setFeaturedHover(null)}
-                      className={cn(
-                        "group relative shrink-0 w-44 cursor-pointer overflow-hidden rounded-xl transition-all duration-200",
-                        appliedId === preset.id
-                          ? "ring-2 ring-primary/40 shadow-lg shadow-primary/10"
-                          : "hover:shadow-xl hover:-translate-y-0.5",
-                      )}
-                    >
-                      <div
-                        className="relative aspect-video overflow-hidden rounded-xl"
-                        style={{
-                          background:
-                            preset.background.gradient ?? preset.background.color ?? "#000",
-                        }}
-                      >
-                        <div
-                          className={cn(
-                            "absolute inset-0 transition-opacity duration-300",
-                            appliedId === preset.id || featuredHover === preset.id
-                              ? "opacity-100"
-                              : "opacity-0",
-                          )}
-                        >
-                          <ThemeAnimation
-                            animation={preset.background.animation ?? "none"}
-                            paused={featuredHover !== preset.id && appliedId !== preset.id}
-                          />
-                        </div>
-                        {/* Tamil preview */}
-                        <div className="absolute inset-0 flex items-center justify-center px-2">
-                          <span
-                            className="text-[9px] font-semibold leading-tight text-center line-clamp-2"
-                            style={{
-                              color: preset.text.color ?? "#fff",
-                              fontFamily: preset.text.fontFamily,
-                              textShadow: "0 1px 4px rgba(0,0,0,.6)",
-                            }}
-                          >
-                            கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
-                          </span>
-                        </div>
-                        {appliedId === preset.id && (
-                          <div className="absolute top-1.5 right-1.5 rounded-full bg-primary px-1.5 py-0.5 text-[7px] font-semibold text-primary-foreground shadow-sm">
-                            Active
-                          </div>
-                        )}
-                      </div>
-                      <div className="px-2 py-1.5 text-left bg-card/80 backdrop-blur-sm border-t border-border/30 rounded-b-xl">
-                        <div className="truncate text-[10px] font-semibold text-foreground/80">
-                          {preset.name}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                  {/* Most Used row */}
-                  {mostUsed.slice(0, 4).map((preset) => (
-                    <button
-                      key={`mu-${preset.id}`}
-                      onClick={() => handleApply(preset)}
-                      className="group relative shrink-0 w-36 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
-                    >
-                      <div
-                        className="relative aspect-video overflow-hidden rounded-xl"
-                        style={{
-                          background:
-                            preset.background.gradient ?? preset.background.color ?? "#000",
-                        }}
-                      >
-                        <div
-                          className={cn("absolute inset-0", mostUsed.length < 4 && "opacity-80")}
-                        >
-                          {preset.background.animation &&
-                            preset.background.animation !== "none" && (
-                              <ThemeAnimation animation={preset.background.animation} paused />
-                            )}
-                        </div>
-                        <div className="absolute inset-0 flex items-center justify-center px-2">
-                          <span
-                            className="text-[8px] font-medium leading-tight text-center line-clamp-2 text-white/90"
-                            style={{
-                              fontFamily: preset.text.fontFamily,
-                              textShadow: "0 1px 4px rgba(0,0,0,.6)",
-                            }}
-                          >
-                            கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
-                          </span>
-                        </div>
-                      </div>
-                      <div className="px-2 py-1 text-left bg-card/60 backdrop-blur-sm border-t border-border/20 rounded-b-xl">
-                        <div className="truncate text-[9px] font-medium text-foreground/60">
-                          {preset.name}
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                  {/* Recent row */}
-                  {recents.slice(0, 4).map((id) => {
-                    const preset = byId.get(id);
-                    if (!preset) return null;
-                    return (
-                      <button
-                        key={`re-${preset.id}`}
-                        onClick={() => handleApply(preset)}
-                        className="group relative shrink-0 w-28 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 hover:shadow-xl hover:-translate-y-0.5"
-                      >
-                        <div
-                          className="relative aspect-video overflow-hidden rounded-xl"
-                          style={{
-                            background:
-                              preset.background.gradient ?? preset.background.color ?? "#000",
-                          }}
-                        >
-                          <div className="absolute inset-0 flex items-center justify-center px-1">
-                            <span
-                              className="text-[7px] font-medium leading-tight text-center line-clamp-2 text-white/80"
-                              style={{
-                                fontFamily: preset.text.fontFamily,
-                                textShadow: "0 1px 4px rgba(0,0,0,.6)",
-                              }}
-                            >
-                              கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
-                            </span>
-                          </div>
-                        </div>
-                        <div className="px-1.5 py-1 text-left bg-card/40 backdrop-blur-sm border-t border-border/10 rounded-b-xl">
-                          <div className="truncate text-[8px] font-medium text-foreground/50">
-                            {preset.name}
-                          </div>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
+          <main className="flex-1 min-w-0 flex flex-col relative">
+            {!mounted && (
+              <div className="absolute inset-0 flex items-center justify-center z-50">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               </div>
             )}
+            
+            {mounted && (
+              <>
+                {/* ═══ Featured Strip ═══ */}
+                {bucket === "All" && !query && (
+                  <div className="shrink-0 border-b border-border/40 px-6 py-4">
+                    <div className="flex items-center gap-6 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkle className="h-3.5 w-3.5 text-amber-500" />
+                        <span className="text-[11px] font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                          Staff Picks
+                        </span>
+                      </div>
+                      {mostUsed.length >= 3 && (
+                        <div className="flex items-center gap-2">
+                          <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                            Most Used
+                          </span>
+                        </div>
+                      )}
+                      {recents.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3.5 w-3.5 text-blue-500" />
+                          <span className="text-[11px] font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+                            Recent
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1">
+                      {/* Staff Picks row */}
+                      {featuredPicks.slice(0, 6).map((preset) => (
+                        <button
+                          key={preset.id}
+                          onClick={() => handleApply(preset)}
+                          onMouseEnter={() => setFeaturedHover(preset.id)}
+                          onMouseLeave={() => setFeaturedHover(null)}
+                          className={cn(
+                            "group relative shrink-0 w-36 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 bg-card border",
+                            appliedId === preset.id
+                              ? "ring-2 ring-primary border-transparent scale-[1.01]"
+                              : "border-border/40 hover:border-primary/50 hover:scale-[1.01]",
+                          )}
+                        >
+                          <div
+                            className="relative aspect-video w-full overflow-hidden"
+                            style={{
+                              background:
+                                preset.background.gradient ?? preset.background.color ?? "#000",
+                            }}
+                          >
+                            <div className="absolute inset-0 transition-opacity duration-300 opacity-0" />
+                            {/* Tamil preview */}
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center">
+                              <span
+                                className="text-[9px] font-semibold leading-tight text-center line-clamp-2"
+                                style={{
+                                  color: preset.text.color ?? "#fff",
+                                  fontFamily: preset.text.fontFamily,
+                                  textShadow: "0 2px 4px rgba(0,0,0,0.6)",
+                                }}
+                              >
+                                கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                              </span>
+                            </div>
+                            {appliedId === preset.id && (
+                              <div className="absolute top-1.5 right-1.5 rounded bg-primary px-1.5 py-0.5 text-[7px] font-bold text-primary-foreground shadow-sm">
+                                ACTIVE
+                              </div>
+                            )}
+                          </div>
+                          <div className="px-2 py-1.5 text-center bg-card border-t border-border/40">
+                            <div className="truncate text-[10px] font-semibold text-foreground/80">
+                              {preset.name}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {/* Most Used row */}
+                      {mostUsed.slice(0, 4).map((preset) => (
+                        <button
+                          key={`mu-${preset.id}`}
+                          onClick={() => handleApply(preset)}
+                          className={cn(
+                            "group relative shrink-0 w-36 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 bg-card border",
+                            appliedId === preset.id
+                              ? "ring-2 ring-primary border-transparent scale-[1.01]"
+                              : "border-border/40 hover:border-primary/50 hover:scale-[1.01]",
+                          )}
+                        >
+                          <div
+                            className="relative aspect-video w-full overflow-hidden"
+                            style={{
+                              background:
+                                preset.background.gradient ?? preset.background.color ?? "#000",
+                            }}
+                          >
+                            <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center">
+                              <span
+                                className="text-[9px] font-semibold leading-tight text-center line-clamp-2"
+                                style={{
+                                  color: preset.text.color ?? "#fff",
+                                  fontFamily: preset.text.fontFamily,
+                                  textShadow: "0 2px 4px rgba(0,0,0,0.6)",
+                                }}
+                              >
+                                கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                              </span>
+                            </div>
+                          </div>
+                          <div className="px-2 py-1.5 text-center bg-card border-t border-border/40">
+                            <div className="truncate text-[10px] font-semibold text-foreground/80">
+                              {preset.name}
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                      {/* Recent row */}
+                      {recents.slice(0, 4).map((id) => {
+                        const preset = byId.get(id);
+                        if (!preset) return null;
+                        return (
+                          <button
+                            key={`re-${preset.id}`}
+                            onClick={() => handleApply(preset)}
+                            className={cn(
+                              "group relative shrink-0 w-36 cursor-pointer overflow-hidden rounded-xl transition-all duration-200 bg-card border",
+                              appliedId === preset.id
+                                ? "ring-2 ring-primary border-transparent scale-[1.01]"
+                                : "border-border/40 hover:border-primary/50 hover:scale-[1.01]",
+                            )}
+                          >
+                            <div
+                              className="relative aspect-video w-full overflow-hidden"
+                              style={{
+                                background:
+                                  preset.background.gradient ?? preset.background.color ?? "#000",
+                              }}
+                            >
+                              <div className="absolute inset-0 flex flex-col items-center justify-center p-2 text-center">
+                                <span
+                                  className="text-[9px] font-semibold leading-tight text-center line-clamp-2"
+                                  style={{
+                                    color: preset.text.color ?? "#fff",
+                                    fontFamily: preset.text.fontFamily,
+                                    textShadow: "0 2px 4px rgba(0,0,0,0.6)",
+                                  }}
+                                >
+                                  கர்த்தர் என் மேய்ப்பராயிருக்கிறார்
+                                </span>
+                              </div>
+                            </div>
+                            <div className="px-2 py-1.5 text-center bg-card border-t border-border/40">
+                              <div className="truncate text-[10px] font-semibold text-foreground/80">
+                                {preset.name}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
 
-            {/* Grid */}
-            <div className="flex-1 min-h-0">
-              <ThemeGrid
-                items={bucketList}
-                appliedId={appliedId}
-                favorites={favorites}
-                onApply={handleApply}
-                onToggleFavorite={toggleFavorite}
-                onReorderFavorites={bucket === "Favorites" ? reorderFavorites : undefined}
-                renaming={renaming}
-                onRename={(id, name) => {
-                  renameCustom(id, name);
-                  setRenaming(null);
-                }}
-                onStartRename={handleStartRename}
-                dragEnabled={bucket === "Favorites" && bucketList.length > 1}
-              />
-            </div>
+                {/* Grid */}
+                <div className="flex-1 min-h-0">
+                  <ThemeGrid
+                    items={bucketList}
+                    appliedId={appliedId}
+                    favorites={favorites}
+                    onApply={handleApply}
+                    onToggleFavorite={toggleFavorite}
+                    onReorderFavorites={bucket === "Favorites" ? reorderFavorites : undefined}
+                    renaming={renaming}
+                    onRename={(id, name) => {
+                      renameCustom(id, name);
+                      setRenaming(null);
+                    }}
+                    onStartRename={handleStartRename}
+                    dragEnabled={bucket === "Favorites" && bucketList.length > 1}
+                  />
+                </div>
+              </>
+            )}
           </main>
         </div>
 
