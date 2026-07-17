@@ -11,6 +11,7 @@ import {
   Moon,
   ChevronRight,
   X,
+  Info,
 } from "lucide-react";
 import { useSettings } from "@/stores/settings.store";
 import { db, DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
@@ -411,6 +412,8 @@ export function SettingsPage() {
             {/* Category sections */}
             {Object.entries(CATEGORY_META).map(([id, meta]) => {
               if (id === "keyboard-shortcuts") return null; // render separately
+              if (id === "backup") return null; // render separately
+              if (id === "about") return null; // render separately
               const defs = byCategory.get(id) ?? [];
               const visible = defs.filter((d) => !hitKeys || hitKeys.has(d.key));
               if (hitKeys && visible.length === 0) return null;
@@ -466,6 +469,9 @@ export function SettingsPage() {
                 byCategory={byCategory}
               />
             )}
+
+            {/* ── About ── */}
+            {!search.trim() && <AboutSection />}
 
             <div className="h-12" />
           </div>
@@ -536,6 +542,65 @@ function KeyboardShortcutsSection({ search }: { search: string }) {
             No shortcuts found
           </div>
         )}
+      </div>
+    </section>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   About Section
+   ═══════════════════════════════════════════════════ */
+
+function AboutSection() {
+  return (
+    <section id="section-about" className="scroll-mt-12 mb-8">
+      <div className="mb-3 flex items-center gap-2.5">
+        <Info className="h-4 w-4 text-primary" />
+        <h2 className="text-sm font-semibold text-foreground">About</h2>
+      </div>
+      <div className="rounded-lg border border-border/25 bg-card shadow-xs">
+        <div className="divide-y divide-border/6">
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[13px] font-medium text-foreground/90">
+                Application Version
+              </span>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
+                Current release version
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="rounded-md bg-primary/10 px-2.5 py-1 text-[13px] font-semibold text-primary">
+                v1.0.0
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[13px] font-medium text-foreground/90">Build Status</span>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
+                Production-ready stable release
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-2.5 py-1 text-[12px] font-medium text-emerald-500">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Stable
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[13px] font-medium text-foreground/90">Release Date</span>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
+                First public release
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[13px] text-muted-foreground">Q2 2026</span>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   );

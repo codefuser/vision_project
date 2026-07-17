@@ -3,16 +3,12 @@ import { Image as ImageIcon, BookOpen, Music, Type } from "lucide-react";
 import type { WorkspaceTab } from "./workspace.store";
 
 /**
- * Future-ready workspace module registry.
+ * Workspace module registry.
  *
  * The right-hand workspace tab panel renders whichever module is registered
- * for the active tab id. New modules (Bible, Songs, Text, …) plug in by
- * calling `registerWorkspaceModule(...)` from their own bootstrap file —
+ * for the active tab id. New modules plug in by calling
+ * `registerWorkspaceModule(...)` from their own bootstrap file —
  * no layout changes required.
- *
- * Today only the `media` module has a real component; the rest render the
- * built-in "coming soon" placeholder. Replacing them later is a one-line
- * change at the module's entry point.
  */
 export interface WorkspaceModule {
   id: WorkspaceTab;
@@ -51,7 +47,6 @@ registerWorkspaceModule({
   label: "Bible",
   icon: BookOpen,
   component: null,
-  badge: "Soon",
 });
 registerWorkspaceModule({
   id: "songs",
@@ -64,5 +59,4 @@ registerWorkspaceModule({
   label: "Text",
   icon: Type,
   component: null,
-  badge: "Soon",
 });

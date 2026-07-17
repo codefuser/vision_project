@@ -61,7 +61,7 @@ export class ProjectionEventBus {
           fn(event);
         } catch (err) {
           // Never let one bad listener break the rest of the system.
-          // eslint-disable-next-line no-console
+
           console.error("[projection] listener error for", event.type, err);
         }
       }
@@ -70,7 +70,6 @@ export class ProjectionEventBus {
       try {
         fn(event);
       } catch (err) {
-        // eslint-disable-next-line no-console
         console.error("[projection] anyListener error for", event.type, err);
       }
     }

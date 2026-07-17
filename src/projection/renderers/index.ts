@@ -45,12 +45,6 @@ export function listRegisteredRenderers(): ProjectionContentType[] {
 // app entry. Imports kept inline to avoid circular boot ordering.
 import { ImageRenderer } from "./ImageRenderer";
 import { VideoRenderer } from "./VideoRenderer";
-import { BibleRenderer } from "./BibleRenderer";
-import { SongRenderer } from "./SongRenderer";
-import { TextRenderer } from "./TextRenderer";
 
 registerRenderer("image", ImageRenderer);
 registerRenderer("video", VideoRenderer);
-registerRenderer("bible_verse", BibleRenderer);
-registerRenderer("song_slide", SongRenderer);
-registerRenderer("live_text", TextRenderer);

@@ -267,7 +267,7 @@ export function SongsPanel() {
 
   // ── shortcuts ── (skipped while the editor dialog is open so the textarea
   // behaves like a plain editor — Enter / Arrow / Esc are all owned by it).
-  const guarded = <T extends (...a: any[]) => any>(fn: T) =>
+  const guarded = <T extends (...a: unknown[]) => unknown>(fn: T) =>
     ((...a: Parameters<T>) => {
       if (editorOpen) return false;
       return fn(...a);
@@ -643,7 +643,11 @@ function SongList(p: ListProps) {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        isFav ? p.removeFav(song.id) : p.addFav({ id: song.id, title: song.title });
+                        if (isFav) {
+                          p.removeFav(song.id);
+                        } else {
+                          p.addFav({ id: song.id, title: song.title });
+                        }
                       }}
                       title={isFav ? "Unfavorite" : "Favorite"}
                       className={cn(
@@ -788,7 +792,11 @@ function SongList(p: ListProps) {
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
-                      isFav ? p.removeFav(song.id) : p.addFav({ id: song.id, title: song.title });
+                      if (isFav) {
+                        p.removeFav(song.id);
+                      } else {
+                        p.addFav({ id: song.id, title: song.title });
+                      }
                     }}
                     title={isFav ? "Unfavorite" : "Favorite"}
                     className={cn(

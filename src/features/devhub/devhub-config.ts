@@ -107,9 +107,9 @@ export const DEVELOPER_INFO = {
     "The idea for Vision Projector was born from a simple observation: churches in India and around the world were spending thousands on presentation software that was either too expensive, required constant internet, or didn't support local languages properly. After years of struggling with existing solutions during worship services, the decision was made to build something better — something built for the church, by the church. What started as a personal project quickly grew into a vision for a truly free, open-source alternative that could serve congregations worldwide.",
   timeline: [
     { year: "2023", event: "Initial concept and prototyping began" },
-    { year: "2024", event: "First alpha release with core Bible and song functionality" },
-    { year: "2025", event: "Beta release with media support and themes" },
-    { year: "2026", event: "Version 1.0 — stable release with full feature set" },
+    { year: "2024", event: "Core development with Bible and song functionality" },
+    { year: "2025", event: "Media support, themes, and projection engine" },
+    { year: "2026", event: "Version 1.0 — first public stable release" },
   ],
   education: "Computer Science & Engineering",
   skills: [
@@ -233,13 +233,6 @@ export const VISION_MISSION = {
       title: "Cultural Respect",
       description: "First-class support for Tamil and other regional languages.",
     },
-  ],
-  futureGoals: [
-    "Achieve 10,000+ active installations worldwide",
-    "Build a thriving community of 100+ contributors",
-    "Add support for 50+ languages",
-    "Create a plugin/extension ecosystem",
-    "Develop mobile companion apps for remote control",
   ],
   projectPhilosophy:
     "Vision Projector believes that church technology should be a blessing, not a burden. Every design decision is made with the end goal of helping worship leaders focus on what matters most — presenting the Gospel. We prioritize reliability, performance, and beauty in equal measure, knowing that technology serves ministry, not the other way around.",
@@ -392,14 +385,13 @@ export const STATISTICS: Stat[] = [
   { label: "Components", value: 120, suffix: "+", icon: Globe },
   { label: "Themes", value: 25, suffix: "+", icon: Heart },
   { label: "Bible Versions", value: 4, suffix: "", icon: Mail },
-  { label: "Songs", value: 10000, suffix: "+", icon: Github },
-  { label: "Contributors", value: 8, suffix: "", icon: Heart },
-  { label: "Releases", value: 24, suffix: "", icon: Route },
+  { label: "Preloaded Songs", value: 500, suffix: "+", icon: Github },
+  { label: "Contributors", value: 5, suffix: "", icon: Heart },
+  { label: "Release", value: 1, suffix: "", icon: Route },
 ];
 
 export const CONTRIBUTORS = [
   { name: "Joseph", role: "Lead Developer", country: "India", avatar: "" },
-  { name: "You?", role: "Future Contributor", country: "Your Country", avatar: "", future: true },
 ];
 
 export const LICENSE_INFO = {

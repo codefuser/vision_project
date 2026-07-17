@@ -19,7 +19,6 @@ import {
   BookOpen,
   MonitorPlay,
   Zap,
-  ArrowRight,
   Check,
   UserPlus,
 } from "lucide-react";
@@ -588,18 +587,13 @@ function VisionSection() {
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2">
               <Compass className="w-4 h-4 text-primary" />
-              Future Goals
+              Project Philosophy
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {VISION_MISSION.futureGoals.map((goal, i) => (
-                <li key={i} className="flex items-start gap-2 text-muted-foreground text-sm">
-                  <ArrowRight className="w-4 h-4 text-chart-3 mt-0.5 shrink-0" />
-                  <span>{goal}</span>
-                </li>
-              ))}
-            </ul>
+            <p className="text-muted-foreground leading-relaxed">
+              {VISION_MISSION.projectPhilosophy}
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -791,9 +785,6 @@ function GallerySection() {
             </div>
             <CardContent className="p-4">
               <p className="text-sm font-medium text-center text-muted-foreground">{item.label}</p>
-              <p className="text-[10px] text-muted-foreground/50 text-center mt-1">
-                Screenshot coming soon
-              </p>
             </CardContent>
           </Card>
         ))}

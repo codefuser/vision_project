@@ -32,8 +32,8 @@ const PRIMARY_NAV = [
 ] as const;
 
 const DEVELOPER_NAV = [
-  { to: "/developer-hub", label: "Developer Hub", icon: Code2, shortcutId: "nav.developer-hub" },
-  { to: "/roadmap", label: "Roadmap", icon: Route, shortcutId: "nav.roadmap" },
+  { to: "/developer-hub", label: "Developer", icon: Code2, shortcutId: "nav.developer-hub" },
+  { to: "/roadmap", label: "Version History", icon: Route, shortcutId: "nav.roadmap" },
   { to: "/contact", label: "Contact", icon: Mail, shortcutId: "nav.contact" },
 ] as const;
 
@@ -148,7 +148,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               collapsed ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
-            Developer Hub
+            Developer
           </div>
           {DEVELOPER_NAV.map(renderNavItem)}
         </div>

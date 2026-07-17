@@ -389,7 +389,10 @@ export function PlaylistEditor({ id }: { id: string }) {
         void duplicateItems(Array.from(selection));
         return;
       }
-      if (e.key === "ArrowDown") {
+      if (e.altKey && e.key === "ArrowDown") {
+        e.preventDefault();
+        void moveSelection(1);
+      } else if (e.key === "ArrowDown") {
         e.preventDefault();
         const n = Math.min(ids.length - 1, cur < 0 ? 0 : cur + 1);
         if (ids[n]) {
@@ -405,9 +408,6 @@ export function PlaylistEditor({ id }: { id: string }) {
           if (!e.shiftKey) setSelection(new Set([ids[n]]));
           else setSelection((prev) => new Set(prev).add(ids[n]));
         }
-      } else if (e.altKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
-        e.preventDefault();
-        void moveSelection(e.key === "ArrowDown" ? 1 : -1);
       } else if (e.key === "Enter" && cur >= 0) {
         e.preventDefault();
         const realIdx = p.items.findIndex((it) => it.id === ids[cur]);

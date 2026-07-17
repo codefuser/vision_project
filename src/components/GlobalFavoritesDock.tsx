@@ -186,7 +186,7 @@ export function GlobalFavoritesDock() {
               ))}
             </ul>
           ))}
-        {group === "text" && <Empty hint="Text module coming soon." />}
+        {group === "text" && <Empty hint="No text items yet." />}
       </div>
     </div>
   );
