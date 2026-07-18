@@ -95,17 +95,31 @@ export async function loadSongs(): Promise<Song[]> {
   if (cache) return cache;
   if (inflight) return inflight;
   
-  inflight = supabase.from("songs").select("*")
-    .then(({ data, error }) => {
-      if (error) throw error;
-      cache = (data as RawSong[]).map(buildFromRaw);
+  inflight = (async () => {
+    try {
+      const allRows: RawSong[] = [];
+      let start = 0;
+      const limit = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from("songs")
+          .select("*")
+          .range(start, start + limit - 1);
+        if (error) throw error;
+        allRows.push(...(data as RawSong[]));
+        if (data.length < limit) break;
+        start += limit;
+      }
+      
+      cache = allRows.map(buildFromRaw);
       inflight = null;
       console.log(`[Songs] Loaded ${cache.length} songs`);
       return cache;
-    })
-    .catch((e) => {
+    } catch (e) {
       inflight = null;
       throw e;
-    });
+    }
+  })();
   return inflight;
 }

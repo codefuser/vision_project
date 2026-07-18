@@ -24,20 +24,33 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
   
   const tableName = lang === "en" ? "english_bible" : "tamil_bible";
 
-  const p = supabase.from(tableName).select("*")
-    .then(({ data, error }) => {
-      if (error) throw error;
+  const p = (async () => {
+    try {
+      const allRows: any[] = [];
+      let start = 0;
+      const limit = 1000;
+      
+      while (true) {
+        const { data, error } = await supabase
+          .from(tableName)
+          .select("*")
+          .range(start, start + limit - 1);
+        if (error) throw error;
+        allRows.push(...data);
+        if (data.length < limit) break;
+        start += limit;
+      }
       
       const bibleData: BibleData = [];
       let isZeroIndexed = false;
-      for (const row of (data as any[])) {
+      for (const row of allRows) {
         if (Number(row.book) === 0) {
           isZeroIndexed = true;
           break;
         }
       }
 
-      for (const row of (data as any[])) {
+      for (const row of allRows) {
         const b = isZeroIndexed ? Number(row.book) : Number(row.book) - 1;
         const c = Number(row.chapter) - 1;
         const v = Number(row.versecount) - 1;
@@ -50,11 +63,12 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
       cache[lang] = bibleData;
       delete inflight[lang];
       return bibleData;
-    })
-    .catch((e) => {
+    } catch (e) {
       delete inflight[lang];
       throw e;
-    });
+    }
+  })();
+  
   inflight[lang] = p;
   return p;
 }

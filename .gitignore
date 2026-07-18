@@ -79,3 +79,5 @@ Thumbs.db
 # Environment Files
 # ---------------------------------------
 .env
+.env.local
+.env.*
