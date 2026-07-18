@@ -1,13 +1,13 @@
-import asset from "@/assets/songs/tamilsongs.json.asset.json";
+import { supabase } from "../supabase";
 import { songStem, songLower } from "./normalize";
 
 export interface RawSong {
   id: number;
-  t: string; // title
-  c: string; // content (lyrics)
-  a: string; // artist
-  al: string; // album
-  s: string; // scale
+  title: string;
+  content: string;
+  artist: string;
+  album: string;
+  scale: string;
 }
 
 export interface Song {
@@ -70,7 +70,7 @@ export function buildSong(raw: {
 }
 
 function buildFromRaw(r: RawSong): Song {
-  return buildSong({ id: r.id, title: r.t, content: r.c, artist: r.a, album: r.al, scale: r.s });
+  return buildSong({ id: r.id, title: r.title, content: r.content, artist: r.artist, album: r.album, scale: r.scale });
 }
 
 /** Returns library songs + any user-created songs (user overrides win by id). */
@@ -94,17 +94,11 @@ export function setUserSongs(songs: Song[]) {
 export async function loadSongs(): Promise<Song[]> {
   if (cache) return cache;
   if (inflight) return inflight;
-  const url = (asset as { url: string }).url.replace(
-    /^\/__l5e/,
-    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
-  );
-  inflight = fetch(url)
-    .then((r) => {
-      if (!r.ok) throw new Error(`Failed to load songs: ${r.status}`);
-      return r.json() as Promise<RawSong[]>;
-    })
-    .then((rows) => {
-      cache = rows.map(buildFromRaw);
+  
+  inflight = supabase.from("songs").select("*")
+    .then(({ data, error }) => {
+      if (error) throw error;
+      cache = (data as RawSong[]).map(buildFromRaw);
       inflight = null;
       console.log(`[Songs] Loaded ${cache.length} songs`);
       return cache;

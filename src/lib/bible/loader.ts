@@ -1,21 +1,11 @@
-import enAsset from "@/assets/bible/en.bible.json.asset.json";
-import taAsset from "@/assets/bible/ta.bible.json.asset.json";
+import { supabase } from "../supabase";
 
 export type BibleLang = "en" | "ta";
 
 /** Verses: data[bookIndex][chapterIndex0Based][verseIndex0Based] = string */
 export type BibleData = string[][][];
 
-const ASSET_URL: Record<BibleLang, string> = {
-  en: (enAsset as { url: string }).url.replace(
-    /^\/__l5e/,
-    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
-  ),
-  ta: (taAsset as { url: string }).url.replace(
-    /^\/__l5e/,
-    "https://813a3f87-806d-4f67-97c8-eb507322ee4d.lovableproject.com/__l5e",
-  ),
-};
+
 
 const cache: Partial<Record<BibleLang, BibleData>> = {};
 const inflight: Partial<Record<BibleLang, Promise<BibleData>>> = {};
@@ -31,15 +21,35 @@ export function getBible(lang: BibleLang): BibleData | undefined {
 export async function loadBible(lang: BibleLang): Promise<BibleData> {
   if (cache[lang]) return cache[lang]!;
   if (inflight[lang]) return inflight[lang]!;
-  const p = fetch(ASSET_URL[lang])
-    .then((r) => {
-      if (!r.ok) throw new Error(`Failed to load ${lang} bible: ${r.status}`);
-      return r.json() as Promise<BibleData>;
-    })
-    .then((data) => {
-      cache[lang] = data;
+  
+  const tableName = lang === "en" ? "english_bible" : "tamil_bible";
+
+  const p = supabase.from(tableName).select("*")
+    .then(({ data, error }) => {
+      if (error) throw error;
+      
+      const bibleData: BibleData = [];
+      let isZeroIndexed = false;
+      for (const row of (data as any[])) {
+        if (Number(row.book) === 0) {
+          isZeroIndexed = true;
+          break;
+        }
+      }
+
+      for (const row of (data as any[])) {
+        const b = isZeroIndexed ? Number(row.book) : Number(row.book) - 1;
+        const c = Number(row.chapter) - 1;
+        const v = Number(row.versecount) - 1;
+        
+        if (!bibleData[b]) bibleData[b] = [];
+        if (!bibleData[b][c]) bibleData[b][c] = [];
+        bibleData[b][c][v] = row.verse;
+      }
+      
+      cache[lang] = bibleData;
       delete inflight[lang];
-      return data;
+      return bibleData;
     })
     .catch((e) => {
       delete inflight[lang];
