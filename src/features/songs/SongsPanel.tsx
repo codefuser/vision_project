@@ -27,6 +27,7 @@ import { useWorkspace } from "@/features/workspace/workspace.store";
 import { getSongs, type Song } from "@/lib/songs/loader";
 import { searchSongs, type SongHit } from "@/lib/songs/search";
 import { songStem } from "@/lib/songs/normalize";
+import { truncateGraphemes } from "@/lib/songs/grapheme";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { useProjection } from "@/stores/projection.store";
 import { cn } from "@/lib/utils";
@@ -34,17 +35,6 @@ import { toast } from "sonner";
 import { SongEditorDialog } from "./SongEditorDialog";
 import { SplitPane } from "@/components/ui/split-pane";
 import { suggestTanglish } from "@/lib/text/tanglish";
-
-/** First non-empty lyric line — shown on every result card. */
-function firstLineOf(song: Song): string {
-  const src = song.slides[0] ?? song.content ?? "";
-  for (const line of src.split("\n")) {
-    const t = line.trim();
-    if (t) return t;
-  }
-  return song.title;
-}
-
 
 type SongFilter = "all" | "favorites" | "recent" | "added" | "most" | "mine" | "author";
 const FILTER_LABELS: Record<SongFilter, string> = {
@@ -72,21 +62,23 @@ export function SongsPanel() {
     removeFavorite,
     selectSong,
     removeUserSong,
-  } = useSongsStore(useShallow((s) => ({
-    query: s.query,
-    loading: s.loading,
-    loaded: s.loaded,
-    error: s.error,
-    favorites: s.favorites,
-    selectedSongId: s.selectedSongId,
-    userSongs: s.userSongs,
-    setQuery: s.setQuery,
-    ensureLoaded: s.ensureLoaded,
-    addFavorite: s.addFavorite,
-    removeFavorite: s.removeFavorite,
-    selectSong: s.selectSong,
-    removeUserSong: s.removeUserSong,
-  })));
+  } = useSongsStore(
+    useShallow((s) => ({
+      query: s.query,
+      loading: s.loading,
+      loaded: s.loaded,
+      error: s.error,
+      favorites: s.favorites,
+      selectedSongId: s.selectedSongId,
+      userSongs: s.userSongs,
+      setQuery: s.setQuery,
+      ensureLoaded: s.ensureLoaded,
+      addFavorite: s.addFavorite,
+      removeFavorite: s.removeFavorite,
+      selectSong: s.selectSong,
+      removeUserSong: s.removeUserSong,
+    })),
+  );
   const wsSongsSearch = useWorkspace((s) => s.songsSearch);
   const wsScrollPos = useWorkspace((s) => s.scrollPositions.songs);
   const wsSelectedSongId = useWorkspace((s) => s.selectedSongId);
@@ -96,7 +88,7 @@ export function SongsPanel() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const debouncedQuery = useDebounce(query, 150);
+  const debouncedQuery = useDebounce(query, 300);
   const [results, setResults] = useState<SongHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
@@ -177,9 +169,27 @@ export function SongsPanel() {
     if (!q) {
       const out: SongHit[] = [];
       const seen = new Set<number>();
-      const push = (s: Song, slideIndex = 0) => {
+      const firstLineOf = (s: Song): string => {
+        for (const slide of s.slides) {
+          for (const line of slide.split("\n")) {
+            const t = line.trim();
+            if (t) return t;
+          }
+        }
+        return s.title;
+      };
+      const push = (s: Song) => {
         if (seen.has(s.id) || !applyFilter(s)) return;
-        out.push({ song: s, score: 0, slideIndex, matched: [], matchType: "Title Exact" });
+        const fl = firstLineOf(s);
+        out.push({
+          song: s,
+          score: 0,
+          matchType: "",
+          firstLine: fl,
+          matchedLine: fl,
+          nextLine: undefined,
+          highlightTokens: [],
+        });
         seen.add(s.id);
       };
       if (filter === "all" || filter === "mine" || filter === "added") {
@@ -195,7 +205,8 @@ export function SongsPanel() {
       if (filter === "all" || filter === "recent") {
         for (const r of recent) {
           const s = songs.find((x) => x.id === r.songId);
-          if (s) push(s, r.slideIndex);
+          if (s) push(s);
+          // note: slideIndex from recent is tracked separately via activeSlideById
         }
       }
       if (filter === "most") {
@@ -254,7 +265,12 @@ export function SongsPanel() {
       text,
     });
     setActiveSlideById((m) => ({ ...m, [song.id]: slideIndex }));
-    pushRecent({ songId: song.id, slideIndex, title: song.title, preview: text.slice(0, 80) });
+    pushRecent({
+      songId: song.id,
+      slideIndex,
+      title: song.title,
+      preview: truncateGraphemes(text, 80),
+    });
     toast.success(`${song.title} · slide ${slideIndex + 1}`);
   };
 
@@ -407,9 +423,8 @@ export function SongsPanel() {
     scope: "songs",
     handler: guarded(() => {
       if (!selectedSong) return;
-      const idx = selectedSong.slides.findIndex((s) =>
-        s.toLowerCase().startsWith("chorus") ||
-        s.toLowerCase().includes("[chorus]"),
+      const idx = selectedSong.slides.findIndex(
+        (s) => s.toLowerCase().startsWith("chorus") || s.toLowerCase().includes("[chorus]"),
       );
       if (idx >= 0) project(selectedSong, idx);
     }),
@@ -435,9 +450,8 @@ export function SongsPanel() {
     scope: "songs",
     handler: guarded(() => {
       if (!selectedSong) return;
-      const idx = selectedSong.slides.findIndex((s) =>
-        s.toLowerCase().startsWith("bridge") ||
-        s.toLowerCase().includes("[bridge]"),
+      const idx = selectedSong.slides.findIndex(
+        (s) => s.toLowerCase().startsWith("bridge") || s.toLowerCase().includes("[bridge]"),
       );
       if (idx >= 0) project(selectedSong, idx);
     }),
@@ -646,18 +660,25 @@ function SongList(p: ListProps) {
 
   if (!p.results.length) {
     return (
-      <div className={cn("min-h-0 overflow-y-auto h-full flex flex-col items-center justify-center p-6 text-center text-muted-foreground", p.compact && "border-r border-border")}>
+      <div
+        className={cn(
+          "min-h-0 overflow-y-auto h-full flex flex-col items-center justify-center p-6 text-center text-muted-foreground",
+          p.compact && "border-r border-border",
+        )}
+      >
         <div className="mb-4">
           <Search className="h-10 w-10 mx-auto mb-2 opacity-20" />
           <p className="text-sm font-medium text-foreground/80">No exact matches found</p>
-          <p className="text-xs opacity-80 max-w-[200px] mt-1">Try spelling phonetically or check your spelling.</p>
+          <p className="text-xs opacity-80 max-w-[200px] mt-1">
+            Try spelling phonetically or check your spelling.
+          </p>
         </div>
-        
+
         {suggestions.length > 0 && (
           <div className="space-y-2 mt-2 border border-border bg-card p-3 rounded-lg text-xs">
             <div className="font-semibold text-foreground">Did you mean?</div>
             <div className="flex flex-wrap gap-2 justify-center">
-              {suggestions.map(s => (
+              {suggestions.map((s) => (
                 <div key={s.tamil} className="bg-primary/10 text-primary px-2 py-1 rounded">
                   {s.tamil} <span className="opacity-50 ml-1">({s.key})</span>
                 </div>
@@ -696,7 +717,7 @@ function SongList(p: ListProps) {
           const i = virtualItem.index;
           const h = p.results[i];
           const song = h.song;
-          const slideIdx = p.activeSlideById[song.id] ?? h.slideIndex ?? 0;
+          const slideIdx = p.activeSlideById[song.id] ?? 0;
           const isSelected = p.selectedId === song.id;
           const isActive = p.activeIdx === i;
           const isFav = p.favSet.has(song.id);
@@ -788,7 +809,8 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
         <div className="grid grid-cols-1 gap-3 @md:grid-cols-2">
           {song.slides.map((s, i) => {
             const isActive = activeSlide === i;
-            const isProjected = !!projectedText && projectedText.startsWith(s.slice(0, 24));
+            const isProjected =
+              !!projectedText && projectedText.startsWith(truncateGraphemes(s, 24));
             const lines = s.split("\n").length;
             return (
               <div
@@ -796,7 +818,7 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
                 onClick={() => {
                   onSelect(i);
                   onProject(i);
-             }}
+                }}
                 className={cn(
                   "group relative flex min-w-0 cursor-pointer flex-col overflow-hidden rounded-lg border-2 bg-card/80 transition-all",
                   "hover:-translate-y-px hover:border-primary/70 hover:shadow-md",
@@ -861,7 +883,7 @@ function SongSearchInput({ inputRef }: { inputRef: React.RefObject<HTMLInputElem
     const t = setTimeout(() => {
       setQuery(localValue);
       setSongsSearch({ query: localValue });
-    }, 150);
+    }, 100);
     return () => clearTimeout(t);
   }, [localValue, query, setQuery, setSongsSearch]);
 
@@ -877,22 +899,28 @@ function SongSearchInput({ inputRef }: { inputRef: React.RefObject<HTMLInputElem
   );
 }
 
-function HighlightedText({ text, highlightTokens = [] }: { text: string; highlightTokens?: string[] }) {
+function HighlightedText({
+  text,
+  highlightTokens = [],
+}: {
+  text: string;
+  highlightTokens?: string[];
+}) {
   if (!highlightTokens.length) return <>{text}</>;
   try {
-    const q = highlightTokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
-    const regex = new RegExp(`(${q})`, 'gi');
+    const escaped = highlightTokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const regex = new RegExp(`(${escaped.join("|")})`, "gi");
     const parts = text.split(regex);
     return (
       <>
         {parts.map((part, i) =>
-          regex.test(part) ? (
+          i % 2 === 1 ? (
             <mark key={i} className="bg-primary/20 text-primary font-bold px-0.5 rounded">
               {part}
             </mark>
           ) : (
             <span key={i}>{part}</span>
-          )
+          ),
         )}
       </>
     );
@@ -901,150 +929,160 @@ function HighlightedText({ text, highlightTokens = [] }: { text: string; highlig
   }
 }
 
-const SongRow = memo(function SongRow({
-  virtualItem,
-  virtualizer,
-  hit,
-  song,
-  slideIdx,
-  isSelected,
-  isActive,
-  isFav,
-  isMine,
-  compact,
-  onOpen,
-  onProject,
-  addFav,
-  removeFav,
-  onEdit,
-  onDelete,
-  query,
-}: any) {
-  return (
-    <div
-      key={virtualItem.key}
-      data-index={virtualItem.index}
-      ref={virtualizer.measureElement}
-      className={cn(
-        "absolute left-0 top-0 w-full px-2 py-1 transition-colors",
-        isActive && !isSelected && "bg-muted/30",
-        isSelected && "bg-accent text-accent-foreground",
-      )}
-      style={{
-        transform: `translateY(${virtualItem.start}px)`,
-      }}
-    >
+const SongRow = memo(
+  function SongRow({
+    virtualItem,
+    virtualizer,
+    hit,
+    song,
+    slideIdx,
+    isSelected,
+    isActive,
+    isFav,
+    isMine,
+    compact,
+    onOpen,
+    onProject,
+    addFav,
+    removeFav,
+    onEdit,
+    onDelete,
+    query,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  }: any) {
+    return (
       <div
+        key={virtualItem.key}
+        data-index={virtualItem.index}
+        ref={virtualizer.measureElement}
         className={cn(
-          "group flex cursor-pointer items-start justify-between rounded-md p-2 hover:bg-muted/50",
-          isSelected && "bg-accent text-accent-foreground hover:bg-accent/90",
-          isActive && "ring-1 ring-ring/50",
+          "absolute left-0 top-0 w-full px-2 py-1 transition-colors",
+          isActive && !isSelected && "bg-muted/30",
+          isSelected && "bg-accent text-accent-foreground",
         )}
-        onClick={() => onOpen(song)}
-        onDoubleClick={() => onProject(song)}
+        style={{
+          transform: `translateY(${virtualItem.start}px)`,
+        }}
       >
-        <div className="min-w-0 flex-1 pr-4">
-          <div className="flex items-center gap-2 mb-1">
-            <span className={cn("font-semibold truncate", compact ? "text-sm" : "text-base")}>
-              <HighlightedText text={song.title} highlightTokens={hit.snippet?.highlightTokens || query.split(/\s+/)} />
-            </span>
-            {hit.matchType && hit.matchType !== "partial" && hit.matchType !== "Title Exact" && (
-              <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground border border-border">
-                Matched in {hit.matchType}
-              </span>
-            )}
-            {isMine && <span className="rounded bg-primary/10 px-1 text-[10px] text-primary">Mine</span>}
-          </div>
-          
-          {/* Snippet Preview */}
-          {!compact && (
-            <div className="mt-1.5 space-y-0.5">
-              {hit.snippet ? (
-                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
-                  <div className="opacity-60 text-[11px] leading-none mb-0.5">...</div>
-                  <div className="truncate text-foreground/90 font-medium">
-                    <HighlightedText text={hit.snippet.matchedLine} highlightTokens={hit.snippet.highlightTokens} />
-                  </div>
-                  {hit.snippet.nextLine ? (
-                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.snippet.nextLine}</div>
-                  ) : hit.snippet.previousLine ? (
-                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.snippet.previousLine}</div>
-                  ) : null}
-                  <div className="opacity-60 text-[11px] leading-none mt-0.5">...</div>
-                </div>
-              ) : (
-                <div className="text-xs text-muted-foreground truncate pl-2 opacity-80 max-w-[95%]">
-                  ... {firstLineOf(song)} ...
-                </div>
-              )}
-              {song.artist && <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">👤 {song.artist}</div>}
-            </div>
+        <div
+          className={cn(
+            "group flex cursor-pointer items-start justify-between rounded-md p-2 hover:bg-muted/50",
+            isSelected && "bg-accent text-accent-foreground hover:bg-accent/90",
+            isActive && "ring-1 ring-ring/50",
           )}
-        </div>
-        <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <div className="flex items-center gap-1">
-            <button
-              title={isFav ? "Remove Favorite" : "Add Favorite"}
-              className={cn("p-1.5 hover:bg-background/80 rounded", isFav ? "text-yellow-500" : "text-muted-foreground")}
-              onClick={(e) => {
-                e.stopPropagation();
-                isFav ? removeFav(song.id) : addFav({ id: song.id, title: song.title });
-              }}
-            >
-              <Star className="h-4 w-4" fill={isFav ? "currentColor" : "none"} />
-            </button>
-            {!compact && isMine && (
-              <>
-                <button
-                  className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-foreground"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(song.id);
-                  }}
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-destructive"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (confirm("Delete this song?")) onDelete(song.id);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </>
-            )}
+          onClick={() => onOpen(song)}
+          onDoubleClick={() => onProject(song)}
+        >
+          <div className="min-w-0 flex-1 pr-4">
+            <div className="flex items-center gap-2 mb-1">
+              <span className={cn("font-semibold truncate", compact ? "text-sm" : "text-base")}>
+                <HighlightedText text={hit.firstLine} highlightTokens={hit.highlightTokens} />
+              </span>
+              {hit.matchType && (
+                <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground border border-border">
+                  Matched in {hit.matchType}
+                </span>
+              )}
+              {isMine && (
+                <span className="rounded bg-primary/10 px-1 text-[10px] text-primary">Mine</span>
+              )}
+            </div>
+
+            {/* Preview: matched line + next line */}
             {!compact && (
+              <div className="mt-1.5 space-y-0.5">
+                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
+                  <div className="truncate text-foreground/90 font-medium">
+                    <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
+                  </div>
+                  {hit.nextLine && (
+                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.nextLine}</div>
+                  )}
+                </div>
+                {song.artist && (
+                  <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">
+                    👤 {song.artist}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="flex items-center gap-1">
               <button
-                title="Project Song"
-                className="p-1.5 hover:bg-primary/20 rounded text-primary"
+                title={isFav ? "Remove Favorite" : "Add Favorite"}
+                className={cn(
+                  "p-1.5 hover:bg-background/80 rounded",
+                  isFav ? "text-yellow-500" : "text-muted-foreground",
+                )}
                 onClick={(e) => {
                   e.stopPropagation();
-                  onProject(song);
+                  if (isFav) {
+                    removeFav(song.id);
+                  } else {
+                    addFav({ id: song.id, title: song.title });
+                  }
                 }}
               >
-                <Send className="h-4 w-4" />
+                <Star className="h-4 w-4" fill={isFav ? "currentColor" : "none"} />
               </button>
-            )}
-          </div>
-          <div className="text-[9px] text-muted-foreground font-mono">
-            {song.slides.length} slides
+              {!compact && isMine && (
+                <>
+                  <button
+                    className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-foreground"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(song.id);
+                    }}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-destructive"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (confirm("Delete this song?")) onDelete(song.id);
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </>
+              )}
+              {!compact && (
+                <button
+                  title="Project Song"
+                  className="p-1.5 hover:bg-primary/20 rounded text-primary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onProject(song);
+                  }}
+                >
+                  <Send className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <div className="text-[9px] text-muted-foreground font-mono">
+              {song.slides.length} slides
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-}, (prev, next) => {
-  return (
-    prev.virtualItem.start === next.virtualItem.start &&
-    prev.isSelected === next.isSelected &&
-    prev.isActive === next.isActive &&
-    prev.isFav === next.isFav &&
-    prev.isMine === next.isMine &&
-    prev.slideIdx === next.slideIdx &&
-    prev.query === next.query &&
-    prev.compact === next.compact
-  );
-});
-
+    );
+  },
+  (prev, next) => {
+    return (
+      prev.virtualItem.start === next.virtualItem.start &&
+      prev.isSelected === next.isSelected &&
+      prev.isActive === next.isActive &&
+      prev.isFav === next.isFav &&
+      prev.isMine === next.isMine &&
+      prev.slideIdx === next.slideIdx &&
+      prev.query === next.query &&
+      prev.compact === next.compact &&
+      prev.hit.score === next.hit.score &&
+      prev.hit.matchedLine === next.hit.matchedLine &&
+      prev.hit.nextLine === next.hit.nextLine &&
+      prev.hit.firstLine === next.hit.firstLine
+    );
+  },
+);
