@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+﻿@import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
@@ -142,7 +142,7 @@
     color: var(--color-foreground);
   }
 
-  /* Custom thin scrollbars — theme-aware, subtle, application-wide. */
+  /* Custom thin scrollbars â€” theme-aware, subtle, application-wide. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--color-muted-foreground) 35%, transparent) transparent;
@@ -435,8 +435,61 @@
   100% { transform: rotate(360deg); }
 }
 
+@keyframes err404-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 .animate-error-rotate {
   animation: error-rotate 30s linear infinite;
+}
+
+.animate-err404-rotate {
+  animation: err404-rotate 35s linear infinite;
+}
+
+@keyframes err404-particle {
+  0% { transform: translateY(0) translateX(0); opacity: 0; }
+  10% { opacity: 0.06; }
+  90% { opacity: 0.03; }
+  100% { transform: translateY(-120px) translateX(20px); opacity: 0; }
+}
+
+@keyframes err404-digit-sep {
+  0% { letter-spacing: 0px; opacity: 0.2; }
+  100% { letter-spacing: 6px; opacity: 1; }
+}
+
+@keyframes err404-breathe {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50% { opacity: 0.9; transform: scale(1.02); }
+}
+
+@keyframes err404-glow-pulse {
+  0%, 100% { opacity: 0.1; transform: scale(1); }
+  50% { opacity: 0.25; transform: scale(1.15); }
+}
+
+@keyframes err404-card-enter {
+  0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes err404-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.animate-err404-particle {
+  animation: err404-particle linear infinite;
+}
+
+.animate-err404-card-enter {
+  animation: err404-card-enter 0.5s ease-out both;
+}
+
+.animate-err404-fade-in {
+  animation: err404-fade-in 0.25s ease-out both;
 }
 
 .error-glass {
@@ -468,3 +521,4 @@
 .error-fade-in {
   animation: error-fade-in 0.3s ease-out both;
 }
+

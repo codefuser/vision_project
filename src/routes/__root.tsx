@@ -1,4 +1,4 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -14,16 +14,26 @@ import { Toaster } from "@/components/ui/sonner";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
 import { ErrorPage } from "@/components/ErrorPage";
+import { NotFoundPage } from "@/components/NotFoundPage";
 
-function NotFoundComponent() {
-  return (
-    <ErrorPage
-      errorCode="VP-404"
-      title="Page Not Found"
-      message="The page you're looking for doesn't exist or has been moved. Check the URL or navigate home."
-      recommendedAction="home"
-      showHistory={false}
-    />
+const KNOWN_ROUTE_PREFIXES = [
+  "/",
+  "/library",
+  "/history",
+  "/playlists",
+  "/project",
+  "/service",
+  "/settings",
+  "/shortcuts",
+  "/contact",
+  "/roadmap",
+  "/developer-hub",
+];
+
+function isKnownRoute(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return KNOWN_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 }
 
@@ -55,14 +65,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Church Media — Projection Software" },
+      { title: "Church Media - Projection Software" },
       {
         name: "description",
         content:
           "Offline-first media projection software for churches. Images, posters, and videos.",
       },
       { name: "theme-color", content: "#0a0a0a" },
-      { property: "og:title", content: "Church Media — Projection Software" },
+      { property: "og:title", content: "Church Media - Projection Software" },
       {
         property: "og:description",
         content: "Offline-first media projection software for churches.",
@@ -81,7 +91,6 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
-  notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
 });
 
@@ -101,12 +110,18 @@ function RootShell({ children }: { children: ReactNode }) {
 
 import { AppShell } from "@/components/AppShell";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { useRouterState } from "@tanstack/react-router";
 
 function RootComponent() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { queryClient } = Route.useRouteContext();
-  // Detect projector popup: skip app-wide shortcut handlers there so the
-  // popup window stays a passive renderer (the broadcast channel is the
-  // only command source it should react to).
+
+  // 404 gate: render standalone NotFoundPage before any providers
+  if (!isKnownRoute(pathname)) {
+    return <NotFoundPage />;
+  }
+
+  // Detect projector popup
   const isProjectorPopup =
     typeof window !== "undefined" && window.opener != null && window.name === "church-projector";
 
