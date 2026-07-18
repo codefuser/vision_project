@@ -1,183 +1,263 @@
 import type { Song } from "./loader";
 import { songLower, songStem } from "./normalize";
 
+export type MatchType = "Title Exact" | "Title Fuzzy" | "Alias" | "Chorus" | "Verse" | "Lyrics";
+
+export interface PreviewSnippet {
+  previousLine?: string;
+  matchedLine: string;
+  nextLine?: string;
+  highlightTokens: string[];
+}
+
 export interface SongHit {
   song: Song;
   score: number;
   slideIndex: number;
-  matched: string[];
-  matchedLine?: string;
+  matchType: MatchType;
+  snippet?: PreviewSnippet;
 }
 
 const queryCache = new Map<string, SongHit[]>();
-const MAX_CACHE = 50;
+const MAX_CACHE = 100;
 
-function cachedSearch(query: string, songs: Song[], limit: number): SongHit[] {
-  const cached = queryCache.get(query);
+/** Bounded Levenshtein on strings (useful for stems or short words) */
+function lev(a: string, b: string, max: number): number {
+  const al = a.length;
+  const bl = b.length;
+  if (Math.abs(al - bl) > max) return Infinity;
+  let prev = new Array(bl + 1);
+  let curr = new Array(bl + 1);
+  for (let j = 0; j <= bl; j++) prev[j] = j;
+  for (let i = 1; i <= al; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= bl; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > max) return Infinity;
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[bl];
+}
+
+// ----------------------------------------------------
+// INVERTED INDEX
+// ----------------------------------------------------
+
+interface TokenLocation {
+  songId: number;
+  slideIdx: number;
+  lineIdx: number;
+  matchType: MatchType;
+  scoreWeight: number;
+}
+
+let cachedSongsRef: Song[] | null = null;
+const invertedIndex = new Map<string, TokenLocation[]>();
+const songMap = new Map<number, Song>();
+let indexKeys: string[] = [];
+
+function buildIndex(songs: Song[]) {
+  if (cachedSongsRef === songs) return;
+  invertedIndex.clear();
+  songMap.clear();
+  cachedSongsRef = songs;
+
+  for (const song of songs) {
+    songMap.set(song.id, song);
+    
+    const indexToken = (tokenStr: string, loc: TokenLocation) => {
+      const stem = songStem(tokenStr);
+      if (!stem || stem.length === 0) return;
+      let list = invertedIndex.get(stem);
+      if (!list) {
+        list = [];
+        invertedIndex.set(stem, list);
+      }
+      list.push(loc);
+    };
+
+    // 1. Index Title
+    const titleWords = song.title.split(/\s+/);
+    for (const w of titleWords) {
+      indexToken(w, { songId: song.id, slideIdx: 0, lineIdx: -1, matchType: "Title Exact", scoreWeight: 10000 });
+    }
+
+    // 2. Index Slides
+    for (let slideIdx = 0; slideIdx < song.slides.length; slideIdx++) {
+      const slideStr = song.slides[slideIdx];
+      const slideLower = songLower(slideStr);
+      const isChorus = slideLower.startsWith("chorus") || slideLower.includes("[chorus]");
+      const matchType: MatchType = isChorus ? "Chorus" : "Verse";
+      const scoreWeight = isChorus ? 5000 : 3000;
+
+      const lines = slideStr.split("\n");
+      for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+        const lineStr = lines[lineIdx];
+        if (lineStr.trim() === song.title.trim()) continue; // skip inline titles
+
+        const words = lineStr.split(/\s+/);
+        for (const w of words) {
+          indexToken(w, { songId: song.id, slideIdx, lineIdx, matchType, scoreWeight });
+        }
+      }
+    }
+  }
+  indexKeys = Array.from(invertedIndex.keys());
+}
+
+export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[] {
+  const q = query.trim();
+  if (!q) return [];
+  
+  buildIndex(songs);
+
+  const cached = queryCache.get(q);
   if (cached) return cached.slice(0, limit);
 
-  const hits = runSearch(query, songs, limit);
-  if (hits.length > 0) {
-    if (queryCache.size >= MAX_CACHE) {
-      const firstKey = queryCache.keys().next().value;
-      if (firstKey !== undefined) queryCache.delete(firstKey);
-    }
-    queryCache.set(query, hits);
-    return hits;
+  const hits = runSearch(q, limit);
+  
+  if (queryCache.size >= MAX_CACHE) {
+    const firstKey = queryCache.keys().next().value;
+    if (firstKey !== undefined) queryCache.delete(firstKey);
   }
-
-  if (query.length < 20) {
-    const fallback = typoToleranceFallback(query, songs, limit);
-    if (fallback.length > 0) {
-      if (queryCache.size >= MAX_CACHE) {
-        const firstKey = queryCache.keys().next().value;
-        if (firstKey !== undefined) queryCache.delete(firstKey);
-      }
-      queryCache.set(query, fallback);
-    }
-    return fallback;
-  }
-
-  return [];
+  queryCache.set(q, hits);
+  
+  return hits;
 }
 
-export function searchSongs(query: string, songs: Song[], limit = 80): SongHit[] {
-  const q = query.trim();
-  if (!q) return [];
-  return cachedSearch(q, songs, limit);
-}
-
-function typoToleranceFallback(query: string, songs: Song[], limit: number): SongHit[] {
-  const tokens = query.split(/\s+/).filter(Boolean);
-  if (tokens.length === 0) return [];
-  const variants = new Set<string>();
-  for (let i = 0; i < tokens.length; i++) {
-    const t = tokens[i];
-    if (t.length < 3) continue;
-    for (let j = 0; j < t.length; j++) {
-      const trimmed = t.slice(0, j) + t.slice(j + 1);
-      const v = [...tokens.slice(0, i), trimmed, ...tokens.slice(i + 1)].join(" ");
-      variants.add(v);
-    }
-  }
-  const seen = new Set<number>();
-  const out: SongHit[] = [];
-  for (const v of variants) {
-    const h = runSearch(v, songs, limit);
-    for (const x of h) {
-      if (seen.has(x.song.id)) continue;
-      seen.add(x.song.id);
-      out.push({ ...x, score: x.score - 50 });
-      if (out.length >= limit) break;
-    }
-    if (out.length >= limit) break;
-  }
-  return out;
-}
-
-function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
-  const q = query.trim();
-  if (!q) return [];
-  const qLower = songLower(q);
-  const qStem = songStem(q);
-  const rawTokens = q.toLowerCase().split(/\s+/).filter(Boolean);
-  const tokens = rawTokens
-    .map((t) => ({
-      raw: t,
-      lower: songLower(t),
-      stem: songStem(t),
-    }))
+function runSearch(query: string, limit: number): SongHit[] {
+  const qLower = songLower(query);
+  
+  const rawTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const qTokens = rawTokens
+    .map((t) => ({ raw: t, lower: songLower(t), stem: songStem(t) }))
     .filter((t) => t.stem.length >= 1 || t.lower.length >= 2);
 
-  if (!tokens.length) return [];
+  if (!qTokens.length) return [];
 
-  const hits: SongHit[] = [];
-  for (let i = 0; i < songs.length; i++) {
-    const s = songs[i];
-    let titleHits = 0;
-    let titleStemHits = 0;
-    let contentHits = 0;
-    let contentStemHits = 0;
-    const matched: string[] = [];
-    let allMatched = true;
+  // Track scores per song ID
+  const songScores = new Map<number, { score: number, slideIdx: number, lineIdx: number, matchType: MatchType, tokensMatched: Set<string> }>();
 
-    for (const tok of tokens) {
-      let found = false;
-      if (tok.lower && s.titleLower.includes(tok.lower)) {
-        titleHits++;
-        matched.push(tok.raw);
-        found = true;
-      } else if (tok.stem.length >= 2 && s.titleStem.includes(tok.stem)) {
-        titleStemHits++;
-        matched.push(tok.raw);
-        found = true;
-      } else if (tok.lower && s.contentLower.includes(tok.lower)) {
-        contentHits++;
-        matched.push(tok.raw);
-        found = true;
-      } else if (tok.stem.length >= 2 && s.contentStem.includes(tok.stem)) {
-        contentStemHits++;
-        matched.push(tok.raw);
-        found = true;
-      }
-      if (!found) {
-        allMatched = false;
-        break;
-      }
-    }
-    if (!allMatched) continue;
-
-    let score = titleHits * 220 + titleStemHits * 140 + contentHits * 30 + contentStemHits * 18;
-    if (qLower && s.titleLower.includes(qLower)) score += 320;
-    if (qStem && s.titleStem.includes(qStem)) score += 80;
-    if (qLower && s.contentLower.includes(qLower)) score += 90;
-    score -= Math.min(40, Math.floor(s.content.length / 400));
-
-    let bestSlide = 0,
-      bestScore = -1,
-      matchedLine: string | undefined = undefined;
-
-    for (let j = 0; j < s.slides.length; j++) {
-      const slide = s.slides[j];
-      const sl = slide.toLowerCase();
-      const st = s.slideStems[j] ?? "";
-      let sc = 0;
-      for (const tok of tokens) {
-        if (tok.lower && sl.includes(tok.lower)) sc += 6;
-        else if (tok.stem.length >= 2 && st.includes(tok.stem)) sc += 4;
-      }
-      if (qLower && sl.includes(qLower)) sc += 12;
-      
-      if (sc > bestScore) {
-        bestScore = sc;
-        bestSlide = j;
-        
-        if (sc > 0) {
-          const lines = slide.split('\n');
-          for (const line of lines) {
-            const ll = line.toLowerCase();
-            const lst = songStem(line);
-            let lineMatches = false;
-            for (const tok of tokens) {
-              if ((tok.lower && ll.includes(tok.lower)) || (tok.stem.length >= 2 && lst.includes(tok.stem))) {
-                lineMatches = true;
-                break;
-              }
-            }
-            if (qLower && ll.includes(qLower)) lineMatches = true;
-            
-            if (lineMatches && line.trim() !== s.title.trim()) {
-              matchedLine = line.trim();
-              break;
-            }
-          }
+  for (const qTok of qTokens) {
+    // Find all index keys that match this query token
+    const matchedKeys: string[] = [];
+    
+    // Exact or Prefix match
+    for (const key of indexKeys) {
+      if (key === qTok.stem) {
+        matchedKeys.push(key);
+      } else if (qTok.stem.length >= 3 && key.startsWith(qTok.stem)) {
+        matchedKeys.push(key);
+      } else if (qTok.stem.length >= 4 && key.length >= 4) {
+        // Fuzzy match on vocabulary (extremely fast since vocab is small)
+        if (lev(qTok.stem, key, 1) <= 1) {
+          matchedKeys.push(key);
         }
       }
     }
 
-    hits.push({ song: s, score, slideIndex: bestSlide, matched, matchedLine });
-    if (hits.length >= limit) break;
+    // Accumulate scores for songs that contain these matched keys
+    for (const key of matchedKeys) {
+      const locations = invertedIndex.get(key);
+      if (!locations) continue;
+      
+      const isFuzzy = key !== qTok.stem && !key.startsWith(qTok.stem);
+      const fuzzyPenalty = isFuzzy ? 0.6 : 1.0;
+
+      for (const loc of locations) {
+        let current = songScores.get(loc.songId);
+        if (!current) {
+          current = { score: 0, slideIdx: loc.slideIdx, lineIdx: loc.lineIdx, matchType: loc.matchType, tokensMatched: new Set() };
+          songScores.set(loc.songId, current);
+        }
+        
+        if (!current.tokensMatched.has(qTok.stem)) {
+          current.tokensMatched.add(qTok.stem);
+          // Only add score for the first time this token matches for this song
+          // We apply the location weight
+          let addedScore = loc.scoreWeight * fuzzyPenalty;
+          
+          // Adjust Match Type if fuzzy title
+          let mt = loc.matchType;
+          if (mt === "Title Exact" && isFuzzy) mt = "Title Fuzzy";
+          
+          current.score += addedScore;
+          
+          // Keep highest priority match type and location
+          if (loc.scoreWeight > (current.matchType === "Title Exact" ? 10000 : current.matchType === "Chorus" ? 5000 : 0)) {
+             current.matchType = mt;
+             current.slideIdx = loc.slideIdx;
+             current.lineIdx = loc.lineIdx;
+          }
+        }
+      }
+    }
   }
+
+  const hits: SongHit[] = [];
+
+  for (const [songId, data] of songScores.entries()) {
+    const song = songMap.get(songId);
+    if (!song) continue;
+    
+    let finalScore = data.score;
+    let mt = data.matchType;
+
+    // Full String Exact Match Boost
+    if (qLower && song.titleLower.includes(qLower)) {
+      finalScore += 20000;
+      mt = "Title Exact";
+    }
+
+    // Must match at least half the tokens to be considered a viable result
+    if (data.tokensMatched.size < Math.ceil(qTokens.length / 2)) {
+      continue; // Skip junk matches
+    }
+
+    // Extract Lazy Snippet only if it's not a title-only match
+    let snippet: PreviewSnippet | undefined = undefined;
+    if (data.lineIdx >= 0) {
+      const slide = song.slides[data.slideIdx];
+      if (slide) {
+        const lines = slide.split("\n").map(l => l.trim());
+        const lIdx = data.lineIdx;
+        snippet = {
+          previousLine: lIdx > 0 ? lines[lIdx - 1] : undefined,
+          matchedLine: lines[lIdx] || "",
+          nextLine: lIdx < lines.length - 1 ? lines[lIdx + 1] : undefined,
+          highlightTokens: qTokens.map(t => t.lower).filter(Boolean)
+        };
+      }
+    } else {
+      // It's a title match, let's grab the first line of the song as context
+      if (song.slides.length > 0) {
+        const lines = song.slides[0].split("\n").map(l => l.trim()).filter(Boolean);
+        if (lines.length > 0) {
+          snippet = {
+            previousLine: undefined,
+            matchedLine: lines[0],
+            nextLine: lines.length > 1 ? lines[1] : undefined,
+            highlightTokens: qTokens.map(t => t.lower).filter(Boolean)
+          };
+        }
+      }
+    }
+
+    hits.push({
+      song,
+      score: finalScore,
+      slideIndex: data.slideIdx,
+      matchType: mt,
+      snippet
+    });
+  }
+
   hits.sort((a, b) => b.score - a.score);
   return hits.slice(0, limit);
 }

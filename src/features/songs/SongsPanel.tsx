@@ -7,7 +7,7 @@
  *                         preview cards on the right. The operator sees
  *                         the library and the song's slides at the same time.
  */
-import { useEffect, useMemo, useRef, useState, memo } from "react";
+import { useEffect, useMemo, useRef, useState, memo, useTransition } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
 import { useShallow } from "zustand/react/shallow";
 import { Music, Loader2, Star, Send, Search, Plus, Pencil, Trash2, Filter } from "lucide-react";
@@ -32,6 +32,8 @@ import { useProjection } from "@/stores/projection.store";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { SongEditorDialog } from "./SongEditorDialog";
+import { SplitPane } from "@/components/ui/split-pane";
+import { suggestTanglish } from "@/lib/text/tanglish";
 
 /** First non-empty lyric line — shown on every result card. */
 function firstLineOf(song: Song): string {
@@ -98,6 +100,7 @@ export function SongsPanel() {
   const [results, setResults] = useState<SongHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [activeSlideById, setActiveSlideById] = useState<Record<number, number>>({});
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -227,8 +230,10 @@ export function SongsPanel() {
       .filter((h) => applyFilter(h.song))
       .slice(0, 120);
     setSearchMs(performance.now() - t0);
-    setResults(hits);
-    setActiveIdx(0);
+    startTransition(() => {
+      setResults(hits);
+      setActiveIdx(0);
+    });
   }, [debouncedQuery, loaded, recent, userSongs, favorites, filter, authorFilter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
@@ -541,49 +546,55 @@ export function SongsPanel() {
             <Loader2 className="h-4 w-4 animate-spin" /> Loading song library…
           </div>
         ) : (
-          <div className="grid h-full min-h-0 grid-cols-1 @lg:grid-cols-[minmax(260px,1fr)_1.4fr]">
-            <SongList
-              results={results}
-              activeIdx={activeIdx}
-              setActiveIdx={setActiveIdx}
-              onOpen={openSong}
-              onProject={(song) => project(song, activeSlideById[song.id] ?? 0)}
-              projectedText={projectedRef}
-              favSet={favSet}
-              addFav={addFavorite}
-              removeFav={removeFavorite}
-              activeSlideById={activeSlideById}
-              selectedId={selectedSong?.id ?? null}
-              userSongs={userSongs}
-              onEdit={(id) => {
-                setEditingId(id);
-                setEditorOpen(true);
-              }}
-              onDelete={removeUserSong}
-              query={query}
-              compact
-              listRef={listRef}
-              onScroll={() => {
-                const el = listRef.current;
-                if (el) setScrollPosition("songs", el.scrollTop);
-              }}
-            />
-            {selectedSong ? (
-              <SlidePane
-                song={selectedSong}
-                activeSlide={activeSlideById[selectedSong.id] ?? 0}
-                onSelect={(i) => setActiveSlideById((m) => ({ ...m, [selectedSong.id]: i }))}
-                onProject={(i) => project(selectedSong, i)}
-                onEdit={() => {
-                  setEditingId(selectedSong.id);
+          <SplitPane
+            storageKey="vision-songs-split-width"
+            defaultLeftWidth={320}
+            left={
+              <SongList
+                results={results}
+                activeIdx={activeIdx}
+                setActiveIdx={setActiveIdx}
+                onOpen={openSong}
+                onProject={(song) => project(song, activeSlideById[song.id] ?? 0)}
+                projectedText={projectedRef}
+                favSet={favSet}
+                addFav={addFavorite}
+                removeFav={removeFavorite}
+                activeSlideById={activeSlideById}
+                selectedId={selectedSong?.id ?? null}
+                userSongs={userSongs}
+                onEdit={(id) => {
+                  setEditingId(id);
                   setEditorOpen(true);
                 }}
-                projectedText={projectedRef}
+                onDelete={removeUserSong}
+                query={query}
+                compact
+                listRef={listRef}
+                onScroll={() => {
+                  const el = listRef.current;
+                  if (el) setScrollPosition("songs", el.scrollTop);
+                }}
               />
-            ) : (
-              <SlideEmptyState />
-            )}
-          </div>
+            }
+            right={
+              selectedSong ? (
+                <SlidePane
+                  song={selectedSong}
+                  activeSlide={activeSlideById[selectedSong.id] ?? 0}
+                  onSelect={(i) => setActiveSlideById((m) => ({ ...m, [selectedSong.id]: i }))}
+                  onProject={(i) => project(selectedSong, i)}
+                  onEdit={() => {
+                    setEditingId(selectedSong.id);
+                    setEditorOpen(true);
+                  }}
+                  projectedText={projectedRef}
+                />
+              ) : (
+                <SlideEmptyState />
+              )
+            }
+          />
         )}
       </div>
 
@@ -628,12 +639,32 @@ function SongList(p: ListProps) {
     overscan: 5,
   });
 
+  const suggestions = useMemo(() => {
+    if (!p.query.trim()) return [];
+    return suggestTanglish(p.query, 3);
+  }, [p.query]);
+
   if (!p.results.length) {
     return (
-      <div className={cn("min-h-0 overflow-y-auto", p.compact && "border-r border-border")}>
-        <div className="px-3 py-8 text-center text-xs text-muted-foreground">
-          No matches. Try Tamil, Tanglish, a misspelling, or any lyric.
+      <div className={cn("min-h-0 overflow-y-auto h-full flex flex-col items-center justify-center p-6 text-center text-muted-foreground", p.compact && "border-r border-border")}>
+        <div className="mb-4">
+          <Search className="h-10 w-10 mx-auto mb-2 opacity-20" />
+          <p className="text-sm font-medium text-foreground/80">No exact matches found</p>
+          <p className="text-xs opacity-80 max-w-[200px] mt-1">Try spelling phonetically or check your spelling.</p>
         </div>
+        
+        {suggestions.length > 0 && (
+          <div className="space-y-2 mt-2 border border-border bg-card p-3 rounded-lg text-xs">
+            <div className="font-semibold text-foreground">Did you mean?</div>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {suggestions.map(s => (
+                <div key={s.tamil} className="bg-primary/10 text-primary px-2 py-1 rounded">
+                  {s.tamil} <span className="opacity-50 ml-1">({s.key})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -846,6 +877,30 @@ function SongSearchInput({ inputRef }: { inputRef: React.RefObject<HTMLInputElem
   );
 }
 
+function HighlightedText({ text, highlightTokens = [] }: { text: string; highlightTokens?: string[] }) {
+  if (!highlightTokens.length) return <>{text}</>;
+  try {
+    const q = highlightTokens.map(t => t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|');
+    const regex = new RegExp(`(${q})`, 'gi');
+    const parts = text.split(regex);
+    return (
+      <>
+        {parts.map((part, i) =>
+          regex.test(part) ? (
+            <mark key={i} className="bg-primary/20 text-primary font-bold px-0.5 rounded">
+              {part}
+            </mark>
+          ) : (
+            <span key={i}>{part}</span>
+          )
+        )}
+      </>
+    );
+  } catch (e) {
+    return <>{text}</>;
+  }
+}
+
 const SongRow = memo(function SongRow({
   virtualItem,
   virtualizer,
@@ -889,70 +944,92 @@ const SongRow = memo(function SongRow({
         onDoubleClick={() => onProject(song)}
       >
         <div className="min-w-0 flex-1 pr-4">
-          <div className="flex items-center gap-2">
-            <span className={cn("font-medium truncate", compact ? "text-sm" : "text-base")}>
-              {song.title}
+          <div className="flex items-center gap-2 mb-1">
+            <span className={cn("font-semibold truncate", compact ? "text-sm" : "text-base")}>
+              <HighlightedText text={song.title} highlightTokens={hit.snippet?.highlightTokens || query.split(/\s+/)} />
             </span>
+            {hit.matchType && hit.matchType !== "partial" && hit.matchType !== "Title Exact" && (
+              <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground border border-border">
+                Matched in {hit.matchType}
+              </span>
+            )}
             {isMine && <span className="rounded bg-primary/10 px-1 text-[10px] text-primary">Mine</span>}
           </div>
+          
+          {/* Snippet Preview */}
           {!compact && (
-            <div className="mt-1 space-y-1">
-              <div className="text-xs text-muted-foreground line-clamp-2">
-                {hit.highlightHTML ? (
-                  <span dangerouslySetInnerHTML={{ __html: hit.highlightHTML }} />
-                ) : (
-                  song.slides[slideIdx]?.text
-                )}
-              </div>
-              {song.author && <div className="text-[10px] text-muted-foreground">👤 {song.author}</div>}
+            <div className="mt-1.5 space-y-1">
+              {hit.snippet ? (
+                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5">
+                  {hit.snippet.previousLine && (
+                    <div className="line-clamp-1 opacity-60 text-[11px]">{hit.snippet.previousLine}</div>
+                  )}
+                  <div className="line-clamp-1 text-foreground/90 font-medium">
+                    <HighlightedText text={hit.snippet.matchedLine} highlightTokens={hit.snippet.highlightTokens} />
+                  </div>
+                  {hit.snippet.nextLine && (
+                    <div className="line-clamp-1 opacity-60 text-[11px]">{hit.snippet.nextLine}</div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-muted-foreground line-clamp-2 pl-2">
+                  {firstLineOf(song)}
+                </div>
+              )}
+              {song.artist && <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">👤 {song.artist}</div>}
             </div>
           )}
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            title={isFav ? "Remove Favorite" : "Add Favorite"}
-            className={cn("p-1.5 hover:bg-background/80 rounded", isFav ? "text-yellow-500" : "text-muted-foreground")}
-            onClick={(e) => {
-              e.stopPropagation();
-              isFav ? removeFav(song.id) : addFav({ id: song.id, title: song.title });
-            }}
-          >
-            <Star className="h-4 w-4" fill={isFav ? "currentColor" : "none"} />
-          </button>
-          {!compact && isMine && (
-            <>
-              <button
-                className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-foreground"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(song.id);
-                }}
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-destructive"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (confirm("Delete this song?")) onDelete(song.id);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </>
-          )}
-          {!compact && (
+        <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex items-center gap-1">
             <button
-              title="Project Song"
-              className="p-1.5 hover:bg-primary/20 rounded text-primary"
+              title={isFav ? "Remove Favorite" : "Add Favorite"}
+              className={cn("p-1.5 hover:bg-background/80 rounded", isFav ? "text-yellow-500" : "text-muted-foreground")}
               onClick={(e) => {
                 e.stopPropagation();
-                onProject(song);
+                isFav ? removeFav(song.id) : addFav({ id: song.id, title: song.title });
               }}
             >
-              <Send className="h-4 w-4" />
+              <Star className="h-4 w-4" fill={isFav ? "currentColor" : "none"} />
             </button>
-          )}
+            {!compact && isMine && (
+              <>
+                <button
+                  className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-foreground"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(song.id);
+                  }}
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-destructive"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm("Delete this song?")) onDelete(song.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </>
+            )}
+            {!compact && (
+              <button
+                title="Project Song"
+                className="p-1.5 hover:bg-primary/20 rounded text-primary"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onProject(song);
+                }}
+              >
+                <Send className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="text-[9px] text-muted-foreground font-mono">
+            {song.slides.length} slides
+          </div>
         </div>
       </div>
     </div>
