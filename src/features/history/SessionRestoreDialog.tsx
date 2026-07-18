@@ -1,10 +1,6 @@
-/**
- * Session Restore Dialog
- * Offers granular restore options for a past session.
- */
 import { useState } from "react";
-import { RotateCcw, ChevronDown, BookOpen, Music, Palette, ListVideo, Layers } from "lucide-react";
-import type { SessionRecord, SessionEventRecord, SessionEventType } from "@/db/schema";
+import { RotateCcw, ChevronDown, BookOpen, Music, Palette, Image as ImageIcon, Layers, RefreshCw } from "lucide-react";
+import type { SessionRecord, SessionEventRecord } from "@/db/schema";
 import { toast } from "sonner";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -13,49 +9,48 @@ interface Props {
   events: SessionEventRecord[];
 }
 
-interface RestoreOption {
-  id: string;
-  label: string;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  action: () => void | Promise<void>;
-}
-
 export function SessionRestoreDialog({ session, events }: Props) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
 
   const bibleEvents = events.filter((e) => e.eventType === "BIBLE_PROJECTED");
   const songEvents = events.filter((e) => e.eventType === "SONG_PROJECTED");
+  const mediaEvents = events.filter((e) => e.eventType === "IMAGE_PROJECTED" || e.eventType === "VIDEO_PROJECTED");
   const lastTheme = [...events].reverse().find((e) => e.eventType === "THEME_CHANGED");
-  const mediaEvents = events.filter(
-    (e) =>
-      e.eventType === "IMAGE_PROJECTED" || e.eventType === "VIDEO_PROJECTED",
-  );
   const playlistEvent = events.find((e) => e.eventType === "PLAYLIST_OPENED");
 
-  const handleRestoreTheme = () => {
-    if (!lastTheme) {
-      toast.info("No theme changes recorded in this session.");
-      return;
-    }
-    // Navigate to project and note the theme to restore
-    toast.success(`Theme "${lastTheme.label.replace("Theme → ", "")}" noted. Navigate to Project to apply.`);
-    setOpen(false);
-  };
-
-  const handleRestoreBibleOrder = () => {
+  const handleCopyBibleRefs = () => {
     if (!bibleEvents.length) {
       toast.info("No Bible verses projected in this session.");
       return;
     }
     const refs = bibleEvents.map((e) => e.label).join(", ");
-    toast.success(`Bible order: ${bibleEvents.length} verses. References copied to clipboard.`);
-    void navigator.clipboard.writeText(refs).catch(() => {/* ignore */});
+    void navigator.clipboard.writeText(refs).catch(() => {});
+    toast.success(`${bibleEvents.length} Bible references copied`);
     setOpen(false);
   };
 
-  const handleRestorePlaylist = () => {
+  const handleCopySongNames = () => {
+    if (!songEvents.length) {
+      toast.info("No songs projected in this session.");
+      return;
+    }
+    const names = [...new Set(songEvents.map((e) => e.label))].join(", ");
+    void navigator.clipboard.writeText(names).catch(() => {});
+    toast.success(`${songEvents.length} song references copied`);
+    setOpen(false);
+  };
+
+  const handleRestoreTheme = () => {
+    if (!lastTheme) {
+      toast.info("No theme changes recorded.");
+      return;
+    }
+    toast.success(`Theme "${lastTheme.label.replace("Theme → ", "")}" noted for restore.`);
+    setOpen(false);
+  };
+
+  const handleOpenPlaylist = () => {
     const meta = playlistEvent?.metadata;
     if (!meta) {
       toast.info("No playlist was opened in this session.");
@@ -68,65 +63,66 @@ export function SessionRestoreDialog({ session, events }: Props) {
         setOpen(false);
         return;
       }
-    } catch {/* ignore */}
-    toast.info("Playlist reference not found. It may have been deleted.");
+    } catch {}
+    toast.info("Playlist reference not found.");
     setOpen(false);
   };
 
-  const options: RestoreOption[] = [
+  const allItemsCount = bibleEvents.length + songEvents.length + mediaEvents.length;
+  const sections: {
+    id: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    action: () => void;
+    count: number;
+    active: boolean;
+  }[] = [
     {
       id: "bible",
-      label: "Restore Bible Order",
-      description: `${bibleEvents.length} verses — copies references to clipboard`,
+      label: "Bible",
       icon: BookOpen,
-      action: handleRestoreBibleOrder,
-    },
-    {
-      id: "theme",
-      label: "Restore Theme",
-      description: lastTheme
-        ? `Last used: ${lastTheme.label.replace("Theme → ", "")}`
-        : "No theme changes in this session",
-      icon: Palette,
-      action: handleRestoreTheme,
-    },
-    {
-      id: "playlist",
-      label: "Restore Playlist",
-      description: playlistEvent
-        ? `Opens the playlist used in this session`
-        : "No playlist was opened",
-      icon: ListVideo,
-      action: handleRestorePlaylist,
-    },
-    {
-      id: "queue",
-      label: "View Media Queue",
-      description: `${mediaEvents.length} media items projected`,
-      icon: Layers,
-      action: () => {
-        if (!mediaEvents.length) {
-          toast.info("No media was projected in this session.");
-          return;
-        }
-        toast.info(`${mediaEvents.length} media items projected. See timeline for details.`);
-        setOpen(false);
-      },
+      action: handleCopyBibleRefs,
+      count: bibleEvents.length,
+      active: bibleEvents.length > 0,
     },
     {
       id: "songs",
-      label: "View Song Order",
-      description: `${songEvents.length} song slides projected`,
+      label: "Songs",
       icon: Music,
+      action: handleCopySongNames,
+      count: songEvents.length,
+      active: songEvents.length > 0,
+    },
+    {
+      id: "theme",
+      label: "Theme",
+      icon: Palette,
+      action: handleRestoreTheme,
+      count: lastTheme ? 1 : 0,
+      active: !!lastTheme,
+    },
+    {
+      id: "media",
+      label: "Media",
+      icon: ImageIcon,
       action: () => {
-        if (!songEvents.length) {
-          toast.info("No songs projected in this session.");
+        if (!mediaEvents.length) {
+          toast.info("No media projected.");
           return;
         }
-        const names = [...new Set(songEvents.map((e) => e.label))].join(", ");
-        toast.success(`Songs: ${names}`);
+        toast.success(`${mediaEvents.length} media items noted. See timeline.`);
         setOpen(false);
       },
+      count: mediaEvents.length,
+      active: mediaEvents.length > 0,
+    },
+    {
+      id: "playlist",
+      label: "Playlist",
+      icon: Layers,
+      action: handleOpenPlaylist,
+      count: playlistEvent ? 1 : 0,
+      active: !!playlistEvent,
     },
   ];
 
@@ -135,9 +131,9 @@ export function SessionRestoreDialog({ session, events }: Props) {
       <button
         id="session-restore-btn"
         onClick={() => setOpen((v) => !v)}
-        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition hover:opacity-90"
+        className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-all duration-150 hover:opacity-90"
       >
-        <RotateCcw className="h-3.5 w-3.5" />
+        <RefreshCw className="h-3.5 w-3.5" />
         Restore
         <ChevronDown className="h-3 w-3 opacity-70" />
       </button>
@@ -145,36 +141,63 @@ export function SessionRestoreDialog({ session, events }: Props) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-border bg-popover shadow-xl">
-            <div className="border-b border-border px-3 py-2">
-              <p className="text-xs font-semibold text-foreground">Restore Options</p>
-              <p className="text-[11px] text-muted-foreground">
-                Best-effort — deleted items cannot be restored
+          <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-xl border border-white/5 bg-popover/95 backdrop-blur-xl shadow-xl">
+            <div className="border-b border-white/5 px-3 py-2.5">
+              <p className="text-xs font-semibold text-foreground/90">
+                Restore from Session
+              </p>
+              <p className="text-[10px] text-muted-foreground/50 mt-0.5">
+                {allItemsCount} items · Best-effort restore
               </p>
             </div>
-            {options.map((opt) => {
-              const Icon = opt.icon;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => void opt.action()}
-                  className="flex w-full items-start gap-3 px-3 py-2.5 text-left transition hover:bg-accent"
-                >
-                  <div className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-primary/10">
-                    <Icon className="h-3.5 w-3.5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-medium text-foreground">{opt.label}</p>
-                    <p className="text-[11px] text-muted-foreground leading-tight">
-                      {opt.description}
-                    </p>
-                  </div>
-                </button>
-              );
-            })}
+
+            <div className="p-1.5 space-y-0.5">
+              {sections.map((s) => {
+                const Icon = s.icon;
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => s.action()}
+                    disabled={!s.active}
+                    className={cn(
+                      "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-all duration-150",
+                      s.active
+                        ? "hover:bg-accent/60 cursor-pointer"
+                        : "opacity-30 cursor-not-allowed",
+                    )}
+                  >
+                    <div className={cn(
+                      "flex h-7 w-7 items-center justify-center rounded-lg",
+                      s.active ? "bg-primary/10" : "bg-muted/30",
+                    )}>
+                      <Icon className={cn(
+                        "h-3.5 w-3.5",
+                        s.active ? "text-primary" : "text-muted-foreground/50",
+                      )} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className={cn(
+                        "text-xs font-medium",
+                        s.active ? "text-foreground/80" : "text-muted-foreground/50",
+                      )}>
+                        {s.label}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground/40">
+                        {s.count} item{s.count !== 1 ? "s" : ""}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-3 w-3 -rotate-90 text-muted-foreground/30 shrink-0" />
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </>
       )}
     </div>
   );
+}
+
+function cn(...inputs: (string | false | null | undefined)[]): string {
+  return inputs.filter(Boolean).join(" ");
 }

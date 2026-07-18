@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback, useRef, useState } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -13,8 +13,7 @@ import {
   Search,
   X,
   Layers,
-  Timer,
-  Sparkles,
+  RotateCcw,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSessionHistory } from "./session-history.store";
@@ -38,26 +37,6 @@ function formatDuration(startedAt: number, endedAt: number | null): string {
   return `${m}m`;
 }
 
-function computeAvgProjectionTime(events: SessionEventRecord[]): string {
-  const contentEvents = events.filter((e) =>
-    ["BIBLE_PROJECTED", "SONG_PROJECTED", "IMAGE_PROJECTED", "VIDEO_PROJECTED", "TEXT_PROJECTED"].includes(e.eventType),
-  );
-  if (contentEvents.length < 2) return "—";
-  let totalGap = 0;
-  let gaps = 0;
-  for (let i = 1; i < contentEvents.length; i++) {
-    const gap = contentEvents[i].ts - contentEvents[i - 1].ts;
-    if (gap > 0 && gap < 600000) {
-      totalGap += gap;
-      gaps++;
-    }
-  }
-  if (gaps === 0) return "—";
-  const avgSec = Math.round(totalGap / gaps / 1000);
-  if (avgSec < 60) return `${avgSec}s`;
-  return `${Math.floor(avgSec / 60)}m ${avgSec % 60}s`;
-}
-
 export function SessionDetailPage({ id }: Props) {
   const {
     openSession,
@@ -67,8 +46,6 @@ export function SessionDetailPage({ id }: Props) {
     detailSearchQuery,
     setDetailSearchQuery,
   } = useSessionHistory();
-
-  const [selectedEventIndex, setSelectedEventIndex] = useState<number>(-1);
 
   useEffect(() => {
     void openSessionById(id);
@@ -81,39 +58,15 @@ export function SessionDetailPage({ id }: Props) {
     [setDetailSearchQuery],
   );
 
-  const handleNavClick = useCallback((index: number) => {
-    setSelectedEventIndex(index);
-    const el = document.getElementById(`timeline-event-${index}`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-  }, []);
-
-  // Hooks must execute before any early return — Rules of Hooks.
   const events = openSessionEvents;
-  const stats = useMemo(() => {
-    const contentEvents = events.filter((e) =>
-      ["BIBLE_PROJECTED", "SONG_PROJECTED", "IMAGE_PROJECTED", "VIDEO_PROJECTED", "TEXT_PROJECTED"].includes(e.eventType),
-    );
-    const lastTheme = [...events].reverse().find((e) => e.eventType === "THEME_CHANGED");
-    return {
-      bibleCount: events.filter((e) => e.eventType === "BIBLE_PROJECTED").length,
-      songCount: events.filter((e) => e.eventType === "SONG_PROJECTED").length,
-      imageCount: events.filter((e) => e.eventType === "IMAGE_PROJECTED").length,
-      videoCount: events.filter((e) => e.eventType === "VIDEO_PROJECTED").length,
-      textCount: events.filter((e) => e.eventType === "TEXT_PROJECTED" || e.eventType === "ANNOUNCEMENT_PROJECTED").length,
-      themeCount: events.filter((e) => e.eventType === "THEME_CHANGED").length,
-      totalContent: contentEvents.length,
-      avgProjectionTime: computeAvgProjectionTime(events),
-      lastThemeName: lastTheme ? lastTheme.label.replace("Theme → ", "") : "—",
-    };
-  }, [events]);
-
-  const navItems = useMemo(() => {
-    return events
-      .filter((e) =>
-        ["BIBLE_PROJECTED", "SONG_PROJECTED", "IMAGE_PROJECTED", "VIDEO_PROJECTED", "TEXT_PROJECTED"].includes(e.eventType),
-      )
-      .slice(0, 100);
-  }, [events]);
+  const stats = useMemo(() => ({
+    bibleCount: events.filter((e) => e.eventType === "BIBLE_PROJECTED").length,
+    songCount: events.filter((e) => e.eventType === "SONG_PROJECTED").length,
+    imageCount: events.filter((e) => e.eventType === "IMAGE_PROJECTED").length,
+    videoCount: events.filter((e) => e.eventType === "VIDEO_PROJECTED").length,
+    textCount: events.filter((e) => e.eventType === "TEXT_PROJECTED" || e.eventType === "ANNOUNCEMENT_PROJECTED").length,
+    themeCount: events.filter((e) => e.eventType === "THEME_CHANGED").length,
+  }), [events]);
 
   if (isLoadingDetail) {
     return (
@@ -144,6 +97,7 @@ export function SessionDetailPage({ id }: Props) {
 
   const session = openSession;
   const duration = formatDuration(session.startedAt, session.endedAt);
+  const totalItems = stats.bibleCount + stats.songCount + stats.imageCount + stats.videoCount + stats.textCount;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -200,7 +154,7 @@ export function SessionDetailPage({ id }: Props) {
             type="text"
             value={detailSearchQuery}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="Search events…"
+            placeholder="Search songs, Bible, media, text…"
             className="h-7 w-full rounded-md border border-border/40 bg-muted/20 pl-7 pr-7 text-[11px] text-foreground placeholder:text-muted-foreground/30 focus:border-primary/30 focus:outline-none focus:ring-1 focus:ring-primary/15 transition"
           />
           {detailSearchQuery && (
@@ -212,86 +166,66 @@ export function SessionDetailPage({ id }: Props) {
             </button>
           )}
         </div>
-        {detailSearchQuery && (
-          <p className="mt-1 text-[9px] text-muted-foreground/40">
-            {events.length} result{events.length !== 1 ? "s" : ""} for "{detailSearchQuery}"
-          </p>
-        )}
       </div>
 
       <div className="flex flex-1 overflow-hidden">
-        <div className="hidden lg:flex w-28 shrink-0 flex-col border-r border-border/30 bg-muted/[0.01]">
-          <div className="border-b border-border/20 px-3 py-2">
-            <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/30">
-              Timeline
-            </span>
-          </div>
-          <div className="flex-1 overflow-y-auto px-3 py-2">
-            {navItems.map((event, i) => (
-              <button
-                key={event.id}
-                onClick={() => handleNavClick(i)}
-                className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-2 py-1 text-left transition-all duration-150",
-                  selectedEventIndex === i
-                    ? "bg-primary/[0.08] text-primary"
-                    : "text-muted-foreground/40 hover:bg-muted/30 hover:text-muted-foreground/70",
-                )}
-              >
-                <span className="text-[9px] tabular-nums font-medium">
-                  {format(new Date(event.ts), "HH:mm")}
-                </span>
-                <span className="h-1 w-1 shrink-0 rounded-full bg-current opacity-40" />
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div className="flex-1 flex flex-col overflow-hidden min-w-0">
           <SessionTimeline events={events} />
         </div>
 
-        <div className="hidden xl:flex w-52 shrink-0 flex-col border-l border-border/30 bg-muted/[0.01]">
+        <div className="hidden lg:flex w-48 shrink-0 flex-col border-l border-border/30 bg-muted/[0.01]">
           <div className="border-b border-border/20 px-3 py-2">
             <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/30">
               Details
             </span>
           </div>
-          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-3">
+          <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
+            <StatSection
+              icon={Clock}
+              label="Session Duration"
+              value={duration}
+            />
             <StatSection
               icon={Layers}
-              label="Content Projected"
-              value={String(stats.totalContent)}
-              color="text-foreground/80"
+              label="Items Projected"
+              value={String(totalItems)}
             />
-            <div className="space-y-1.5">
-              <StatRow icon={BookOpen} label="Bible" value={stats.bibleCount} color="text-blue-400" />
-              <StatRow icon={Music} label="Songs" value={stats.songCount} color="text-violet-400" />
-              <StatRow icon={ImageIcon} label="Images" value={stats.imageCount} color="text-amber-400" />
-              <StatRow icon={Video} label="Videos" value={stats.videoCount} color="text-orange-400" />
-              <StatRow icon={Type} label="Text" value={stats.textCount} color="text-teal-400" />
-              <StatRow icon={Palette} label="Themes" value={stats.themeCount} color="text-emerald-400" />
+
+            <div className="border-t border-border/20 pt-3 space-y-1.5">
+              <StatRowWithCount icon={Music} label="Songs" count={stats.songCount} color="text-violet-400" />
+              <StatRowWithCount icon={BookOpen} label="Bible" count={stats.bibleCount} color="text-blue-400" />
+              <StatRowWithCount icon={ImageIcon} label="Images" count={stats.imageCount} color="text-amber-400" />
+              <StatRowWithCount icon={Video} label="Videos" count={stats.videoCount} color="text-orange-400" />
+              <StatRowWithCount icon={Type} label="Text" count={stats.textCount} color="text-teal-400" />
+              <StatRowWithCount icon={Palette} label="Themes" count={stats.themeCount} color="text-emerald-400" />
             </div>
 
-            <div className="border-t border-border/20 pt-3 space-y-2">
-              <StatSection
-                icon={Clock}
-                label="Session Duration"
-                value={duration}
-                color="text-foreground/80"
-              />
-              <StatSection
-                icon={Timer}
-                label="Avg Projection Time"
-                value={stats.avgProjectionTime}
-                color="text-foreground/60"
-              />
-              <StatSection
-                icon={Palette}
-                label="Most Used Theme"
-                value={stats.lastThemeName}
-                color="text-emerald-400/80"
-              />
+            <div className="border-t border-border/20 pt-3 space-y-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
+                Restore
+              </p>
+              <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-foreground/70 transition-all duration-150 hover:bg-primary/10 hover:text-primary">
+                <RotateCcw className="h-3 w-3" />
+                Entire Service
+              </button>
+              {stats.songCount > 0 && (
+                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-violet-500/10 hover:text-violet-400">
+                  <Music className="h-3 w-3" />
+                  Songs Only
+                </button>
+              )}
+              {stats.bibleCount > 0 && (
+                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-blue-500/10 hover:text-blue-400">
+                  <BookOpen className="h-3 w-3" />
+                  Bible Only
+                </button>
+              )}
+              {(stats.imageCount > 0 || stats.videoCount > 0) && (
+                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-amber-500/10 hover:text-amber-400">
+                  <ImageIcon className="h-3 w-3" />
+                  Media Only
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -304,18 +238,16 @@ function StatSection({
   icon: Icon,
   label,
   value,
-  color,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  color: string;
 }) {
   return (
     <div>
       <div className="flex items-center gap-1.5">
         <Icon className="h-3 w-3 text-muted-foreground/40" />
-        <span className={cn("text-xs font-semibold tabular-nums leading-tight", color)}>
+        <span className="text-sm font-semibold tabular-nums leading-tight text-foreground/80">
           {value}
         </span>
       </div>
@@ -326,15 +258,15 @@ function StatSection({
   );
 }
 
-function StatRow({
+function StatRowWithCount({
   icon: Icon,
   label,
-  value,
+  count,
   color,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: number;
+  count: number;
   color: string;
 }) {
   return (
@@ -344,7 +276,7 @@ function StatRow({
         <span className="text-[10px] text-muted-foreground/60">{label}</span>
       </div>
       <span className={cn("text-xs font-semibold tabular-nums", color)}>
-        {value}
+        {count}
       </span>
     </div>
   );

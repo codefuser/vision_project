@@ -7,115 +7,105 @@ import {
   Type,
   Palette,
   Sparkles,
-  ChevronDown,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import type { SessionEventRecord, SessionEventType } from "@/db/schema";
 import { SessionEventRow } from "./SessionEventRow";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface Props {
   events: SessionEventRecord[];
 }
 
-type GroupKey =
-  | "BIBLE"
-  | "SONG"
-  | "IMAGE"
-  | "VIDEO"
-  | "TEXT"
-  | "THEME"
-  | "SYSTEM"
-  | "OTHER";
+const CONTENT_TYPES = new Set<SessionEventType>([
+  "BIBLE_PROJECTED", "SONG_PROJECTED", "IMAGE_PROJECTED", "VIDEO_PROJECTED",
+  "TEXT_PROJECTED", "ANNOUNCEMENT_PROJECTED", "THEME_CHANGED", "FONT_CHANGED",
+]);
 
-const CONTENT_TYPES: SessionEventType[] = [
-  "BIBLE_PROJECTED",
-  "SONG_PROJECTED",
-  "IMAGE_PROJECTED",
-  "VIDEO_PROJECTED",
-  "TEXT_PROJECTED",
-  "ANNOUNCEMENT_PROJECTED",
-];
-
-function getGroupKey(eventType: SessionEventType): GroupKey {
-  if (eventType === "BIBLE_PROJECTED") return "BIBLE";
-  if (eventType === "SONG_PROJECTED") return "SONG";
-  if (eventType === "IMAGE_PROJECTED") return "IMAGE";
-  if (eventType === "VIDEO_PROJECTED") return "VIDEO";
-  if (eventType === "TEXT_PROJECTED" || eventType === "ANNOUNCEMENT_PROJECTED") return "TEXT";
-  if (eventType === "THEME_CHANGED") return "THEME";
-  return "SYSTEM";
-}
-
-const GROUP_CONFIG: Record<GroupKey, {
-  icon: React.ComponentType<{ className?: string }>;
+interface EventCard {
+  id: string;
+  eventType: SessionEventType;
   label: string;
-  color: string;
-  bg: string;
-  border: string;
-}> = {
-  BIBLE:  { icon: BookOpen, label: "Bible", color: "text-blue-400", bg: "bg-blue-500/10", border: "border-blue-500/20" },
-  SONG:   { icon: Music, label: "Songs", color: "text-violet-400", bg: "bg-violet-500/10", border: "border-violet-500/20" },
-  IMAGE:  { icon: ImageIcon, label: "Images", color: "text-amber-400", bg: "bg-amber-500/10", border: "border-amber-500/20" },
-  VIDEO:  { icon: Video, label: "Videos", color: "text-orange-400", bg: "bg-orange-500/10", border: "border-orange-500/20" },
-  TEXT:   { icon: Type, label: "Text", color: "text-teal-400", bg: "bg-teal-500/10", border: "border-teal-500/20" },
-  THEME:  { icon: Palette, label: "Themes", color: "text-emerald-400", bg: "bg-emerald-500/10", border: "border-emerald-500/20" },
-  SYSTEM: { icon: Sparkles, label: "System", color: "text-muted-foreground", bg: "bg-muted", border: "border-border/30" },
-  OTHER:  { icon: Sparkles, label: "Other", color: "text-muted-foreground", bg: "bg-muted", border: "border-border/30" },
-};
-
-interface EventGroup {
-  key: GroupKey;
+  detail: string | null;
   events: SessionEventRecord[];
+  count: number;
 }
 
-function buildGroups(events: SessionEventRecord[]): EventGroup[] {
-  const groups: EventGroup[] = [];
-  let currentGroup: EventGroup | null = null;
+interface TimeBucket {
+  minuteKey: string;
+  ts: number;
+  cards: EventCard[];
+}
 
-  for (const event of events) {
-    const key = getGroupKey(event.eventType);
+function getMinuteKey(ts: number): string {
+  return format(new Date(ts), "h:mm a");
+}
 
-    if (key === "SYSTEM") {
-      if (currentGroup && currentGroup.key !== "SYSTEM") {
-        groups.push(currentGroup);
-        currentGroup = null;
+function buildTimeline(events: SessionEventRecord[]): TimeBucket[] {
+  const contentEvents = events.filter((e) => CONTENT_TYPES.has(e.eventType));
+
+  if (!contentEvents.length) return [];
+
+  const buckets = new Map<string, EventCard[]>();
+
+  let i = 0;
+  while (i < contentEvents.length) {
+    const event = contentEvents[i];
+    const minuteKey = getMinuteKey(event.ts);
+
+    const card: EventCard = {
+      id: event.id,
+      eventType: event.eventType,
+      label: event.label,
+      detail: event.detail,
+      events: [event],
+      count: 1,
+    };
+
+    if (event.eventType === "SONG_PROJECTED") {
+      let j = i + 1;
+      while (
+        j < contentEvents.length &&
+        contentEvents[j].eventType === "SONG_PROJECTED" &&
+        contentEvents[j].label === event.label
+      ) {
+        card.events.push(contentEvents[j]);
+        card.count++;
+        j++;
       }
-      groups.push({ key: "SYSTEM", events: [event] });
-      continue;
-    }
-
-    if (currentGroup && currentGroup.key === key) {
-      currentGroup.events.push(event);
+      card.detail = `Slides 1–${card.count}`;
+      i = j;
     } else {
-      if (currentGroup) {
-        groups.push(currentGroup);
-      }
-      currentGroup = { key, events: [event] };
+      i++;
     }
+
+    const existing = buckets.get(minuteKey) ?? [];
+    existing.push(card);
+    buckets.set(minuteKey, existing);
   }
 
-  if (currentGroup) {
-    groups.push(currentGroup);
-  }
-
-  return groups;
+  return Array.from(buckets.entries())
+    .map(([minuteKey, cards]) => ({
+      minuteKey,
+      ts: cards[0].events[0].ts,
+      cards,
+    }))
+    .sort((a, b) => a.ts - b.ts);
 }
 
 export function SessionTimeline({ events }: Props) {
-  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
+  const [showSystem, setShowSystem] = useState(false);
 
-  const groups = useMemo(() => buildGroups(events), [events]);
+  const timeline = useMemo(() => buildTimeline(events), [events]);
+  const systemEvents = useMemo(
+    () => events.filter((e) => !CONTENT_TYPES.has(e.eventType)),
+    [events],
+  );
 
-  const toggleGroup = useCallback((key: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) {
-        next.delete(key);
-      } else {
-        next.add(key);
-      }
-      return next;
-    });
+  const toggleSystem = useCallback(() => {
+    setShowSystem((v) => !v);
   }, []);
 
   if (!events.length) {
@@ -132,59 +122,57 @@ export function SessionTimeline({ events }: Props) {
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="relative">
-        {groups.map((group) => {
-          const config = GROUP_CONFIG[group.key];
-          const Icon = config.icon;
-          const groupKey = `${group.key}-${group.events[0].id}`;
-          const isCollapsed = collapsedGroups.has(groupKey);
+      <div className="py-2">
+        {timeline.map((bucket) => (
+          <div key={bucket.minuteKey}>
+            <TimeSeparator label={bucket.minuteKey} />
 
-          if (group.key === "SYSTEM") {
-            return (
-              <div key={groupKey}>
-                {group.events.map((event) => (
+            {bucket.cards.map((card) => (
+              <SessionEventRow key={card.id} event={card.events[0]} />
+            ))}
+          </div>
+        ))}
+
+        {systemEvents.length > 0 && (
+          <div className="mt-2 border-t border-border/20 pt-2">
+            <button
+              onClick={toggleSystem}
+              className="flex w-full items-center gap-2 px-4 py-2 text-left transition-all duration-150 hover:bg-muted/20"
+            >
+              <div className="flex h-5 w-5 items-center justify-center rounded-md bg-muted/40">
+                {showSystem ? (
+                  <EyeOff className="h-3 w-3 text-muted-foreground/50" />
+                ) : (
+                  <Eye className="h-3 w-3 text-muted-foreground/50" />
+                )}
+              </div>
+              <span className="text-[10px] font-medium text-muted-foreground/50">
+                {showSystem ? "Hide" : "Show"} {systemEvents.length} system event{systemEvents.length !== 1 ? "s" : ""}
+              </span>
+            </button>
+
+            {showSystem && (
+              <div>
+                {systemEvents.map((event) => (
                   <SessionEventRow key={event.id} event={event} />
                 ))}
               </div>
-            );
-          }
-
-          return (
-            <div key={groupKey} className="group">
-              <button
-                onClick={() => toggleGroup(groupKey)}
-                className={cn(
-                  "flex w-full items-center gap-2 border-b border-l-2 px-4 py-2 text-left transition-all duration-150",
-                  config.border,
-                  "hover:bg-muted/20",
-                )}
-              >
-                <div className={cn("flex h-5 w-5 items-center justify-center rounded-md", config.bg)}>
-                  <Icon className={cn("h-3 w-3", config.color)} />
-                </div>
-                <span className="flex-1 text-[11px] font-semibold text-foreground/70">
-                  {config.label}
-                </span>
-                <span className="rounded-md bg-muted/40 px-1.5 py-0.5 text-[9px] font-medium tabular-nums text-muted-foreground/50">
-                  {group.events.length}
-                </span>
-                <ChevronDown className={cn(
-                  "h-3 w-3 text-muted-foreground/30 transition-transform duration-150",
-                  !isCollapsed && "rotate-180",
-                )} />
-              </button>
-
-              {!isCollapsed && (
-                <div>
-                  {group.events.map((event) => (
-                    <SessionEventRow key={event.id} event={event} />
-                  ))}
-                </div>
-              )}
-            </div>
-          );
-        })}
+            )}
+          </div>
+        )}
       </div>
+    </div>
+  );
+}
+
+function TimeSeparator({ label }: { label: string }) {
+  return (
+    <div className="flex items-center gap-3 px-4 py-1.5">
+      <div className="h-px flex-1 bg-border/20" />
+      <span className="shrink-0 text-[10px] font-semibold tabular-nums text-muted-foreground/40">
+        {label}
+      </span>
+      <div className="h-px flex-1 bg-border/20" />
     </div>
   );
 }
