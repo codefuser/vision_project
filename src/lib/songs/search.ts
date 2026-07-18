@@ -6,6 +6,7 @@ export interface SongHit {
   score: number;
   firstLine: string;
   matchedLine: string;
+  previousLine?: string;
   nextLine?: string;
   highlightTokens: string[];
 }
@@ -34,6 +35,7 @@ function songsId(songs: Song[]): string {
 
 export function buildSearchIndex(songs: Song[]) {
   searchIndex = new Map();
+  let totalLines = 0;
   for (const song of songs) {
     const lines: LineEntry[] = [];
     for (let si = 0; si < song.slides.length; si++) {
@@ -52,6 +54,7 @@ export function buildSearchIndex(songs: Song[]) {
         });
       }
     }
+    totalLines += lines.length;
     const firstLine = lines.length > 0 ? lines[0].text : song.title;
     searchIndex.set(song.id, {
       firstLine,
@@ -61,6 +64,7 @@ export function buildSearchIndex(songs: Song[]) {
     });
   }
   indexedSongsId = songsId(songs);
+  console.log(`[Songs] Indexed ${searchIndex.size} songs, ${totalLines} lines`);
 }
 
 function editDist(a: string, b: string, maxDist: number): number {
@@ -208,11 +212,15 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
 
     if (total > 0 && (titleScore >= 30 || bestLineScore >= 40)) {
       let matchedText = data.firstLine;
+      let prevText: string | undefined;
       let nextText: string | undefined;
 
       if (bestLine) {
         matchedText = bestLine.text;
         const idx = data.lines.indexOf(bestLine);
+        if (idx > 0) {
+          prevText = data.lines[idx - 1].text;
+        }
         if (idx >= 0 && idx < data.lines.length - 1) {
           nextText = data.lines[idx + 1].text;
         }
@@ -223,6 +231,7 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         score: total,
         firstLine: data.firstLine,
         matchedLine: matchedText,
+        previousLine: prevText,
         nextLine: nextText,
         highlightTokens: qn.tokens,
       });

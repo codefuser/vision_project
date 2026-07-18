@@ -106,6 +106,7 @@ export async function loadSongs(): Promise<Song[]> {
     .then((rows) => {
       cache = rows.map(buildFromRaw);
       inflight = null;
+      console.log(`[Songs] Loaded ${cache.length} songs`);
       return cache;
     })
     .catch((e) => {

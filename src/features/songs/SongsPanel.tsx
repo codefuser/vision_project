@@ -185,6 +185,7 @@ export function SongsPanel() {
           score: 0,
           firstLine: fl,
           matchedLine: fl,
+          previousLine: undefined,
           nextLine: undefined,
           highlightTokens: [],
         });
@@ -981,9 +982,12 @@ const SongRow = memo(
               )}
             </div>
 
-            {/* Preview: matched line + next line — always visible */}
+            {/* Preview: previous line + matched line + next line — always visible */}
             <div className="mt-1.5 space-y-0.5">
               <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
+                {hit.previousLine && (
+                  <div className="truncate opacity-70 text-[11px] mb-0.5">{hit.previousLine}</div>
+                )}
                 <div className="truncate text-foreground/90 font-medium">
                   <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
                 </div>
@@ -1072,6 +1076,7 @@ const SongRow = memo(
       prev.compact === next.compact &&
       prev.hit.score === next.hit.score &&
       prev.hit.matchedLine === next.hit.matchedLine &&
+      prev.hit.previousLine === next.hit.previousLine &&
       prev.hit.nextLine === next.hit.nextLine &&
       prev.hit.firstLine === next.hit.firstLine
     );

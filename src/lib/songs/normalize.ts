@@ -133,6 +133,7 @@ export function tanglishLower(s: string): string {
  */
 export function tanglishNorm(s: string): string {
   let t = s.toLowerCase().trim();
+  if (/[\u0B80-\u0BFF]/.test(t)) t = tamilToLatin(t);
   t = t
     .replace(/dh/g, "d")
     .replace(/th/g, "t")
