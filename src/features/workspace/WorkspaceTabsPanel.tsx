@@ -13,7 +13,7 @@ import { SongsPanel } from "@/features/songs/SongsPanel";
 import { TextPanel } from "@/features/text/TextPanel";
 import { useFocusZone, type FocusZone } from "./focus-manager";
 import { useShortcutScope } from "@/lib/shortcuts/use-shortcut";
-import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 import { cn } from "@/lib/utils";
 
 const TABS: {
@@ -38,6 +38,8 @@ export function WorkspaceTabsPanel() {
   // Activate the "bible" shortcut scope only while the bible tab is showing.
   useShortcutScope("bible", activeTab === "bible");
   useShortcutScope("songs", activeTab === "songs");
+  useShortcutScope("text", activeTab === "text");
+  useShortcutScope("media", activeTab === "media");
 
   // Collapsed icon-rail
   if (collapsed) {
@@ -76,7 +78,7 @@ export function WorkspaceTabsPanel() {
       onMouseDown={focus.onFocus}
       tabIndex={focus.tabIndex}
     >
-      <div className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-muted/30 px-1">
+      <div role="tablist" aria-label="Workspace tabs" className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-muted/30 px-1">
         {TABS.map((t) => (
           <TabBarButton
             key={t.id}
@@ -95,7 +97,7 @@ export function WorkspaceTabsPanel() {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden" role="tabpanel" aria-label={`${activeTab} panel`}>
         {activeTab === "media" && (
           <div className="h-full overflow-hidden">
             <LibraryPage />
@@ -157,22 +159,24 @@ function TabRailButton({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const tooltip = useShortcutTooltip(tab.shortcutId, tab.label);
   const Icon = tab.icon;
   return (
-    <button
-      onClick={onClick}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition",
-        isActive
-          ? "bg-primary/10 text-primary"
-          : "text-muted-foreground hover:bg-accent hover:text-foreground",
-      )}
-    >
-      <Icon className="h-4 w-4" />
-    </button>
+    <ShortcutTooltip id={tab.shortcutId} label={tab.label} side="left">
+      <button
+        onClick={onClick}
+        role="tab"
+        aria-selected={isActive}
+        aria-label={tab.label}
+        className={cn(
+          "inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition",
+          isActive
+            ? "bg-primary/10 text-primary"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground",
+        )}
+      >
+        <Icon className="h-4 w-4" />
+      </button>
+    </ShortcutTooltip>
   );
 }
 
@@ -185,22 +189,24 @@ function TabBarButton({
   isActive: boolean;
   onClick: () => void;
 }) {
-  const tooltip = useShortcutTooltip(tab.shortcutId, tab.label);
   const Icon = tab.icon;
   return (
-    <button
-      onClick={onClick}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition",
-        isActive
-          ? "bg-background text-foreground shadow-sm"
-          : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
-      )}
-    >
-      <Icon className="h-3.5 w-3.5" />
-      {tab.label}
-    </button>
+    <ShortcutTooltip id={tab.shortcutId} label={tab.label} side="bottom">
+      <button
+        onClick={onClick}
+        role="tab"
+        aria-selected={isActive}
+        aria-label={tab.label}
+        className={cn(
+          "inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium transition",
+          isActive
+            ? "bg-background text-foreground shadow-sm"
+            : "text-muted-foreground hover:bg-background/50 hover:text-foreground",
+        )}
+      >
+        <Icon className="h-3.5 w-3.5" />
+        {tab.label}
+      </button>
+    </ShortcutTooltip>
   );
 }

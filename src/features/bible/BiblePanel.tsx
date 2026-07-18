@@ -459,6 +459,7 @@ export function BiblePanel() {
     id: "bible.mode.verse",
     label: "Verse content search mode",
     category: "bible",
+    description: "Switch to full-text verse search mode",
     keys: ["Alt+F"],
     scope: "bible",
     allowInInput: true,
@@ -466,6 +467,55 @@ export function BiblePanel() {
     handler: () => {
       setSearchMode("verse");
       inputRef.current?.focus();
+    },
+  });
+  useShortcut({
+    id: "bible.favorite",
+    label: "Favorite / Unfavorite verse",
+    category: "bible",
+    description: "Toggle favorite on the currently highlighted verse",
+    keys: ["F"],
+    scope: "bible",
+    allowInInput: false,
+    priority: 15,
+    handler: () => {
+      const dh = results[activeIdx];
+      if (!dh) return;
+      const h = dh.hit;
+      const key = `${h.book}:${h.chapter}:${h.verse}`;
+      const fav = favorites.find(
+        (fv) => `${fv.book}:${fv.chapter}:${fv.verse}` === key,
+      );
+      if (fav) removeFavorite(fav.id);
+      else
+        addFavorite({
+          lang,
+          displayMode,
+          book: h.book,
+          chapter: h.chapter,
+          verse: h.verse,
+          ref: `${h.bookName} ${h.chapter}:${h.verse}`,
+          text: h.text,
+        });
+    },
+  });
+  useShortcut({
+    id: "bible.copy",
+    label: "Copy verse text",
+    category: "bible",
+    description: "Copy the highlighted verse text to clipboard",
+    keys: ["Ctrl+Shift+C"],
+    scope: "bible",
+    allowInInput: true,
+    priority: 15,
+    handler: () => {
+      const dh = results[activeIdx];
+      if (!dh) return;
+      const h = dh.hit;
+      const ref = `${h.bookName} ${h.chapter}:${h.verse}`;
+      const text = `${ref} — ${h.text}`;
+      void navigator.clipboard.writeText(text);
+      toast.success(`Copied: ${ref}`);
     },
   });
 

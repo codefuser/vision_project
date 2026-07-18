@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useCallback } from "react";
+import { useShortcut, useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { format, isToday, isYesterday, isThisWeek, isThisMonth } from "date-fns";
 import { History, Radio, Calendar, Clock, Circle, Layers } from "lucide-react";
@@ -75,6 +76,34 @@ export function SessionListPage() {
   const activeSessionId = useSessionHistory((s) => s.activeSessionId);
   const setActiveSessionId = useSessionHistory((s) => s.setActiveSessionId);
   const parentRef = useRef<HTMLDivElement>(null);
+  const searchInputId = "session-search-input";
+
+  // ───────── History keyboard shortcuts ─────────
+  useShortcutScope("history");
+
+  useShortcut({
+    id: "history.focus-search",
+    label: "Focus session search",
+    category: "history",
+    description: "Focus the history search box",
+    keys: ["/"],
+    scope: "history",
+    allowInInput: false,
+    handler: () => {
+      const el = document.getElementById(searchInputId) as HTMLInputElement | null;
+      el?.focus();
+    },
+  });
+
+  // Listen for the global focus-search event dispatched by Alt+7
+  useEffect(() => {
+    const handler = () => {
+      const el = document.getElementById(searchInputId) as HTMLInputElement | null;
+      el?.focus();
+    };
+    window.addEventListener("history:focus-search", handler);
+    return () => window.removeEventListener("history:focus-search", handler);
+  }, []);
 
   useEffect(() => {
     void loadSessions();

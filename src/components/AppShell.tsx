@@ -20,7 +20,7 @@ import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
 import { GlobalFavoritesDock } from "@/components/GlobalFavoritesDock";
 import { AppStartupProvider } from "@/components/AppStartupProvider";
-import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { StartupScreen } from "@/components/StartupScreen";
@@ -222,39 +222,39 @@ const NavItem = memo(({
   collapsed: boolean;
   badge?: React.ReactNode;
 }) => {
-  const tooltip = useShortcutTooltip(item.shortcutId ?? "", item.label);
   return (
-    <Link
-      to={item.to}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "relative flex h-9 cursor-pointer items-center gap-3 overflow-hidden rounded-md px-2.5 text-sm transition-colors duration-150",
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-      )}
-    >
-      {/* Icon — with an absolute badge dot when sidebar is collapsed */}
-      <span className="relative shrink-0">
-        <Icon className="h-4 w-4" />
-        {badge && collapsed && (
-          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500" />
-        )}
-      </span>
-      <span
+    <ShortcutTooltip id={item.shortcutId ?? ""} label={item.label} side="right" disabled={!item.shortcutId}>
+      <Link
+        to={item.to}
+        aria-label={item.label}
         className={cn(
-          "min-w-0 flex-1 truncate whitespace-nowrap transition-[opacity,transform] duration-200 ease-out",
-          collapsed ? "pointer-events-none -translate-x-1 opacity-0" : "translate-x-0 opacity-100",
+          "relative flex h-9 cursor-pointer items-center gap-3 overflow-hidden rounded-md px-2.5 text-sm transition-colors duration-150",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
         )}
       >
-        {item.label}
-      </span>
-      {/* Badge shown inline when sidebar is expanded */}
-      {badge && !collapsed && (
-        <span className="ml-auto shrink-0">{badge}</span>
-      )}
-    </Link>
+        {/* Icon — with an absolute badge dot when sidebar is collapsed */}
+        <span className="relative shrink-0">
+          <Icon className="h-4 w-4" />
+          {badge && collapsed && (
+            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate whitespace-nowrap transition-[opacity,transform] duration-200 ease-out",
+            collapsed ? "pointer-events-none -translate-x-1 opacity-0" : "translate-x-0 opacity-100",
+          )}
+        >
+          {item.label}
+        </span>
+        {/* Badge shown inline when sidebar is expanded */}
+        {badge && !collapsed && (
+          <span className="ml-auto shrink-0">{badge}</span>
+        )}
+      </Link>
+    </ShortcutTooltip>
   );
 });
 
@@ -265,26 +265,23 @@ function ProjectorToggleButton({
   projectorOpen: boolean;
   onToggle: () => void;
 }) {
-  const tooltip = useShortcutTooltip(
-    "projector.toggle",
-    projectorOpen ? "Close Projector" : "Open Projector",
-  );
   return (
-    <button
-      onClick={onToggle}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
-        projectorOpen
-          ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
-          : "bg-primary text-primary-foreground hover:opacity-90",
-      )}
-    >
-      <MonitorPlay className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">
-        {projectorOpen ? "Close Projector" : "Open Projector"}
-      </span>
-    </button>
+    <ShortcutTooltip id="projector.toggle" label={projectorOpen ? "Close Projector" : "Open Projector"}>
+      <button
+        onClick={onToggle}
+        aria-label={projectorOpen ? "Close Projector" : "Open Projector"}
+        className={cn(
+          "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
+          projectorOpen
+            ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
+            : "bg-primary text-primary-foreground hover:opacity-90",
+        )}
+      >
+        <MonitorPlay className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">
+          {projectorOpen ? "Close Projector" : "Open Projector"}
+        </span>
+      </button>
+    </ShortcutTooltip>
   );
 }

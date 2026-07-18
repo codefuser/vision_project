@@ -900,7 +900,7 @@ function ContributorCard({
   contributor,
   index,
 }: {
-  contributor: (typeof CONTRIBUTORS)[number];
+  contributor: (typeof CONTRIBUTORS)[number] & { future?: boolean };
   index: number;
 }) {
   const { ref, visible } = useScrollReveal();

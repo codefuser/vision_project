@@ -1,4 +1,4 @@
-﻿import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
   createRootRouteWithContext,
@@ -111,6 +111,7 @@ function RootShell({ children }: { children: ReactNode }) {
 import { AppShell } from "@/components/AppShell";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
 import { useRouterState } from "@tanstack/react-router";
+import { CommandPalette } from "@/components/CommandPalette";
 
 function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
@@ -130,6 +131,7 @@ function RootComponent() {
       <GlobalErrorBoundary>
         {!isProjectorPopup && <GlobalShortcuts />}
         {!isProjectorPopup && <ShortcutsDialog />}
+        {!isProjectorPopup && <CommandPalette />}
         {isProjectorPopup ? (
           <Outlet />
         ) : (

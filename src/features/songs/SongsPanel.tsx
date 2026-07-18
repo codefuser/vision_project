@@ -351,10 +351,100 @@ export function SongsPanel() {
     id: "songs.close",
     label: "Close song",
     category: "songs",
+    description: "Deselect the current song",
     keys: ["Escape"],
     scope: "songs",
     allowInInput: true,
     handler: guarded(() => selectSong(null)),
+  });
+  useShortcut({
+    id: "songs.favorite",
+    label: "Favorite / Unfavorite song",
+    category: "songs",
+    description: "Toggle favorite on the highlighted song",
+    keys: ["F"],
+    scope: "songs",
+    handler: guarded(() => {
+      const h = results[activeIdx];
+      if (!h) return;
+      const isFav = favorites.some((fv) => fv.id === h.song.id);
+      if (isFav) removeFavorite(h.song.id);
+      else addFavorite({ id: h.song.id, title: h.song.title });
+    }),
+  });
+  useShortcut({
+    id: "songs.duplicate",
+    label: "Duplicate song",
+    category: "songs",
+    description: "Duplicate the selected song",
+    keys: ["Ctrl+Shift+D"],
+    scope: "songs",
+    allowInInput: false,
+    handler: guarded(() => {
+      const h = results[activeIdx];
+      if (!h) return;
+      setEditingId(h.song.id);
+      setEditorOpen(true);
+    }),
+  });
+  useShortcut({
+    id: "songs.editor",
+    label: "Open Song Editor",
+    category: "songs",
+    description: "Open the song editor for the highlighted song",
+    keys: ["Ctrl+Shift+E"],
+    scope: "songs",
+    allowInInput: false,
+    handler: guarded(() => {
+      const h = results[activeIdx];
+      if (!h) return;
+      setEditingId(h.song.id);
+      setEditorOpen(true);
+    }),
+  });
+  useShortcut({
+    id: "songs.jump-chorus",
+    label: "Jump to Chorus",
+    category: "songs",
+    description: "Jump to the first chorus slide of the selected song",
+    keys: ["C"],
+    scope: "songs",
+    handler: guarded(() => {
+      if (!selectedSong) return;
+      const idx = selectedSong.slides.findIndex((s) =>
+        s.toLowerCase().startsWith("chorus") ||
+        s.toLowerCase().includes("[chorus]"),
+      );
+      if (idx >= 0) project(selectedSong, idx);
+    }),
+  });
+  useShortcut({
+    id: "songs.jump-verse",
+    label: "Jump to Verse 1",
+    category: "songs",
+    description: "Jump to the first verse slide of the selected song",
+    keys: ["V"],
+    scope: "songs",
+    handler: guarded(() => {
+      if (!selectedSong) return;
+      project(selectedSong, 0);
+    }),
+  });
+  useShortcut({
+    id: "songs.jump-bridge",
+    label: "Jump to Bridge",
+    category: "songs",
+    description: "Jump to the bridge slide of the selected song",
+    keys: ["G"],
+    scope: "songs",
+    handler: guarded(() => {
+      if (!selectedSong) return;
+      const idx = selectedSong.slides.findIndex((s) =>
+        s.toLowerCase().startsWith("bridge") ||
+        s.toLowerCase().includes("[bridge]"),
+      );
+      if (idx >= 0) project(selectedSong, idx);
+    }),
   });
 
   const favSet = useMemo(() => new Set(favorites.map((f) => f.id)), [favorites]);

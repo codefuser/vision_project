@@ -279,11 +279,55 @@ export function TextPanel() {
     id: "text.duplicate",
     label: "Duplicate current text item",
     category: "text",
-    keys: ["Ctrl+D", "Meta+D"],
+    description: "Create a copy of the selected text item",
+    // Ctrl+D is browser bookmark — use Ctrl+Shift+D instead
+    keys: ["Ctrl+Shift+D", "Meta+Shift+D"],
     scope: "workspace",
     allowInInput: true,
     handler: () => {
       if (selected) handleDuplicate();
+    },
+  });
+  useShortcut({
+    id: "text.new",
+    label: "New Text Item",
+    category: "text",
+    description: "Create a new blank text item",
+    keys: ["Ctrl+Shift+N"],
+    scope: "workspace",
+    allowInInput: false,
+    handler: () => {
+      handleNew();
+    },
+  });
+  useShortcut({
+    id: "text.next-slide",
+    label: "Next text slide",
+    category: "text",
+    description: "Advance to the next slide in the selected text item",
+    keys: ["ArrowRight"],
+    scope: "text",
+    allowInInput: false,
+    priority: 10,
+    handler: () => {
+      if (!selected || slides.length === 0) return;
+      const next = Math.min(activeSlide + 1, slides.length - 1);
+      if (next !== activeSlide) project(next);
+    },
+  });
+  useShortcut({
+    id: "text.prev-slide",
+    label: "Previous text slide",
+    category: "text",
+    description: "Go back to the previous slide in the selected text item",
+    keys: ["ArrowLeft"],
+    scope: "text",
+    allowInInput: false,
+    priority: 10,
+    handler: () => {
+      if (!selected || slides.length === 0) return;
+      const prev = Math.max(0, activeSlide - 1);
+      if (prev !== activeSlide) project(prev);
     },
   });
 

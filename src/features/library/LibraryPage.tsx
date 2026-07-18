@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShortcut, useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import {
   Search,
   Filter,
@@ -149,21 +150,50 @@ export function LibraryPage() {
     [toggleSelect],
   );
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
-        const target = e.target as HTMLElement | null;
-        const tag = target?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
-        const grid = gridRef.current;
-        if (!grid) return;
-        e.preventDefault();
-        selectAll(visible.map((m) => m.id));
+  useShortcutScope("media");
+
+  useShortcut({
+    id: "media.select-all",
+    label: "Select all media items",
+    category: "media",
+    description: "Select all visible media items in the grid",
+    keys: ["Ctrl+A", "Meta+A"],
+    scope: "media",
+    allowInInput: false,
+    handler: () => {
+      const grid = gridRef.current;
+      if (grid) selectAll(visible.map((m) => m.id));
+    },
+  });
+
+  useShortcut({
+    id: "media.delete",
+    label: "Delete selected media",
+    category: "media",
+    description: "Request to delete selected media items",
+    keys: ["Delete", "Backspace"],
+    scope: "media",
+    allowInInput: false,
+    handler: () => {
+      if (selection.size) {
+        const items = visible.filter((m) => selection.has(m.id));
+        if (items.length) setDeleteTargets(items);
       }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selectAll, visible]);
+    },
+  });
+
+  useShortcut({
+    id: "media.duplicate",
+    label: "Duplicate selected media",
+    category: "media",
+    description: "Duplicate the currently selected media items",
+    keys: ["Ctrl+Shift+D", "Meta+Shift+D"],
+    scope: "media",
+    allowInInput: false,
+    handler: () => {
+      if (selection.size) void onDuplicate();
+    },
+  });
 
   const requestDeleteSelection = () => {
     if (!selectedIds.length) return;
