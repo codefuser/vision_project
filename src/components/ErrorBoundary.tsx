@@ -1,5 +1,6 @@
 import { Component, type ReactNode } from "react";
 import { logger } from "@/lib/logger";
+import { ErrorPage } from "@/components/ErrorPage";
 
 interface Props {
   children: ReactNode;
@@ -22,18 +23,16 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       if (this.props.fallback) return this.props.fallback(this.state.error, this.reset);
       return (
-        <div className="flex min-h-screen items-center justify-center bg-background p-6">
-          <div className="max-w-md rounded-lg border border-border bg-card p-6 text-center">
-            <h2 className="text-lg font-semibold text-foreground">Something went wrong</h2>
-            <p className="mt-2 text-sm text-muted-foreground">{this.state.error.message}</p>
-            <button
-              onClick={this.reset}
-              className="mt-4 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-            >
-              Try again
-            </button>
-          </div>
-        </div>
+        <ErrorPage
+          errorCode="VP-500"
+          title="Something Went Wrong"
+          message="A component encountered an error. You can try again."
+          error={this.state.error}
+          recoverable
+          recommendedAction="retry"
+          onRetry={this.reset}
+          showHistory={false}
+        />
       );
     }
     return this.props.children;

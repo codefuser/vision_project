@@ -99,6 +99,8 @@ interface WorkspaceState {
   galleryOpen: boolean;
   galleryBucket: string;
   galleryQuery: string;
+  errorPageMode: boolean;
+  setErrorPageMode: (v: boolean) => void;
   setGalleryOpen: (open: boolean) => void;
   setGalleryBucket: (bucket: string) => void;
   setGalleryQuery: (query: string) => void;
@@ -154,6 +156,7 @@ const DEFAULTS = {
   galleryOpen: false,
   galleryBucket: "All",
   galleryQuery: "",
+  errorPageMode: false,
 };
 
 const MAX_HISTORY = 50;
@@ -216,6 +219,7 @@ export const useWorkspace = create<WorkspaceState>()(
       setGalleryOpen: (open) => set({ galleryOpen: open }),
       setGalleryBucket: (bucket) => set({ galleryBucket: bucket }),
       setGalleryQuery: (query) => set({ galleryQuery: query }),
+      setErrorPageMode: (v) => set({ errorPageMode: v }),
 
       resetLayout: () => {
         if (typeof window !== "undefined") {
@@ -233,7 +237,7 @@ export const useWorkspace = create<WorkspaceState>()(
       storage: createJSONStorage(() => localStorage),
       version: 7,
       partialize: (s) => {
-        const { _hydrated, galleryOpen, ...rest } = s;
+        const { _hydrated, galleryOpen, errorPageMode, ...rest } = s;
         return rest;
       },
       onRehydrateStorage: () => () => {

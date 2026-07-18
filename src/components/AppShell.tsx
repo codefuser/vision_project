@@ -53,6 +53,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
   const collapsed = useWorkspace((s) => s.sidebarCollapsed);
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
+  const errorPageMode = useWorkspace((s) => s.errorPageMode);
   const activeSessionId = useSessionHistory((s) => s.activeSessionId);
   useEffect(() => {
     init();
@@ -91,6 +92,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <StartupScreen onReady={() => {}}>
     <div className="flex h-screen bg-background text-foreground">
+      {!errorPageMode && (
       <aside
         style={{ width: collapsed ? 56 : 224, willChange: "width" }}
         className="flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-200 ease-out"
@@ -174,6 +176,7 @@ export function AppShell({ children }: { children: ReactNode }) {
           </div>
         </div>
       </aside>
+      )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <AppStartupProvider>

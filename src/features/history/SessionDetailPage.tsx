@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -14,6 +14,7 @@ import {
   X,
   Layers,
   Sparkles,
+  History as HistoryIcon,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSessionHistory } from "./session-history.store";
@@ -23,6 +24,9 @@ import { SessionExportMenu } from "./SessionExportMenu";
 import { buildContentGroups, computeContentStats } from "./content-groups";
 import type { ContentStats } from "./content-groups";
 import { cn } from "@/lib/utils";
+import { ErrorPage } from "@/components/ErrorPage";
+import { listSessions } from "./session-history.repo";
+import type { SessionRecord } from "@/db/schema";
 
 interface Props {
   id: string;
@@ -48,9 +52,17 @@ export function SessionDetailPage({ id }: Props) {
     setDetailSearchQuery,
   } = useSessionHistory();
 
+  const [recentSessions, setRecentSessions] = useState<SessionRecord[] | null>(null);
+
   useEffect(() => {
     void openSessionById(id);
   }, [id, openSessionById]);
+
+  useEffect(() => {
+    if (!isLoadingDetail && !openSession && recentSessions === null) {
+      void listSessions({ limit: 3 }).then(setRecentSessions);
+    }
+  }, [isLoadingDetail, openSession, recentSessions]);
 
   const handleSearchChange = useCallback(
     (q: string) => {
@@ -60,9 +72,10 @@ export function SessionDetailPage({ id }: Props) {
   );
 
   const stats: ContentStats = useMemo(() => {
-    const duration = openSession
-      ? formatDuration(openSession.startedAt, openSession.endedAt)
-      : "—";
+    if (!openSession) {
+      return { sessionDuration: "—", uniqueSongs: 0, slidesViewed: 0, bibleRefs: 0, versesViewed: 0, images: 0, videos: 0, themesUsed: 0, textItems: 0 };
+    }
+    const duration = formatDuration(openSession.startedAt, openSession.endedAt);
     const groups = buildContentGroups(openSessionEvents);
     return computeContentStats(groups, duration);
   }, [openSessionEvents, openSession]);
@@ -80,17 +93,24 @@ export function SessionDetailPage({ id }: Props) {
 
   if (!openSession) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <span className="text-2xl opacity-30">🔍</span>
-        <p className="text-xs text-muted-foreground">Session not found.</p>
-        <Link
-          to="/history"
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground hover:opacity-90 transition-opacity duration-150"
-        >
-          <ArrowLeft className="h-3 w-3" />
-          Back to History
-        </Link>
-      </div>
+      <ErrorPage
+        errorCode="VP-SESSION"
+        title="Session Not Found"
+        message={`The session you're looking for doesn't exist or may have been deleted. It might also have been an empty session that was automatically removed.`}
+        icon={HistoryIcon}
+        sessionId={id}
+        recommendedAction="history"
+        backPath="/history"
+        backLabel="Back to History"
+        showHome
+        showHistory
+        breadcrumbs={[
+          { label: "Home", to: "/library" },
+          { label: "History", to: "/history" },
+          { label: "Session" },
+        ]}
+        recentSessions={recentSessions ?? undefined}
+      />
     );
   }
 

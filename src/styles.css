@@ -425,3 +425,46 @@
 .devhub-section-link:hover {
   color: var(--color-foreground);
 }
+
+/* ============================================================
+   Error Page Animations
+   ============================================================ */
+
+@keyframes error-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.animate-error-rotate {
+  animation: error-rotate 30s linear infinite;
+}
+
+.error-glass {
+  background: color-mix(in oklab, var(--color-card) 60%, transparent);
+  backdrop-filter: blur(24px);
+  border: 1px solid color-mix(in oklab, var(--color-border) 40%, transparent);
+}
+
+.error-glass-strong {
+  background: color-mix(in oklab, var(--color-card) 75%, transparent);
+  backdrop-filter: blur(32px);
+  border: 1px solid color-mix(in oklab, var(--color-border) 50%, transparent);
+}
+
+@keyframes error-card-enter {
+  0% { opacity: 0; transform: scale(0.96) translateY(8px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.error-card-enter {
+  animation: error-card-enter 0.35s ease-out both;
+}
+
+@keyframes error-fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.error-fade-in {
+  animation: error-fade-in 0.3s ease-out both;
+}
