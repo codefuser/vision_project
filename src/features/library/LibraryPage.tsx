@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useShortcut, useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import {
   Search,
@@ -104,7 +105,18 @@ export function LibraryPage() {
   }, [foldersCollapsed]);
 
   const anchorIndexRef = useRef<number | null>(null);
-  const gridRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [columns, setColumns] = useState(4);
+
+  useEffect(() => {
+    if (!scrollRef.current) return;
+    const ob = new ResizeObserver((entries) => {
+      const w = entries[0].contentRect.width;
+      setColumns(Math.max(1, Math.floor((w + 12) / 192)));
+    });
+    ob.observe(scrollRef.current);
+    return () => ob.disconnect();
+  }, []);
 
   useEffect(() => {
     if (!loaded) void refreshAll();
@@ -161,7 +173,7 @@ export function LibraryPage() {
     scope: "media",
     allowInInput: false,
     handler: () => {
-      const grid = gridRef.current;
+      const grid = scrollRef.current;
       if (grid) selectAll(visible.map((m) => m.id));
     },
   });
@@ -396,6 +408,42 @@ export function LibraryPage() {
     );
   };
 
+  type RowItem =
+    | { type: "header"; label: string; count: number }
+    | { type: "row"; items: MediaRecord[]; startIndex: number };
+
+  const rows = useMemo<RowItem[]>(() => {
+    const out: RowItem[] = [];
+    if (grouped) {
+      grouped.forEach((g) => {
+        out.push({ type: "header", label: g.label, count: g.items.length });
+        for (let i = 0; i < g.items.length; i += columns) {
+          out.push({
+            type: "row",
+            items: g.items.slice(i, i + columns),
+            startIndex: visible.indexOf(g.items[i]),
+          });
+        }
+      });
+    } else {
+      for (let i = 0; i < visible.length; i += columns) {
+        out.push({
+          type: "row",
+          items: visible.slice(i, i + columns),
+          startIndex: i,
+        });
+      }
+    }
+    return out;
+  }, [grouped, visible, columns]);
+
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: (i) => (rows[i].type === "header" ? 40 : 180),
+    overscan: 4,
+  });
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-4 py-3">
@@ -505,80 +553,109 @@ export function LibraryPage() {
             </div>
           )}
 
-          <div
-            className="flex-1 overflow-y-auto p-4"
-            onMouseDown={(e) => {
-              if (e.target === e.currentTarget) clearSelection();
-            }}
-          >
-            <Dropzone folderId={currentFolderId} onDone={refreshMedia} className="mb-4" />
+                  <div ref={scrollRef} className="flex-1 overflow-y-auto p-4" onMouseDown={(e) => {
+                    if (e.target === e.currentTarget) clearSelection();
+                  }}>
+                    <Dropzone folderId={currentFolderId} onDone={refreshMedia} className="mb-4" />
 
-            {visible.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
-                <p className="text-sm">No media here yet.</p>
-              </div>
-            ) : (
-              <>
-                <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
-                  <div>
-                    {visible.length} item{visible.length !== 1 ? "s" : ""}
-                    {!selectionMode && (
-                      <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
-                        Click to project
-                      </span>
+                    {visible.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-16 text-center text-muted-foreground">
+                        <p className="text-sm">No media here yet.</p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="mb-4 flex items-center justify-between text-xs text-muted-foreground">
+                          <div>
+                            {visible.length} item{visible.length !== 1 ? "s" : ""}
+                            {!selectionMode && (
+                              <span className="ml-2 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+                                Click to project
+                              </span>
+                            )}
+                          </div>
+                          {!selectionMode ? (
+                            <button
+                              onClick={() => setSelectionMode(true)}
+                              className="cursor-pointer hover:text-foreground"
+                            >
+                              Select
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => selectAll(visible.map((m) => m.id))}
+                              className="cursor-pointer hover:text-foreground"
+                            >
+                              Select all
+                            </button>
+                          )}
+                        </div>
+
+                        <>
+                            <div
+                              style={{
+                                height: `${virtualizer.getTotalSize()}px`,
+                                width: "100%",
+                                position: "relative",
+                              }}
+                            >
+                              {virtualizer.getVirtualItems().map((v) => {
+                                const row = rows[v.index];
+                                if (row.type === "header") {
+                                  return (
+                                    <div
+                                      key={v.key}
+                                      ref={virtualizer.measureElement}
+                                      data-index={v.index}
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        width: "100%",
+                                        transform: `translateY(${v.start}px)`,
+                                        paddingBottom: "0.5rem",
+                                        paddingTop: "0.5rem",
+                                      }}
+                                    >
+                                      <h3 className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        {row.label}
+                                        <span className="ml-2 text-[10px] font-normal opacity-70">
+                                          {row.count}
+                                        </span>
+                                      </h3>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <div
+                                      key={v.key}
+                                      ref={virtualizer.measureElement}
+                                      data-index={v.index}
+                                      style={{
+                                        position: "absolute",
+                                        top: 0,
+                                        left: 0,
+                                        width: "100%",
+                                        transform: `translateY(${v.start}px)`,
+                                        paddingBottom: "0.75rem",
+                                      }}
+                                    >
+                                      <div
+                                        className="grid gap-3"
+                                        style={{
+                                          gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                                        }}
+                                      >
+                                        {row.items.map((m, i) => renderCard(m, row.startIndex + i))}
+                                      </div>
+                                    </div>
+                                  );
+                                }
+                              })}
+                            </div>
+                        </>
+                      </>
                     )}
                   </div>
-                  {!selectionMode ? (
-                    <button
-                      onClick={() => setSelectionMode(true)}
-                      className="cursor-pointer hover:text-foreground"
-                    >
-                      Select
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => selectAll(visible.map((m) => m.id))}
-                      className="cursor-pointer hover:text-foreground"
-                    >
-                      Select all
-                    </button>
-                  )}
-                </div>
-
-                <div ref={gridRef}>
-                  {grouped ? (
-                    grouped.map((g) => (
-                      <section key={g.label} className="mb-5">
-                        <h3 className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                          {g.label}
-                          <span className="ml-2 text-[10px] font-normal opacity-70">
-                            {g.items.length}
-                          </span>
-                        </h3>
-                        <div
-                          className="grid gap-3"
-                          style={{
-                            gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
-                          }}
-                        >
-                          {g.items.map((m) => renderCard(m, visible.indexOf(m)))}
-                        </div>
-                      </section>
-                    ))
-                  ) : (
-                    <div
-                      className="grid gap-3"
-                      style={{
-                        gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 180px), 1fr))",
-                      }}
-                    >
-                      {visible.map((m, idx) => renderCard(m, idx))}
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
         </div>
       </div>
 

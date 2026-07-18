@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, memo } from "react";
 import { useDebounce } from "@/hooks/useDebounce";
+import { useShallow } from "zustand/react/shallow";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { BookOpen, Loader2, Star, Send, Languages, Search, Hash } from "lucide-react";
 import {
   Select,
@@ -49,7 +51,22 @@ export function BiblePanel() {
     ensureBoth,
     addFavorite,
     removeFavorite,
-  } = useBibleStore();
+  } = useBibleStore(useShallow((s) => ({
+    lang: s.lang,
+    displayMode: s.displayMode,
+    query: s.query,
+    loading: s.loading,
+    loaded: s.loaded,
+    error: s.error,
+    favorites: s.favorites,
+    setLang: s.setLang,
+    setDisplayMode: s.setDisplayMode,
+    setQuery: s.setQuery,
+    ensureLoaded: s.ensureLoaded,
+    ensureBoth: s.ensureBoth,
+    addFavorite: s.addFavorite,
+    removeFavorite: s.removeFavorite,
+  })));
   const wsBibleSearch = useWorkspace((s) => s.bibleSearch);
   const wsScrollPos = useWorkspace((s) => s.scrollPositions.bible);
   const setBibleSearch = useWorkspace((s) => s.setBibleSearch);
@@ -61,6 +78,7 @@ export function BiblePanel() {
   const [activeIdx, setActiveIdx] = useState(() => (wsScrollPos ? 0 : 0));
   const [searchMs, setSearchMs] = useState<number | null>(null);
   const [chapterCtx, setChapterCtx] = useState<{ book: number; chapter: number } | null>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
   const [searchMode, setSearchMode] = useState<SearchMode>(
     () => (wsBibleSearch.searchMode as SearchMode) || "reference",
   );
@@ -88,6 +106,18 @@ export function BiblePanel() {
         if (listRef.current) listRef.current.scrollTop = wsScrollPos;
       });
     }
+  }, []);
+
+  // Track container width for responsive columns
+  useEffect(() => {
+    if (!listRef.current) return;
+    const observer = new ResizeObserver((entries) => {
+      if (entries[0]) {
+        setContainerWidth(entries[0].contentRect.width);
+      }
+    });
+    observer.observe(listRef.current);
+    return () => observer.disconnect();
   }, []);
 
   // Load required databases for current mode.
@@ -527,6 +557,16 @@ export function BiblePanel() {
   const primaryLang: BibleLang = displayMode === "ta" ? "ta" : "en";
   const showingRecent = !query.trim() && recent.length > 0;
 
+  const lanes = containerWidth > 1100 ? 3 : containerWidth > 650 ? 2 : 1;
+
+  const virtualizer = useVirtualizer({
+    count: results.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: () => 140,
+    overscan: 5 * lanes,
+    lanes,
+  });
+
   return (
     <div className="@container flex h-full min-h-0 flex-col">
       {/* Single-row toolbar — search + language modes */}
@@ -545,21 +585,7 @@ export function BiblePanel() {
             </SelectItem>
           </SelectContent>
         </Select>
-        <Input
-          ref={inputRef}
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            setBibleSearch({ query: e.target.value });
-          }}
-          placeholder={
-            searchMode === "reference"
-              ? "John 3:16, யோவான் 3, PSA 23"
-              : "yesu, anbu, grace, vaazhvu, ஆதியிலே"
-          }
-          className="h-8 min-w-[160px] flex-1 text-sm"
-          autoFocus
-        />
+        <BibleSearchInput inputRef={inputRef} searchMode={searchMode} />
         <div className="inline-flex overflow-hidden rounded-md border border-border bg-background text-[11px]">
           {(["en", "ta", "both"] as DisplayMode[]).map((m) => (
             <button
@@ -622,70 +648,47 @@ export function BiblePanel() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-2.5 @md:grid-cols-2 @3xl:grid-cols-3">
-          {results.map((dh, i) => {
-            const h = dh.hit;
-            const pair = dh.pair;
-            const stableKey = favKey(h.book, h.chapter, h.verse);
-            const isFav = fav.has(stableKey);
-            const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
-            const refSecondary = pair
-              ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}`
-              : null;
-            const isProjected = (projectedRef ?? "").includes(refPrimary);
-            const isActive = activeIdx === i;
-            return (
-              <div
-                key={stableKey + ":" + i}
-                onClick={() => {
-                  selectIdx(i);
-                  project(dh);
-                }}
-                className={cn(
-                  "group relative flex h-full cursor-pointer flex-col rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
-                  "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
-                  isProjected
-                    ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/25"
-                    : isActive
-                      ? "border-primary/70 ring-1 ring-primary/20"
-                      : "border-border",
-                )}
-              >
-                {/* Header — single-line bilingual reference */}
-                <div className="flex items-center gap-1.5 rounded-t-[inherit] border-b border-border/60 bg-muted/40 px-2 py-1">
-                  <span className="truncate text-[11px] font-bold tracking-tight text-primary">
-                    {refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary}
-                  </span>
-                  <div className="ml-auto flex shrink-0 items-center gap-1">
-                    {isFav && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
-                    {isProjected && (
-                      <span className="inline-flex items-center gap-1 rounded bg-primary px-1 py-px text-[9px] font-bold uppercase text-primary-foreground">
-                        <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />
-                        Live
-                      </span>
-                    )}
-                  </div>
-                </div>
+        {(() => {
+          if (!results.length) return null;
 
-                {/* Verse text */}
-                <div className="flex-1 space-y-1.5 px-2.5 py-2">
-                  <p className="whitespace-pre-wrap text-[12.5px] leading-snug text-foreground/95">
-                    {h.text}
-                  </p>
-                  {pair && (
-                    <div className="border-t border-dashed border-border/50 pt-1.5">
-                      <p className="whitespace-pre-wrap text-[12px] leading-snug text-muted-foreground">
-                        {pair.text}
-                      </p>
-                    </div>
-                  )}
-                </div>
+          return (
+            <div
+              style={{
+                height: `${virtualizer.getTotalSize()}px`,
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {virtualizer.getVirtualItems().map((virtualItem) => {
+                const i = virtualItem.index;
+                const dh = results[i];
+                const h = dh.hit;
+                const pair = dh.pair;
+                const stableKey = favKey(h.book, h.chapter, h.verse);
+                const isFav = fav.has(stableKey);
+                const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
+                const refSecondary = pair
+                  ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}`
+                  : null;
+                const isProjected = (projectedRef ?? "").includes(refPrimary);
+                const isActive = activeIdx === i;
 
-                {/* Footer — favorite + project only */}
-                <div className="mt-auto flex items-center gap-0.5 rounded-b-[inherit] border-t border-border/40 bg-muted/20 px-1.5 py-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
+                return (
+                  <VerseRow
+                    key={virtualItem.key}
+                    virtualItem={virtualItem}
+                    virtualizer={virtualizer}
+                    dh={dh}
+                    stableKey={stableKey}
+                    isFav={isFav}
+                    refPrimary={refPrimary}
+                    refSecondary={refSecondary}
+                    isProjected={isProjected}
+                    isActive={isActive}
+                    primaryLang={primaryLang}
+                    onSelect={() => selectIdx(i)}
+                    onProject={() => project(dh)}
+                    onToggleFav={() => {
                       if (isFav) removeFavorite(stableKey);
                       else
                         addFavorite({
@@ -697,32 +700,13 @@ export function BiblePanel() {
                           text: h.text,
                         });
                     }}
-                    className={cn(
-                      "inline-flex h-6 w-6 items-center justify-center rounded transition",
-                      isFav
-                        ? "text-amber-500 hover:bg-amber-500/10"
-                        : "text-muted-foreground hover:bg-accent hover:text-foreground",
-                    )}
-                    title={isFav ? "Remove favorite" : "Add favorite"}
-                  >
-                    <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      selectIdx(i);
-                      project(dh);
-                    }}
-                    className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground transition hover:opacity-90"
-                    title="Project verse (Enter)"
-                  >
-                    <Send className="h-3 w-3" /> Project
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  />
+                );
+              })}
+            </div>
+          );
+        })()}
+
 
         {!query.trim() && favorites.length > 0 && (
           <div className="mt-4 border-t border-border pt-3">
@@ -749,3 +733,169 @@ export function BiblePanel() {
     </div>
   );
 }
+
+function BibleSearchInput({
+  inputRef,
+  searchMode,
+}: {
+  inputRef: React.RefObject<HTMLInputElement | null>;
+  searchMode: SearchMode;
+}) {
+  const query = useBibleStore((s) => s.query);
+  const setQuery = useBibleStore((s) => s.setQuery);
+  const setBibleSearch = useWorkspace((s) => s.setBibleSearch);
+
+  const [localValue, setLocalValue] = useState(query);
+
+  // Sync external changes
+  useEffect(() => {
+    setLocalValue(query);
+  }, [query]);
+
+  // Debounce pushing to Zustand
+  useEffect(() => {
+    if (localValue === query) return;
+    const t = setTimeout(() => {
+      setQuery(localValue);
+      setBibleSearch({ query: localValue });
+    }, 150);
+    return () => clearTimeout(t);
+  }, [localValue, query, setQuery, setBibleSearch]);
+
+  return (
+    <Input
+      ref={inputRef}
+      value={localValue}
+      onChange={(e) => setLocalValue(e.target.value)}
+      placeholder={
+        searchMode === "reference"
+          ? "John 3:16, யோவான் 3, PSA 23"
+          : "yesu, anbu, grace, vaazhvu, ஆதியிலே"
+      }
+      className="h-8 min-w-[160px] flex-1 text-sm"
+      autoFocus
+    />
+  );
+}
+
+const VerseRow = memo(function VerseRow({
+  virtualItem,
+  virtualizer,
+  dh,
+  stableKey,
+  isFav,
+  refPrimary,
+  refSecondary,
+  isProjected,
+  isActive,
+  primaryLang,
+  onSelect,
+  onProject,
+  onToggleFav,
+}: {
+  virtualItem: any;
+  virtualizer: any;
+  dh: DisplayHit;
+  stableKey: string;
+  isFav: boolean;
+  refPrimary: string;
+  refSecondary: string | null;
+  isProjected: boolean;
+  isActive: boolean;
+  primaryLang: BibleLang;
+  onSelect: () => void;
+  onProject: () => void;
+  onToggleFav: () => void;
+}) {
+  const h = dh.hit;
+  const pair = dh.pair;
+
+  return (
+    <div
+      data-index={virtualItem.index}
+      ref={virtualizer.measureElement}
+      style={{
+        position: "absolute",
+        top: 0,
+        left: `${(virtualItem.lane * 100) / virtualizer.options.lanes}%`,
+        width: `${100 / virtualizer.options.lanes}%`,
+        transform: `translateY(${virtualItem.start}px)`,
+        padding: "0 0.35rem",
+        paddingBottom: "0.6rem",
+      }}
+    >
+      <div
+        onClick={() => {
+          onSelect();
+          onProject();
+        }}
+        className={cn(
+          "group relative flex h-full cursor-pointer flex-col rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
+          "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
+          isProjected
+            ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/25"
+            : isActive
+              ? "border-primary/70 ring-1 ring-primary/20"
+              : "border-border",
+        )}
+      >
+        <div className="flex items-center gap-1.5 rounded-t-[inherit] border-b border-border/60 bg-muted/40 px-2 py-1">
+          <span className="truncate text-[11px] font-bold tracking-tight text-primary">
+            {refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary}
+          </span>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {isFav && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
+            {isProjected && (
+              <span className="inline-flex items-center gap-1 rounded bg-primary px-1 py-px text-[9px] font-bold uppercase text-primary-foreground">
+                <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />
+                Live
+              </span>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 space-y-1.5 px-2.5 py-2">
+          <p className="whitespace-pre-wrap text-[12.5px] leading-snug text-foreground/95">
+            {h.text}
+          </p>
+          {pair && (
+            <div className="border-t border-dashed border-border/50 pt-1.5">
+              <p className="whitespace-pre-wrap text-[12px] leading-snug text-muted-foreground">
+                {pair.text}
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div className="mt-auto flex items-center gap-0.5 rounded-b-[inherit] border-t border-border/40 bg-muted/20 px-1.5 py-1">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleFav();
+            }}
+            className={cn(
+              "inline-flex h-6 w-6 items-center justify-center rounded transition",
+              isFav
+                ? "text-amber-500 hover:bg-amber-500/10"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            )}
+            title={isFav ? "Remove favorite" : "Add favorite"}
+          >
+            <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+              onProject();
+            }}
+            className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground transition hover:opacity-90"
+            title="Project verse (Enter)"
+          >
+            <Send className="h-3 w-3" /> Project
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+});

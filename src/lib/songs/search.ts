@@ -6,6 +6,7 @@ export interface SongHit {
   score: number;
   slideIndex: number;
   matched: string[];
+  matchedLine?: string;
 }
 
 const queryCache = new Map<string, SongHit[]>();
@@ -133,9 +134,12 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     score -= Math.min(40, Math.floor(s.content.length / 400));
 
     let bestSlide = 0,
-      bestScore = -1;
+      bestScore = -1,
+      matchedLine: string | undefined = undefined;
+
     for (let j = 0; j < s.slides.length; j++) {
-      const sl = s.slides[j].toLowerCase();
+      const slide = s.slides[j];
+      const sl = slide.toLowerCase();
       const st = s.slideStems[j] ?? "";
       let sc = 0;
       for (const tok of tokens) {
@@ -143,13 +147,35 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         else if (tok.stem.length >= 2 && st.includes(tok.stem)) sc += 4;
       }
       if (qLower && sl.includes(qLower)) sc += 12;
+      
       if (sc > bestScore) {
         bestScore = sc;
         bestSlide = j;
+        
+        if (sc > 0) {
+          const lines = slide.split('\n');
+          for (const line of lines) {
+            const ll = line.toLowerCase();
+            const lst = songStem(line);
+            let lineMatches = false;
+            for (const tok of tokens) {
+              if ((tok.lower && ll.includes(tok.lower)) || (tok.stem.length >= 2 && lst.includes(tok.stem))) {
+                lineMatches = true;
+                break;
+              }
+            }
+            if (qLower && ll.includes(qLower)) lineMatches = true;
+            
+            if (lineMatches && line.trim() !== s.title.trim()) {
+              matchedLine = line.trim();
+              break;
+            }
+          }
+        }
       }
     }
 
-    hits.push({ song: s, score, slideIndex: bestSlide, matched });
+    hits.push({ song: s, score, slideIndex: bestSlide, matched, matchedLine });
     if (hits.length >= limit) break;
   }
   hits.sort((a, b) => b.score - a.score);

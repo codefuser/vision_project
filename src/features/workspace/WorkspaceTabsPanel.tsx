@@ -1,3 +1,4 @@
+import React, { useState } from "react";
 import {
   Image as ImageIcon,
   BookOpen,
@@ -28,6 +29,19 @@ const TABS: {
   { id: "songs", label: "Songs", icon: Music, focus: "songs", shortcutId: "tab.songs" },
   { id: "text", label: "Text", icon: Type, focus: "text", shortcutId: "tab.text" },
 ];
+
+function LazyKeepAlive({ active, children }: { active: boolean, children: React.ReactNode }) {
+  const [hasRendered, setHasRendered] = useState(active);
+  if (active && !hasRendered) setHasRendered(true);
+  
+  if (!hasRendered) return null;
+  
+  return (
+    <div className={cn("h-full overflow-hidden", !active && "hidden")}>
+      {children}
+    </div>
+  );
+}
 
 export function WorkspaceTabsPanel() {
   const { activeTab, setActiveTab } = useWorkspace();
@@ -98,26 +112,18 @@ export function WorkspaceTabsPanel() {
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden" role="tabpanel" aria-label={`${activeTab} panel`}>
-        {activeTab === "media" && (
-          <div className="h-full overflow-hidden">
-            <LibraryPage />
-          </div>
-        )}
-        {activeTab === "bible" && (
-          <div className="h-full overflow-hidden">
-            <BiblePanel />
-          </div>
-        )}
-        {activeTab === "songs" && (
-          <div className="h-full overflow-hidden">
-            <SongsPanel />
-          </div>
-        )}
-        {activeTab === "text" && (
-          <div className="h-full overflow-hidden">
-            <TextPanel />
-          </div>
-        )}
+        <LazyKeepAlive active={activeTab === "media"}>
+          <LibraryPage />
+        </LazyKeepAlive>
+        <LazyKeepAlive active={activeTab === "bible"}>
+          <BiblePanel />
+        </LazyKeepAlive>
+        <LazyKeepAlive active={activeTab === "songs"}>
+          <SongsPanel />
+        </LazyKeepAlive>
+        <LazyKeepAlive active={activeTab === "text"}>
+          <TextPanel />
+        </LazyKeepAlive>
       </div>
     </div>
   );
