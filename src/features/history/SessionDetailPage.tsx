@@ -13,14 +13,15 @@ import {
   Search,
   X,
   Layers,
-  RotateCcw,
+  Sparkles,
 } from "lucide-react";
 import { format } from "date-fns";
 import { useSessionHistory } from "./session-history.store";
-import type { SessionEventRecord } from "@/db/schema";
 import { SessionTimeline } from "./SessionTimeline";
 import { SessionRestoreDialog } from "./SessionRestoreDialog";
 import { SessionExportMenu } from "./SessionExportMenu";
+import { buildContentGroups, computeContentStats } from "./content-groups";
+import type { ContentStats } from "./content-groups";
 import { cn } from "@/lib/utils";
 
 interface Props {
@@ -58,15 +59,13 @@ export function SessionDetailPage({ id }: Props) {
     [setDetailSearchQuery],
   );
 
-  const events = openSessionEvents;
-  const stats = useMemo(() => ({
-    bibleCount: events.filter((e) => e.eventType === "BIBLE_PROJECTED").length,
-    songCount: events.filter((e) => e.eventType === "SONG_PROJECTED").length,
-    imageCount: events.filter((e) => e.eventType === "IMAGE_PROJECTED").length,
-    videoCount: events.filter((e) => e.eventType === "VIDEO_PROJECTED").length,
-    textCount: events.filter((e) => e.eventType === "TEXT_PROJECTED" || e.eventType === "ANNOUNCEMENT_PROJECTED").length,
-    themeCount: events.filter((e) => e.eventType === "THEME_CHANGED").length,
-  }), [events]);
+  const stats: ContentStats = useMemo(() => {
+    const duration = openSession
+      ? formatDuration(openSession.startedAt, openSession.endedAt)
+      : "—";
+    const groups = buildContentGroups(openSessionEvents);
+    return computeContentStats(groups, duration);
+  }, [openSessionEvents, openSession]);
 
   if (isLoadingDetail) {
     return (
@@ -96,8 +95,7 @@ export function SessionDetailPage({ id }: Props) {
   }
 
   const session = openSession;
-  const duration = formatDuration(session.startedAt, session.endedAt);
-  const totalItems = stats.bibleCount + stats.songCount + stats.imageCount + stats.videoCount + stats.textCount;
+  const events = openSessionEvents;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -127,7 +125,7 @@ export function SessionDetailPage({ id }: Props) {
                   {session.endedAt && (
                     <> – {format(new Date(session.endedAt), "h:mm a")}</>
                   )}
-                  · {duration}
+                  · {stats.sessionDuration}
                 </span>
                 {session.status === "active" && (
                   <span className="flex items-center gap-1 text-red-400/70">
@@ -173,59 +171,101 @@ export function SessionDetailPage({ id }: Props) {
           <SessionTimeline events={events} />
         </div>
 
-        <div className="hidden lg:flex w-48 shrink-0 flex-col border-l border-border/30 bg-muted/[0.01]">
+        <div className="hidden lg:flex w-52 shrink-0 flex-col border-l border-border/30 bg-muted/[0.01]">
           <div className="border-b border-border/20 px-3 py-2">
             <span className="text-[8px] font-bold uppercase tracking-widest text-muted-foreground/30">
-              Details
+              Session Overview
             </span>
           </div>
           <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4">
             <StatSection
               icon={Clock}
-              label="Session Duration"
-              value={duration}
-            />
-            <StatSection
-              icon={Layers}
-              label="Items Projected"
-              value={String(totalItems)}
+              label="Duration"
+              value={stats.sessionDuration}
             />
 
             <div className="border-t border-border/20 pt-3 space-y-1.5">
-              <StatRowWithCount icon={Music} label="Songs" count={stats.songCount} color="text-violet-400" />
-              <StatRowWithCount icon={BookOpen} label="Bible" count={stats.bibleCount} color="text-blue-400" />
-              <StatRowWithCount icon={ImageIcon} label="Images" count={stats.imageCount} color="text-amber-400" />
-              <StatRowWithCount icon={Video} label="Videos" count={stats.videoCount} color="text-orange-400" />
-              <StatRowWithCount icon={Type} label="Text" count={stats.textCount} color="text-teal-400" />
-              <StatRowWithCount icon={Palette} label="Themes" count={stats.themeCount} color="text-emerald-400" />
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
+                Music
+              </p>
+              <StatRow
+                icon={Music}
+                label="Unique Songs"
+                value={String(stats.uniqueSongs)}
+                color="text-violet-400"
+              />
+              <StatRow
+                icon={Sparkles}
+                label="Slides Viewed"
+                value={String(stats.slidesViewed)}
+                color="text-violet-300"
+              />
             </div>
 
             <div className="border-t border-border/20 pt-3 space-y-1.5">
               <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
-                Restore
+                Scripture
               </p>
-              <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-foreground/70 transition-all duration-150 hover:bg-primary/10 hover:text-primary">
-                <RotateCcw className="h-3 w-3" />
-                Entire Service
-              </button>
-              {stats.songCount > 0 && (
-                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-violet-500/10 hover:text-violet-400">
-                  <Music className="h-3 w-3" />
-                  Songs Only
-                </button>
-              )}
-              {stats.bibleCount > 0 && (
-                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-blue-500/10 hover:text-blue-400">
-                  <BookOpen className="h-3 w-3" />
-                  Bible Only
-                </button>
-              )}
-              {(stats.imageCount > 0 || stats.videoCount > 0) && (
-                <button className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-muted-foreground/60 transition-all duration-150 hover:bg-amber-500/10 hover:text-amber-400">
-                  <ImageIcon className="h-3 w-3" />
-                  Media Only
-                </button>
-              )}
+              <StatRow
+                icon={BookOpen}
+                label="References"
+                value={String(stats.bibleRefs)}
+                color="text-blue-400"
+              />
+              <StatRow
+                icon={BookOpen}
+                label="Verses Viewed"
+                value={String(stats.versesViewed)}
+                color="text-blue-300"
+              />
+            </div>
+
+            <div className="border-t border-border/20 pt-3 space-y-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
+                Media
+              </p>
+              <StatRow
+                icon={ImageIcon}
+                label="Images"
+                value={String(stats.images)}
+                color="text-amber-400"
+              />
+              <StatRow
+                icon={Video}
+                label="Videos"
+                value={String(stats.videos)}
+                color="text-orange-400"
+              />
+            </div>
+
+            <div className="border-t border-border/20 pt-3 space-y-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
+                Other
+              </p>
+              <StatRow
+                icon={Palette}
+                label="Themes"
+                value={String(stats.themesUsed)}
+                color="text-emerald-400"
+              />
+              <StatRow
+                icon={Type}
+                label="Text Items"
+                value={String(stats.textItems)}
+                color="text-teal-400"
+              />
+            </div>
+
+            <div className="border-t border-border/20 pt-3 space-y-1.5">
+              <p className="text-[9px] font-semibold uppercase tracking-widest text-muted-foreground/30">
+                Total
+              </p>
+              <StatRow
+                icon={Layers}
+                label="Content Items"
+                value={String(stats.uniqueSongs + stats.bibleRefs + stats.images + stats.videos + stats.themesUsed + stats.textItems)}
+                color="text-foreground/80"
+              />
             </div>
           </div>
         </div>
@@ -258,15 +298,15 @@ function StatSection({
   );
 }
 
-function StatRowWithCount({
+function StatRow({
   icon: Icon,
   label,
-  count,
+  value,
   color,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  count: number;
+  value: string;
   color: string;
 }) {
   return (
@@ -276,7 +316,7 @@ function StatRowWithCount({
         <span className="text-[10px] text-muted-foreground/60">{label}</span>
       </div>
       <span className={cn("text-xs font-semibold tabular-nums", color)}>
-        {count}
+        {value}
       </span>
     </div>
   );
