@@ -1,7 +1,7 @@
 import type { Song } from "./loader";
 import { songLower, songStem } from "./normalize";
 
-export type MatchType = "Title Exact" | "Title Fuzzy" | "Alias" | "Chorus" | "Verse" | "Lyrics";
+export type MatchType = string;
 
 export interface PreviewSnippet {
   previousLine?: string;
@@ -16,6 +16,9 @@ export interface SongHit {
   slideIndex: number;
   matchType: MatchType;
   snippet?: PreviewSnippet;
+  // Backwards compatibility for UI during transition
+  matchedLine?: string; 
+  matched?: string[];
 }
 
 const queryCache = new Map<string, SongHit[]>();
@@ -46,7 +49,7 @@ function lev(a: string, b: string, max: number): number {
 }
 
 // ----------------------------------------------------
-// INVERTED INDEX
+// INVERTED INDEX (Stage 5 execution)
 // ----------------------------------------------------
 
 interface TokenLocation {
@@ -82,19 +85,30 @@ function buildIndex(songs: Song[]) {
       list.push(loc);
     };
 
-    // 1. Index Title
+    // 1. Index Title (Weight: 10000)
     const titleWords = song.title.split(/\s+/);
     for (const w of titleWords) {
       indexToken(w, { songId: song.id, slideIdx: 0, lineIdx: -1, matchType: "Title Exact", scoreWeight: 10000 });
     }
 
-    // 2. Index Slides
+    // 2. Index Slides (Weight: Chorus 5000, Verse 3000)
     for (let slideIdx = 0; slideIdx < song.slides.length; slideIdx++) {
       const slideStr = song.slides[slideIdx];
       const slideLower = songLower(slideStr);
-      const isChorus = slideLower.startsWith("chorus") || slideLower.includes("[chorus]");
-      const matchType: MatchType = isChorus ? "Chorus" : "Verse";
-      const scoreWeight = isChorus ? 5000 : 3000;
+      
+      let matchType = "Verse";
+      if (slideLower.startsWith("chorus") || slideLower.includes("[chorus]")) {
+        matchType = "Chorus";
+      } else if (slideLower.startsWith("bridge") || slideLower.includes("[bridge]")) {
+        matchType = "Bridge";
+      } else {
+        const verseMatch = slideLower.match(/verse\s*(\d+)/);
+        if (verseMatch) {
+          matchType = `Verse ${verseMatch[1]}`;
+        }
+      }
+      
+      const scoreWeight = matchType === "Chorus" ? 5000 : 3000;
 
       const lines = slideStr.split("\n");
       for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
@@ -134,6 +148,7 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
 function runSearch(query: string, limit: number): SongHit[] {
   const qLower = songLower(query);
   
+  // Stage 1 & 2: Normalization
   const rawTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
   const qTokens = rawTokens
     .map((t) => ({ raw: t, lower: songLower(t), stem: songStem(t) }))
@@ -142,13 +157,19 @@ function runSearch(query: string, limit: number): SongHit[] {
   if (!qTokens.length) return [];
 
   // Track scores per song ID
-  const songScores = new Map<number, { score: number, slideIdx: number, lineIdx: number, matchType: MatchType, tokensMatched: Set<string> }>();
+  const songScores = new Map<number, { 
+    score: number, 
+    slideIdx: number, 
+    lineIdx: number, 
+    matchType: MatchType, 
+    tokensMatched: Set<string> 
+  }>();
 
   for (const qTok of qTokens) {
     // Find all index keys that match this query token
     const matchedKeys: string[] = [];
     
-    // Exact or Prefix match
+    // Stage 3 & 4: Exact, Prefix, or Bounded Levenshtein (Fuzzy)
     for (const key of indexKeys) {
       if (key === qTok.stem) {
         matchedKeys.push(key);
@@ -179,18 +200,17 @@ function runSearch(query: string, limit: number): SongHit[] {
         
         if (!current.tokensMatched.has(qTok.stem)) {
           current.tokensMatched.add(qTok.stem);
-          // Only add score for the first time this token matches for this song
-          // We apply the location weight
+          
           let addedScore = loc.scoreWeight * fuzzyPenalty;
           
-          // Adjust Match Type if fuzzy title
           let mt = loc.matchType;
           if (mt === "Title Exact" && isFuzzy) mt = "Title Fuzzy";
           
           current.score += addedScore;
           
           // Keep highest priority match type and location
-          if (loc.scoreWeight > (current.matchType === "Title Exact" ? 10000 : current.matchType === "Chorus" ? 5000 : 0)) {
+          const currentWeight = current.matchType.startsWith("Title") ? 10000 : current.matchType === "Chorus" ? 5000 : 0;
+          if (loc.scoreWeight > currentWeight) {
              current.matchType = mt;
              current.slideIdx = loc.slideIdx;
              current.lineIdx = loc.lineIdx;
@@ -215,30 +235,34 @@ function runSearch(query: string, limit: number): SongHit[] {
       mt = "Title Exact";
     }
 
-    // Must match at least half the tokens to be considered a viable result
+    // Stage 7: Set Intersection - Must match at least half the query tokens
     if (data.tokensMatched.size < Math.ceil(qTokens.length / 2)) {
-      continue; // Skip junk matches
+      continue; 
     }
 
-    // Extract Lazy Snippet only if it's not a title-only match
+    // Stage 9: Snippet Generation
     let snippet: PreviewSnippet | undefined = undefined;
+    let matchedLineFallback: string | undefined = undefined;
+
     if (data.lineIdx >= 0) {
       const slide = song.slides[data.slideIdx];
       if (slide) {
         const lines = slide.split("\n").map(l => l.trim());
         const lIdx = data.lineIdx;
+        matchedLineFallback = lines[lIdx] || "";
         snippet = {
           previousLine: lIdx > 0 ? lines[lIdx - 1] : undefined,
-          matchedLine: lines[lIdx] || "",
+          matchedLine: matchedLineFallback,
           nextLine: lIdx < lines.length - 1 ? lines[lIdx + 1] : undefined,
           highlightTokens: qTokens.map(t => t.lower).filter(Boolean)
         };
       }
     } else {
-      // It's a title match, let's grab the first line of the song as context
+      // It's a title match, grab first lyrics as context
       if (song.slides.length > 0) {
         const lines = song.slides[0].split("\n").map(l => l.trim()).filter(Boolean);
         if (lines.length > 0) {
+          matchedLineFallback = lines[0];
           snippet = {
             previousLine: undefined,
             matchedLine: lines[0],
@@ -254,10 +278,13 @@ function runSearch(query: string, limit: number): SongHit[] {
       score: finalScore,
       slideIndex: data.slideIdx,
       matchType: mt,
-      snippet
+      snippet,
+      matchedLine: matchedLineFallback,
+      matched: qTokens.map(t => t.raw)
     });
   }
 
+  // Stage 8: Sort Results
   hits.sort((a, b) => b.score - a.score);
   return hits.slice(0, limit);
 }

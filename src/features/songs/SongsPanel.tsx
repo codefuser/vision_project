@@ -179,7 +179,7 @@ export function SongsPanel() {
       const seen = new Set<number>();
       const push = (s: Song, slideIndex = 0) => {
         if (seen.has(s.id) || !applyFilter(s)) return;
-        out.push({ song: s, score: 0, slideIndex, matched: [] });
+        out.push({ song: s, score: 0, slideIndex, matched: [], matchType: "Title Exact" });
         seen.add(s.id);
       };
       if (filter === "all" || filter === "mine" || filter === "added") {
@@ -958,22 +958,23 @@ const SongRow = memo(function SongRow({
           
           {/* Snippet Preview */}
           {!compact && (
-            <div className="mt-1.5 space-y-1">
+            <div className="mt-1.5 space-y-0.5">
               {hit.snippet ? (
-                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5">
-                  {hit.snippet.previousLine && (
-                    <div className="line-clamp-1 opacity-60 text-[11px]">{hit.snippet.previousLine}</div>
-                  )}
-                  <div className="line-clamp-1 text-foreground/90 font-medium">
+                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
+                  <div className="opacity-60 text-[11px] leading-none mb-0.5">...</div>
+                  <div className="truncate text-foreground/90 font-medium">
                     <HighlightedText text={hit.snippet.matchedLine} highlightTokens={hit.snippet.highlightTokens} />
                   </div>
-                  {hit.snippet.nextLine && (
-                    <div className="line-clamp-1 opacity-60 text-[11px]">{hit.snippet.nextLine}</div>
-                  )}
+                  {hit.snippet.nextLine ? (
+                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.snippet.nextLine}</div>
+                  ) : hit.snippet.previousLine ? (
+                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.snippet.previousLine}</div>
+                  ) : null}
+                  <div className="opacity-60 text-[11px] leading-none mt-0.5">...</div>
                 </div>
               ) : (
-                <div className="text-xs text-muted-foreground line-clamp-2 pl-2">
-                  {firstLineOf(song)}
+                <div className="text-xs text-muted-foreground truncate pl-2 opacity-80 max-w-[95%]">
+                  ... {firstLineOf(song)} ...
                 </div>
               )}
               {song.artist && <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">👤 {song.artist}</div>}
