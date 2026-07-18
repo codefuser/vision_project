@@ -126,6 +126,38 @@ export function tanglishLower(s: string): string {
   return t;
 }
 
+/**
+ * Aggressive Tanglish normalization — vowel-length collapse, consonant
+ * deduplication, digraph/voicing collapse. Produces a stable comparable
+ * form from inconsistent Tanglish spellings.
+ */
+export function tanglishNorm(s: string): string {
+  let t = s.toLowerCase().trim();
+  t = t
+    .replace(/dh/g, "d")
+    .replace(/th/g, "t")
+    .replace(/zh/g, "l")
+    .replace(/sh/g, "s")
+    .replace(/ch/g, "s")
+    .replace(/ph/g, "p")
+    .replace(/gh/g, "k")
+    .replace(/kh/g, "k")
+    .replace(/ng/g, "n");
+  t = t
+    .replace(/b/g, "p")
+    .replace(/g/g, "k")
+    .replace(/d/g, "t")
+    .replace(/j/g, "s")
+    .replace(/f/g, "p")
+    .replace(/w/g, "v")
+    .replace(/h/g, "");
+  t = t.replace(/oo/g, "u").replace(/ee/g, "i").replace(/aa/g, "a");
+  t = t.replace(/([ptkmnlrsvy])\1+/g, "$1");
+  t = t.replace(/[^a-z\s]/g, "");
+  t = t.replace(/\s+/g, " ").trim();
+  return t;
+}
+
 /** Consonant skeleton — vowels removed, consonants deduped. Stable across
  *  spelling variants and Tamil↔Tanglish. */
 export function tanglishStem(s: string): string {

@@ -26,7 +26,6 @@ import { useSongsRecent } from "@/stores/songs-recent.store";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { getSongs, type Song } from "@/lib/songs/loader";
 import { searchSongs, type SongHit } from "@/lib/songs/search";
-import { songStem } from "@/lib/songs/normalize";
 import { truncateGraphemes } from "@/lib/songs/grapheme";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { useProjection } from "@/stores/projection.store";
@@ -184,7 +183,6 @@ export function SongsPanel() {
         out.push({
           song: s,
           score: 0,
-          matchType: "",
           firstLine: fl,
           matchedLine: fl,
           nextLine: undefined,
@@ -978,34 +976,27 @@ const SongRow = memo(
               <span className={cn("font-semibold truncate", compact ? "text-sm" : "text-base")}>
                 <HighlightedText text={hit.firstLine} highlightTokens={hit.highlightTokens} />
               </span>
-              {hit.matchType && (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-[9px] uppercase tracking-wide text-muted-foreground border border-border">
-                  Matched in {hit.matchType}
-                </span>
-              )}
               {isMine && (
                 <span className="rounded bg-primary/10 px-1 text-[10px] text-primary">Mine</span>
               )}
             </div>
 
-            {/* Preview: matched line + next line */}
-            {!compact && (
-              <div className="mt-1.5 space-y-0.5">
-                <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
-                  <div className="truncate text-foreground/90 font-medium">
-                    <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
-                  </div>
-                  {hit.nextLine && (
-                    <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.nextLine}</div>
-                  )}
+            {/* Preview: matched line + next line — always visible */}
+            <div className="mt-1.5 space-y-0.5">
+              <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
+                <div className="truncate text-foreground/90 font-medium">
+                  <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
                 </div>
-                {song.artist && (
-                  <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">
-                    👤 {song.artist}
-                  </div>
+                {hit.nextLine && (
+                  <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.nextLine}</div>
                 )}
               </div>
-            )}
+              {song.artist && (
+                <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">
+                  👤 {song.artist}
+                </div>
+              )}
+            </div>
           </div>
           <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
             <div className="flex items-center gap-1">

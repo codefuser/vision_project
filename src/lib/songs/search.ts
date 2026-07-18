@@ -1,10 +1,9 @@
 import type { Song } from "./loader";
-import { songLower, songStem } from "./normalize";
+import { songStem, tanglishNorm } from "./normalize";
 
 export interface SongHit {
   song: Song;
   score: number;
-  matchType: string;
   firstLine: string;
   matchedLine: string;
   nextLine?: string;
@@ -14,21 +13,22 @@ export interface SongHit {
 interface LineEntry {
   text: string;
   normalized: string;
+  normTokens: string[];
   stem: string;
-  slideIndex: number;
+  stemTokens: string[];
 }
 
 interface SongSearchData {
   firstLine: string;
   lines: LineEntry[];
-  titleLower: string;
+  titleNorm: string;
   titleStem: string;
 }
 
 let searchIndex: Map<number, SongSearchData> | null = null;
 let indexedSongsId: string | null = null;
 
-function getSongsId(songs: Song[]): string {
+function songsId(songs: Song[]): string {
   return songs.map((s) => `${s.id}:${s.content.length}`).join(",");
 }
 
@@ -42,11 +42,13 @@ export function buildSearchIndex(songs: Song[]) {
         .map((l) => l.trim())
         .filter(Boolean);
       for (const text of slideLines) {
+        const norm = tanglishNorm(text);
         lines.push({
           text,
-          normalized: songLower(text),
+          normalized: norm,
+          normTokens: norm ? norm.split(/\s+/).filter(Boolean) : [],
           stem: songStem(text),
-          slideIndex: si,
+          stemTokens: songStem(text).split(/\s+/).filter(Boolean),
         });
       }
     }
@@ -54,11 +56,36 @@ export function buildSearchIndex(songs: Song[]) {
     searchIndex.set(song.id, {
       firstLine,
       lines,
-      titleLower: song.titleLower,
+      titleNorm: tanglishNorm(song.title),
       titleStem: song.titleStem,
     });
   }
-  indexedSongsId = getSongsId(songs);
+  indexedSongsId = songsId(songs);
+}
+
+function editDist(a: string, b: string, maxDist: number): number {
+  const an = a.length;
+  const bn = b.length;
+  if (Math.abs(an - bn) > maxDist) return maxDist + 1;
+  if (an === 0) return bn;
+  if (bn === 0) return an;
+  let prev = new Int32Array(bn + 1);
+  let curr = new Int32Array(bn + 1);
+  for (let j = 0; j <= bn; j++) prev[j] = j;
+  for (let i = 1; i <= an; i++) {
+    curr[0] = i;
+    let rowMin = curr[0];
+    for (let j = 1; j <= bn; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+      if (curr[j] < rowMin) rowMin = curr[j];
+    }
+    if (rowMin > maxDist) return maxDist + 1;
+    const tmp = prev;
+    prev = curr;
+    curr = tmp;
+  }
+  return prev[bn];
 }
 
 const queryCache = new Map<string, SongHit[]>();
@@ -68,7 +95,7 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
   const q = query.trim();
   if (!q) return [];
 
-  const currentId = getSongsId(songs);
+  const currentId = songsId(songs);
   if (!searchIndex || indexedSongsId !== currentId) {
     buildSearchIndex(songs);
   }
@@ -87,13 +114,47 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
   return hits;
 }
 
-function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
-  const qLower = songLower(query);
-  const qStem = songStem(query);
-  if (!qLower) return [];
+function normTokens(s: string): { tokens: string[]; flat: string } {
+  const n = tanglishNorm(s);
+  if (!n) return { tokens: [], flat: "" };
+  return {
+    tokens: n.split(/\s+/).filter((t) => t.length >= 2),
+    flat: n.replace(/\s+/g, ""),
+  };
+}
 
-  const rawTokens = query.toLowerCase().split(/\s+/).filter(Boolean);
-  const qTokensLower = qLower.split(/\s+/).filter(Boolean);
+function stemTokens(s: string): string[] {
+  return songStem(s)
+    .split(/\s+/)
+    .filter((t) => t.length >= 2);
+}
+
+/** Fraction of query tokens (0–1) that have a close match in line's token array. */
+function queryTokenCoverage(lineTokens: string[], qTokens: string[]): number {
+  if (!qTokens.length) return 0;
+  let matched = 0;
+  for (const qt of qTokens) {
+    for (const lt of lineTokens) {
+      if (lt.includes(qt) || qt.includes(lt)) {
+        matched++;
+        break;
+      }
+      if (Math.abs(lt.length - qt.length) <= 3) {
+        const threshold = Math.min(3, Math.max(lt.length, qt.length) * 0.4);
+        if (editDist(lt, qt, threshold) <= threshold) {
+          matched++;
+          break;
+        }
+      }
+    }
+  }
+  return matched / qTokens.length;
+}
+
+function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
+  const qn = normTokens(query);
+  const qs = stemTokens(query);
+  if (!qn.flat) return [];
 
   const hits: SongHit[] = [];
 
@@ -101,101 +162,69 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     const data = searchIndex!.get(song.id);
     if (!data) continue;
 
-    let score = 0;
-    let matchType = "";
-    let matchedLine: LineEntry | null = null;
-
-    // Title matching (highest priority)
-    if (song.titleLower === qLower) {
-      score += 20000;
-      matchType = "Title Exact";
-    } else if (song.titleLower.startsWith(qLower)) {
-      score += 15000;
-      matchType = "Title Prefix";
-    } else if (song.titleLower.includes(qLower)) {
-      score += 10000;
-      matchType = "Title Match";
+    // --- title score ---
+    let titleScore = 0;
+    if (data.titleNorm === qn.flat) titleScore = 200;
+    else if (data.titleNorm.replace(/\s+/g, "").includes(qn.flat)) titleScore = 150;
+    else if (qn.flat.includes(data.titleNorm.replace(/\s+/g, ""))) titleScore = 100;
+    else if (qn.tokens.length) {
+      const tNorm = data.titleNorm.replace(/\s+/g, "");
+      const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
+      titleScore = queryTokenCoverage(tTokens, qn.tokens) * 80;
     }
 
-    if (score === 0 && qTokensLower.length > 0) {
-      let matchedTokens = 0;
-      for (const t of qTokensLower) {
-        if (song.titleLower.includes(t)) matchedTokens++;
-      }
-      if (matchedTokens === qTokensLower.length) {
-        score += 8000;
-        matchType = "Title Words";
-      }
+    if (titleScore === 0 && qs.length && data.titleStem) {
+      const tStem = data.titleStem.split(/\s+/).filter((t) => t.length >= 2);
+      titleScore = queryTokenCoverage(tStem, qs) * 40;
     }
 
-    // Line-level content matching
+    // --- line-level scoring ---
     let bestLine: LineEntry | null = null;
     let bestLineScore = 0;
 
     for (const line of data.lines) {
-      let lineScore = 0;
+      let ls = 0;
 
-      if (line.normalized.includes(qLower)) {
-        lineScore += 5000;
+      // Exact-substring match on flat (no-space) normalized strings
+      if (line.normalized.replace(/\s+/g, "") === qn.flat) ls = 200;
+      else if (line.normalized.replace(/\s+/g, "").includes(qn.flat)) ls = 160;
+      else if (qn.flat.includes(line.normalized.replace(/\s+/g, ""))) ls = 120;
+      else if (qn.tokens.length) {
+        ls = queryTokenCoverage(line.normTokens, qn.tokens) * 100;
       }
 
-      if (qTokensLower.length > 0) {
-        let matched = 0;
-        for (const t of qTokensLower) {
-          if (line.normalized.includes(t)) matched++;
-        }
-        lineScore += matched * 500;
+      // Stem overlap bonus
+      if (ls > 0 && qs.length && line.stemTokens.length) {
+        ls += queryTokenCoverage(line.stemTokens, qs) * 30;
       }
 
-      if (lineScore > bestLineScore) {
-        bestLineScore = lineScore;
+      if (ls > bestLineScore) {
+        bestLineScore = ls;
         bestLine = line;
       }
     }
 
-    if (bestLine && bestLineScore > 0) {
-      score += bestLineScore;
-      if (!matchType) matchType = "Lyrics Match";
-      matchedLine = bestLine;
-    }
+    const total = titleScore + bestLineScore;
 
-    // Stem fallback (sound-alike)
-    if (score === 0 && qStem.length >= 3) {
-      if (data.titleStem.includes(qStem)) {
-        score += 1000;
-        matchType = "Title Sound-alike";
-      } else {
-        for (const line of data.lines) {
-          if (line.stem.includes(qStem)) {
-            score += 500;
-            matchType = "Lyrics Sound-alike";
-            matchedLine = line;
-            break;
-          }
-        }
-      }
-    }
-
-    if (score > 0) {
+    if (total > 0 && (titleScore >= 30 || bestLineScore >= 40)) {
       let matchedText = data.firstLine;
       let nextText: string | undefined;
 
-      if (matchedLine) {
-        matchedText = matchedLine.text;
-        const lineIdx = data.lines.indexOf(matchedLine);
-        if (lineIdx >= 0 && lineIdx < data.lines.length - 1) {
-          nextText = data.lines[lineIdx + 1].text;
+      if (bestLine) {
+        matchedText = bestLine.text;
+        const idx = data.lines.indexOf(bestLine);
+        if (idx >= 0 && idx < data.lines.length - 1) {
+          nextText = data.lines[idx + 1].text;
         }
       }
 
       hits.push({
         song,
-        score,
-        matchType: matchType || "Match",
+        score: total,
         firstLine: data.firstLine,
         matchedLine: matchedText,
         nextLine: nextText,
-        highlightTokens: qTokensLower,
+        highlightTokens: qn.tokens,
       });
     }
   }
