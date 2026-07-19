@@ -17,6 +17,7 @@ interface LineEntry {
   normTokens: string[];
   stem: string;
   stemTokens: string[];
+  rawTokens: string[];
 }
 
 interface SongSearchData {
@@ -44,13 +45,28 @@ export function buildSearchIndex(songs: Song[]) {
         .map((l) => l.trim())
         .filter(Boolean);
       for (const text of slideLines) {
-        const norm = tanglishNorm(text);
+        const rawTokensArray = text.split(/\s+/);
+        const normTokens = [];
+        const stemTokens = [];
+        const validRawTokens = [];
+        
+        for (const raw of rawTokensArray) {
+          const norm = tanglishNorm(raw);
+          const stem = songStem(raw);
+          if (norm && stem) {
+            normTokens.push(norm);
+            stemTokens.push(stem);
+            validRawTokens.push(raw);
+          }
+        }
+        
         lines.push({
           text,
-          normalized: norm,
-          normTokens: norm ? norm.split(/\s+/).filter(Boolean) : [],
-          stem: songStem(text),
-          stemTokens: songStem(text).split(/\s+/).filter(Boolean),
+          normalized: normTokens.join(" "),
+          normTokens,
+          stem: stemTokens.join(" "),
+          stemTokens,
+          rawTokens: validRawTokens,
         });
       }
     }
@@ -133,26 +149,30 @@ function stemTokens(s: string): string[] {
     .filter((t) => t.length >= 2);
 }
 
-/** Fraction of query tokens (0–1) that have a close match in line's token array. */
-function queryTokenCoverage(lineTokens: string[], qTokens: string[]): number {
-  if (!qTokens.length) return 0;
-  let matched = 0;
+function getMatchIndices(lineTokens: string[], qTokens: string[]): number[] {
+  if (!qTokens.length || !lineTokens.length) return [];
+  const indices = new Set<number>();
   for (const qt of qTokens) {
-    for (const lt of lineTokens) {
+    let bestDist = Infinity;
+    let bestIdx = -1;
+    for (let i = 0; i < lineTokens.length; i++) {
+      const lt = lineTokens[i];
+      if (lt === qt) { bestIdx = i; bestDist = 0; break; }
       if (lt.includes(qt) || qt.includes(lt)) {
-        matched++;
-        break;
+        if (1 < bestDist) { bestDist = 1; bestIdx = i; }
       }
       if (Math.abs(lt.length - qt.length) <= 3) {
         const threshold = Math.min(3, Math.max(lt.length, qt.length) * 0.4);
-        if (editDist(lt, qt, threshold) <= threshold) {
-          matched++;
-          break;
+        const d = editDist(lt, qt, threshold);
+        if (d <= threshold && d < bestDist) {
+          bestDist = d;
+          bestIdx = i;
         }
       }
     }
+    if (bestIdx !== -1) indices.add(bestIdx);
   }
-  return matched / qTokens.length;
+  return Array.from(indices);
 }
 
 function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
@@ -168,43 +188,56 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
 
     // --- title score ---
     let titleScore = 0;
-    if (data.titleNorm === qn.flat) titleScore = 200;
-    else if (data.titleNorm.replace(/\s+/g, "").includes(qn.flat)) titleScore = 150;
-    else if (qn.flat.includes(data.titleNorm.replace(/\s+/g, ""))) titleScore = 100;
+    if (data.titleNorm === qn.flat) titleScore = 300;
+    else if (data.titleNorm.replace(/\s+/g, "").includes(qn.flat)) titleScore = 200;
+    else if (qn.flat.includes(data.titleNorm.replace(/\s+/g, ""))) titleScore = 150;
     else if (qn.tokens.length) {
-      const tNorm = data.titleNorm.replace(/\s+/g, "");
       const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
-      titleScore = queryTokenCoverage(tTokens, qn.tokens) * 80;
+      const indices = getMatchIndices(tTokens, qn.tokens);
+      titleScore = (indices.length / qn.tokens.length) * 80;
     }
 
     if (titleScore === 0 && qs.length && data.titleStem) {
       const tStem = data.titleStem.split(/\s+/).filter((t) => t.length >= 2);
-      titleScore = queryTokenCoverage(tStem, qs) * 40;
+      const indices = getMatchIndices(tStem, qs);
+      titleScore = (indices.length / qs.length) * 40;
     }
 
     // --- line-level scoring ---
     let bestLine: LineEntry | null = null;
     let bestLineScore = 0;
+    let bestHighlightTokens: string[] = [];
 
     for (const line of data.lines) {
       let ls = 0;
+      let indices: number[] = [];
 
       // Exact-substring match on flat (no-space) normalized strings
-      if (line.normalized.replace(/\s+/g, "") === qn.flat) ls = 200;
-      else if (line.normalized.replace(/\s+/g, "").includes(qn.flat)) ls = 160;
-      else if (qn.flat.includes(line.normalized.replace(/\s+/g, ""))) ls = 120;
-      else if (qn.tokens.length) {
-        ls = queryTokenCoverage(line.normTokens, qn.tokens) * 100;
+      if (line.normalized.replace(/\s+/g, "") === qn.flat) {
+        ls = 250;
+        indices = line.rawTokens.map((_, i) => i);
+      } else if (line.normalized.replace(/\s+/g, "").includes(qn.flat)) {
+        ls = 160;
+        indices = getMatchIndices(line.normTokens, qn.tokens);
+      } else if (qn.flat.includes(line.normalized.replace(/\s+/g, ""))) {
+        ls = 120;
+        indices = getMatchIndices(line.normTokens, qn.tokens);
+      } else if (qn.tokens.length) {
+        indices = getMatchIndices(line.normTokens, qn.tokens);
+        ls = (indices.length / qn.tokens.length) * 100;
       }
 
       // Stem overlap bonus
       if (ls > 0 && qs.length && line.stemTokens.length) {
-        ls += queryTokenCoverage(line.stemTokens, qs) * 30;
+        const stemIndices = getMatchIndices(line.stemTokens, qs);
+        ls += (stemIndices.length / qs.length) * 30;
+        for (const idx of stemIndices) if (!indices.includes(idx)) indices.push(idx);
       }
 
       if (ls > bestLineScore) {
         bestLineScore = ls;
         bestLine = line;
+        bestHighlightTokens = indices.map((i) => line.rawTokens[i]).filter(Boolean);
       }
     }
 
@@ -226,6 +259,9 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         }
       }
 
+      // Always pass the raw query tokens + matched Tamil words to the highlighter
+      const finalHighlightTokens = Array.from(new Set([...qn.tokens, ...bestHighlightTokens]));
+
       hits.push({
         song,
         score: total,
@@ -233,7 +269,7 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         matchedLine: matchedText,
         previousLine: prevText,
         nextLine: nextText,
-        highlightTokens: qn.tokens,
+        highlightTokens: finalHighlightTokens,
       });
     }
   }

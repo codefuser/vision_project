@@ -975,30 +975,30 @@ const SongRow = memo(
           <div className="min-w-0 flex-1 pr-4">
             <div className="flex items-center gap-2 mb-1">
               <span className={cn("font-semibold truncate", compact ? "text-sm" : "text-base")}>
-                <HighlightedText text={hit.firstLine} highlightTokens={hit.highlightTokens} />
+                <HighlightedText text={song.title || hit.firstLine} highlightTokens={hit.highlightTokens} />
               </span>
               {isMine && (
                 <span className="rounded bg-primary/10 px-1 text-[10px] text-primary">Mine</span>
               )}
             </div>
 
-            {/* Preview: previous line + matched line + next line — always visible */}
-            <div className="mt-1.5 space-y-0.5">
-              <div className="text-xs text-muted-foreground border-l-2 border-primary/40 pl-2 py-0.5 max-w-[95%]">
-                {hit.previousLine && (
-                  <div className="truncate opacity-70 text-[11px] mb-0.5">{hit.previousLine}</div>
-                )}
-                <div className="truncate text-foreground/90 font-medium">
-                  <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
-                </div>
-                {hit.nextLine && (
-                  <div className="truncate opacity-70 text-[11px] mt-0.5">{hit.nextLine}</div>
-                )}
+            {(song.artist || song.album) && (
+              <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground/70 mb-2">
+                {song.artist && <span>👤 {song.artist}</span>}
+                {song.album && <span>💿 {song.album}</span>}
               </div>
-              {song.artist && (
-                <div className="text-[10px] text-muted-foreground/70 flex items-center gap-1 mt-1">
-                  👤 {song.artist}
-                </div>
+            )}
+
+            {/* Preview: previous line + matched line + next line */}
+            <div className="mt-1.5 space-y-0.5 border-l-2 border-primary/30 pl-2 max-w-[95%]">
+              {hit.previousLine && (
+                <div className="truncate opacity-60 text-[11px] mb-0.5">... {hit.previousLine}</div>
+              )}
+              <div className="truncate text-foreground/90 text-[12px] font-medium">
+                <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
+              </div>
+              {hit.nextLine && (
+                <div className="truncate opacity-60 text-[11px] mt-0.5">{hit.nextLine} ...</div>
               )}
             </div>
           </div>
