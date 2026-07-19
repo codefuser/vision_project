@@ -114,7 +114,7 @@ export function tanglishLower(s: string): string {
     .replace(/ph/g, "p")
     .replace(/gh/g, "k")
     .replace(/kh/g, "k")
-    .replace(/ng/g, "n");
+    .replace(/ng/g, "nk");
   t = t
     .replace(/b/g, "p")
     .replace(/g/g, "k")
@@ -143,7 +143,7 @@ export function tanglishNorm(s: string): string {
     .replace(/ph/g, "p")
     .replace(/gh/g, "k")
     .replace(/kh/g, "k")
-    .replace(/ng/g, "n");
+    .replace(/ng/g, "nk");
   t = t
     .replace(/b/g, "p")
     .replace(/g/g, "k")

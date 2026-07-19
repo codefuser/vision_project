@@ -185,8 +185,7 @@ export function SongsPanel() {
           score: 0,
           firstLine: fl,
           matchedLine: fl,
-          previousLine: undefined,
-          nextLine: undefined,
+          contextLines: [{ text: fl, isMatch: false }],
           highlightTokens: [],
         });
         seen.add(s.id);
@@ -989,17 +988,20 @@ const SongRow = memo(
               </div>
             )}
 
-            {/* Preview: previous line + matched line + next line */}
             <div className="mt-1.5 space-y-0.5 border-l-2 border-primary/30 pl-2 max-w-[95%]">
-              {hit.previousLine && (
-                <div className="truncate opacity-60 text-[11px] mb-0.5">... {hit.previousLine}</div>
-              )}
-              <div className="truncate text-foreground/90 text-[12px] font-medium">
-                <HighlightedText text={hit.matchedLine} highlightTokens={hit.highlightTokens} />
-              </div>
-              {hit.nextLine && (
-                <div className="truncate opacity-60 text-[11px] mt-0.5">{hit.nextLine} ...</div>
-              )}
+              {hit.contextLines.map((line, i) => (
+                <div
+                  key={i}
+                  className={cn(
+                    "truncate text-[11px]",
+                    line.isMatch ? "text-foreground/90 font-medium text-[12px]" : "opacity-60"
+                  )}
+                >
+                  {i === 0 && hit.contextLines.length > 1 && !line.isMatch && "... "}
+                  <HighlightedText text={line.text} highlightTokens={hit.highlightTokens} />
+                  {i === hit.contextLines.length - 1 && hit.contextLines.length > 1 && !line.isMatch && " ..."}
+                </div>
+              ))}
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -1012,11 +1014,8 @@ const SongRow = memo(
                 )}
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (isFav) {
-                    removeFav(song.id);
-                  } else {
-                    addFav({ id: song.id, title: song.title });
-                  }
+                  if (isFav) removeFav(song.id);
+                  else addFav({ id: song.id, title: song.title });
                 }}
               >
                 <Star className="h-4 w-4" fill={isFav ? "currentColor" : "none"} />
@@ -1056,29 +1055,21 @@ const SongRow = memo(
                 </button>
               )}
             </div>
-            <div className="text-[9px] text-muted-foreground font-mono">
-              {song.slides.length} slides
-            </div>
           </div>
         </div>
       </div>
     );
   },
-  (prev, next) => {
-    return (
-      prev.virtualItem.start === next.virtualItem.start &&
-      prev.isSelected === next.isSelected &&
-      prev.isActive === next.isActive &&
-      prev.isFav === next.isFav &&
-      prev.isMine === next.isMine &&
-      prev.slideIdx === next.slideIdx &&
-      prev.query === next.query &&
-      prev.compact === next.compact &&
-      prev.hit.score === next.hit.score &&
-      prev.hit.matchedLine === next.hit.matchedLine &&
-      prev.hit.previousLine === next.hit.previousLine &&
-      prev.hit.nextLine === next.hit.nextLine &&
-      prev.hit.firstLine === next.hit.firstLine
-    );
-  },
+  (prev, next) =>
+    prev.virtualItem.start === next.virtualItem.start &&
+    prev.isSelected === next.isSelected &&
+    prev.isActive === next.isActive &&
+    prev.isFav === next.isFav &&
+    prev.isMine === next.isMine &&
+    prev.slideIdx === next.slideIdx &&
+    prev.query === next.query &&
+    prev.compact === next.compact &&
+    prev.hit.score === next.hit.score &&
+    prev.hit.matchedLine === next.hit.matchedLine &&
+    prev.hit.firstLine === next.hit.firstLine
 );

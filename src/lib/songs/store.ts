@@ -5,7 +5,7 @@
  */
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
-import { buildSong, loadSongs, setUserSongs, type Song } from "./loader";
+import { buildSong, loadSongs, setUserSongs, getSongs, type Song } from "./loader";
 
 export interface SongFavorite {
   id: number;
@@ -89,7 +89,13 @@ export const useSongsStore = create<SongStore>()(
         const id = get().userSongs.reduce((m, x) => Math.max(m, x.id), USER_ID_BASE) + 1;
         const next = [...get().userSongs, { ...s, id }];
         set({ userSongs: next });
+        const newSong = buildSong({ ...s, id, userCreated: true });
         syncUserSongs(next);
+        // Incrementally update search index to prevent UI freeze
+        import("./search").then(({ updateSearchIndex, markSearchIndexUpdated }) => {
+          updateSearchIndex(newSong);
+          markSearchIndexUpdated(getSongs() || []);
+        });
         return id;
       },
       upsertUserSong: (s) => {
@@ -98,17 +104,34 @@ export const useSongsStore = create<SongStore>()(
           ? get().userSongs.map((u) => (u.id === s.id ? s : u))
           : [...get().userSongs, s];
         set({ userSongs: next });
+        const updatedSong = buildSong({ ...s, userCreated: true });
         syncUserSongs(next);
+        import("./search").then(({ updateSearchIndex, markSearchIndexUpdated }) => {
+          updateSearchIndex(updatedSong);
+          markSearchIndexUpdated(getSongs() || []);
+        });
       },
       updateUserSong: (id, patch) => {
-        const next = get().userSongs.map((u) => (u.id === id ? { ...u, ...patch } : u));
+        const current = get().userSongs.find((u) => u.id === id);
+        if (!current) return;
+        const updated = { ...current, ...patch };
+        const next = get().userSongs.map((u) => (u.id === id ? updated : u));
         set({ userSongs: next });
+        const updatedSong = buildSong({ ...updated, userCreated: true });
         syncUserSongs(next);
+        import("./search").then(({ updateSearchIndex, markSearchIndexUpdated }) => {
+          updateSearchIndex(updatedSong);
+          markSearchIndexUpdated(getSongs() || []);
+        });
       },
       removeUserSong: (id) => {
         const next = get().userSongs.filter((u) => u.id !== id);
         set({ userSongs: next });
         syncUserSongs(next);
+        import("./search").then(({ removeSearchIndex, markSearchIndexUpdated }) => {
+          removeSearchIndex(id);
+          markSearchIndexUpdated(getSongs() || []);
+        });
         if (get().selectedSongId === id) set({ selectedSongId: null });
       },
     }),

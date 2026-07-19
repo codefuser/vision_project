@@ -91,35 +91,66 @@ export function setUserSongs(songs: Song[]) {
   userSongsRef = songs;
 }
 
+import { get, set } from "idb-keyval";
+
+const CACHE_KEY = "vision_songs_cache_v2";
+
 export async function loadSongs(): Promise<Song[]> {
   if (cache) return cache;
   if (inflight) return inflight;
   
   inflight = (async () => {
     try {
-      const allRows: RawSong[] = [];
-      let start = 0;
-      const limit = 1000;
-      
-      while (true) {
-        const { data, error } = await supabase
-          .from("songs")
-          .select("*")
-          .range(start, start + limit - 1);
-        if (error) throw error;
-        allRows.push(...(data as RawSong[]));
-        if (data.length < limit) break;
-        start += limit;
+      // 1. Try IndexedDB first for instant load
+      const cachedRaw = await get<RawSong[]>(CACHE_KEY);
+      if (cachedRaw && cachedRaw.length > 0) {
+        cache = cachedRaw.map(buildFromRaw);
+        inflight = null;
+        console.log(`[Songs] Loaded ${cache.length} songs from IndexedDB`);
+        
+        // 2. Background sync with Supabase
+        syncSongsFromSupabase().catch((err) => console.error("Background sync failed:", err));
+        
+        return cache;
       }
       
-      cache = allRows.map(buildFromRaw);
+      // 3. If no cache, block and load from Supabase
+      const data = await syncSongsFromSupabase();
       inflight = null;
-      console.log(`[Songs] Loaded ${cache.length} songs`);
-      return cache;
+      return data;
     } catch (e) {
       inflight = null;
       throw e;
     }
   })();
   return inflight;
+}
+
+async function syncSongsFromSupabase(): Promise<Song[]> {
+  const allRows: RawSong[] = [];
+  let start = 0;
+  const limit = 1000;
+  
+  while (true) {
+    const { data, error } = await supabase
+      .from("songs")
+      .select("id, title, content, artist, album, scale")
+      .range(start, start + limit - 1);
+    if (error) throw error;
+    allRows.push(...(data as RawSong[]));
+    if (data.length < limit) break;
+    start += limit;
+  }
+  
+  await set(CACHE_KEY, allRows);
+  cache = allRows.map(buildFromRaw);
+  
+  // Rebuild the search index with the fresh data (including user overrides)
+  import("./search").then(({ buildSearchIndex }) => {
+    const combined = getSongs();
+    if (combined) buildSearchIndex(combined);
+  });
+  
+  console.log(`[Songs] Synced ${cache.length} songs from Supabase`);
+  return cache;
 }

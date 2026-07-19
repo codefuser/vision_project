@@ -6,8 +6,7 @@ export interface SongHit {
   score: number;
   firstLine: string;
   matchedLine: string;
-  previousLine?: string;
-  nextLine?: string;
+  contextLines: { text: string; isMatch: boolean }[];
   highlightTokens: string[];
 }
 
@@ -81,6 +80,60 @@ export function buildSearchIndex(songs: Song[]) {
   }
   indexedSongsId = songsId(songs);
   console.log(`[Songs] Indexed ${searchIndex.size} songs, ${totalLines} lines`);
+}
+
+export function updateSearchIndex(song: Song) {
+  if (!searchIndex) return;
+  const lines: LineEntry[] = [];
+  for (let si = 0; si < song.slides.length; si++) {
+    const slideLines = song.slides[si]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const text of slideLines) {
+      const rawTokensArray = text.split(/\s+/);
+      const normTokens = [];
+      const stemTokens = [];
+      const validRawTokens = [];
+      
+      for (const raw of rawTokensArray) {
+        const norm = tanglishNorm(raw);
+        const stem = songStem(raw);
+        if (norm && stem) {
+          normTokens.push(norm);
+          stemTokens.push(stem);
+          validRawTokens.push(raw);
+        }
+      }
+      
+      lines.push({
+        text,
+        normalized: normTokens.join(" "),
+        normTokens,
+        stem: stemTokens.join(" "),
+        stemTokens,
+        rawTokens: validRawTokens,
+      });
+    }
+  }
+  const firstLine = lines.length > 0 ? lines[0].text : song.title;
+  searchIndex.set(song.id, {
+    firstLine,
+    lines,
+    titleNorm: tanglishNorm(song.title),
+    titleStem: song.titleStem,
+  });
+  queryCache.clear(); // invalidate cache since data changed
+}
+
+export function removeSearchIndex(songId: number) {
+  if (!searchIndex) return;
+  searchIndex.delete(songId);
+  queryCache.clear();
+}
+
+export function markSearchIndexUpdated(songs: Song[]) {
+  indexedSongsId = songsId(songs);
 }
 
 function editDist(a: string, b: string, maxDist: number): number {
@@ -245,18 +298,29 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
 
     if (total > 0 && (titleScore >= 30 || bestLineScore >= 40)) {
       let matchedText = data.firstLine;
-      let prevText: string | undefined;
-      let nextText: string | undefined;
+      const contextLines: { text: string; isMatch: boolean }[] = [];
 
       if (bestLine) {
         matchedText = bestLine.text;
         const idx = data.lines.indexOf(bestLine);
-        if (idx > 0) {
-          prevText = data.lines[idx - 1].text;
+        
+        let startIdx = Math.max(0, idx - 1);
+        let endIdx = Math.min(data.lines.length - 1, idx + 1);
+        
+        if (idx === 0) {
+          endIdx = Math.min(data.lines.length - 1, 2); // Show first 3 lines
+        } else if (idx === data.lines.length - 1) {
+          startIdx = Math.max(0, data.lines.length - 3); // Show last 3 lines
         }
-        if (idx >= 0 && idx < data.lines.length - 1) {
-          nextText = data.lines[idx + 1].text;
+        
+        for (let i = startIdx; i <= endIdx; i++) {
+          contextLines.push({
+            text: data.lines[i].text,
+            isMatch: i === idx
+          });
         }
+      } else {
+         contextLines.push({ text: data.firstLine, isMatch: true });
       }
 
       // Always pass the raw query tokens + matched Tamil words to the highlighter
@@ -267,8 +331,7 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
         score: total,
         firstLine: data.firstLine,
         matchedLine: matchedText,
-        previousLine: prevText,
-        nextLine: nextText,
+        contextLines,
         highlightTokens: finalHighlightTokens,
       });
     }
