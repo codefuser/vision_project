@@ -26,6 +26,7 @@ import { useSongsRecent } from "@/stores/songs-recent.store";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { getSongs, type Song } from "@/lib/songs/loader";
 import { searchSongs, type SongHit } from "@/lib/songs/search";
+import { useSongSearchWorker } from "@/lib/songs/use-song-search-worker";
 import { truncateGraphemes } from "@/lib/songs/grapheme";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { useProjection } from "@/stores/projection.store";
@@ -130,10 +131,12 @@ export function SongsPanel() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
+  const allSongs = useMemo(() => (loaded ? getSongs() : null), [loaded, userSongs]);
+  const { executeSearch } = useSongSearchWorker(allSongs);
+
   useEffect(() => {
-    if (!loaded) return;
-    const songs = getSongs();
-    if (!songs) return;
+    if (!loaded || !allSongs) return;
+    const songs = allSongs;
     const q = debouncedQuery.trim();
     const favIds = new Set(favorites.map((f) => f.id));
     const userIds = new Set(userSongs.map((u) => u.id));
@@ -186,7 +189,6 @@ export function SongsPanel() {
         for (const r of recent) {
           const s = songs.find((x) => x.id === r.songId);
           if (s) push(s);
-          // note: slideIndex from recent is tracked separately via activeSlideById
         }
       }
       if (filter === "most") {
@@ -214,16 +216,22 @@ export function SongsPanel() {
       setActiveIdx(0);
       return;
     }
-    const t0 = performance.now();
-    const hits = searchSongs(q, songs, 200)
-      .filter((h) => applyFilter(h.song))
-      .slice(0, 120);
-    setSearchMs(performance.now() - t0);
-    startTransition(() => {
-      setResults(hits);
-      setActiveIdx(0);
+
+    let isCancelled = false;
+    void executeSearch(q, 200).then(({ hits, searchMs: ms }) => {
+      if (isCancelled) return;
+      const filtered = hits.filter((h) => applyFilter(h.song)).slice(0, 120);
+      setSearchMs(ms);
+      startTransition(() => {
+        setResults(filtered);
+        setActiveIdx(0);
+      });
     });
-  }, [debouncedQuery, loaded, recent, userSongs, favorites, filter, counts]);
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [debouncedQuery, loaded, allSongs, executeSearch, recent, userSongs, favorites, filter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
 
