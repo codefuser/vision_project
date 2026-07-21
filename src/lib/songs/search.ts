@@ -1,5 +1,12 @@
 import type { Song } from "./loader";
-import { songStem, tanglishNorm } from "./normalize";
+import {
+  songStem,
+  tanglishNorm,
+  songLower,
+  editDist,
+  trigramSimilarity,
+} from "./normalize";
+import { getCachedSearchIndex, setCachedSearchIndex } from "./cache";
 
 export interface SongHit {
   song: Song;
@@ -10,7 +17,7 @@ export interface SongHit {
   highlightTokens: string[];
 }
 
-interface LineEntry {
+export interface LineEntry {
   text: string;
   normalized: string;
   normTokens: string[];
@@ -19,11 +26,12 @@ interface LineEntry {
   rawTokens: string[];
 }
 
-interface SongSearchData {
+export interface SongSearchData {
   firstLine: string;
   lines: LineEntry[];
   titleNorm: string;
   titleStem: string;
+  titleLower: string;
 }
 
 let searchIndex: Map<number, SongSearchData> | null = null;
@@ -36,6 +44,7 @@ function songsId(songs: Song[]): string {
 export function buildSearchIndex(songs: Song[]) {
   searchIndex = new Map();
   let totalLines = 0;
+
   for (const song of songs) {
     const lines: LineEntry[] = [];
     for (let si = 0; si < song.slides.length; si++) {
@@ -45,10 +54,10 @@ export function buildSearchIndex(songs: Song[]) {
         .filter(Boolean);
       for (const text of slideLines) {
         const rawTokensArray = text.split(/\s+/);
-        const normTokens = [];
-        const stemTokens = [];
-        const validRawTokens = [];
-        
+        const normTokens: string[] = [];
+        const stemTokens: string[] = [];
+        const validRawTokens: string[] = [];
+
         for (const raw of rawTokensArray) {
           const norm = tanglishNorm(raw);
           const stem = songStem(raw);
@@ -58,7 +67,7 @@ export function buildSearchIndex(songs: Song[]) {
             validRawTokens.push(raw);
           }
         }
-        
+
         lines.push({
           text,
           normalized: normTokens.join(" "),
@@ -76,10 +85,15 @@ export function buildSearchIndex(songs: Song[]) {
       lines,
       titleNorm: tanglishNorm(song.title),
       titleStem: song.titleStem,
+      titleLower: songLower(song.title),
     });
   }
   indexedSongsId = songsId(songs);
   console.log(`[Songs] Indexed ${searchIndex.size} songs, ${totalLines} lines`);
+
+  // Cache pre-computed index to IndexedDB asynchronously
+  const serialized = Array.from(searchIndex.entries());
+  void setCachedSearchIndex(indexedSongsId, serialized);
 }
 
 export function updateSearchIndex(song: Song) {
@@ -92,10 +106,10 @@ export function updateSearchIndex(song: Song) {
       .filter(Boolean);
     for (const text of slideLines) {
       const rawTokensArray = text.split(/\s+/);
-      const normTokens = [];
-      const stemTokens = [];
-      const validRawTokens = [];
-      
+      const normTokens: string[] = [];
+      const stemTokens: string[] = [];
+      const validRawTokens: string[] = [];
+
       for (const raw of rawTokensArray) {
         const norm = tanglishNorm(raw);
         const stem = songStem(raw);
@@ -105,7 +119,7 @@ export function updateSearchIndex(song: Song) {
           validRawTokens.push(raw);
         }
       }
-      
+
       lines.push({
         text,
         normalized: normTokens.join(" "),
@@ -122,8 +136,9 @@ export function updateSearchIndex(song: Song) {
     lines,
     titleNorm: tanglishNorm(song.title),
     titleStem: song.titleStem,
+    titleLower: songLower(song.title),
   });
-  queryCache.clear(); // invalidate cache since data changed
+  queryCache.clear();
 }
 
 export function removeSearchIndex(songId: number) {
@@ -134,31 +149,6 @@ export function removeSearchIndex(songId: number) {
 
 export function markSearchIndexUpdated(songs: Song[]) {
   indexedSongsId = songsId(songs);
-}
-
-function editDist(a: string, b: string, maxDist: number): number {
-  const an = a.length;
-  const bn = b.length;
-  if (Math.abs(an - bn) > maxDist) return maxDist + 1;
-  if (an === 0) return bn;
-  if (bn === 0) return an;
-  let prev = new Int32Array(bn + 1);
-  let curr = new Int32Array(bn + 1);
-  for (let j = 0; j <= bn; j++) prev[j] = j;
-  for (let i = 1; i <= an; i++) {
-    curr[0] = i;
-    let rowMin = curr[0];
-    for (let j = 1; j <= bn; j++) {
-      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
-      if (curr[j] < rowMin) rowMin = curr[j];
-    }
-    if (rowMin > maxDist) return maxDist + 1;
-    const tmp = prev;
-    prev = curr;
-    curr = tmp;
-  }
-  return prev[bn];
 }
 
 const queryCache = new Map<string, SongHit[]>();
@@ -202,39 +192,83 @@ function stemTokens(s: string): string[] {
     .filter((t) => t.length >= 2);
 }
 
-function getMatchIndices(lineTokens: string[], qTokens: string[]): number[] {
-  if (!qTokens.length || !lineTokens.length) return [];
+function getMatchIndices(
+  lineTokens: string[],
+  qTokens: string[],
+  lineStems?: string[],
+  qStems?: string[],
+): { indices: number[]; scoreBonus: number } {
+  if (!qTokens.length || !lineTokens.length) return { indices: [], scoreBonus: 0 };
   const indices = new Set<number>();
-  for (const qt of qTokens) {
+  let totalBonus = 0;
+
+  for (let qIdx = 0; qIdx < qTokens.length; qIdx++) {
+    const qt = qTokens[qIdx];
+    const qs = qStems?.[qIdx] ?? "";
     let bestDist = Infinity;
     let bestIdx = -1;
+
     for (let i = 0; i < lineTokens.length; i++) {
       const lt = lineTokens[i];
-      if (lt === qt) { bestIdx = i; bestDist = 0; break; }
-      
-      // Only allow substring matching if both are at least 4 characters, or one is exactly the other (handled above)
-      if (lt.length >= 4 && qt.length >= 4 && (lt.includes(qt) || qt.includes(lt))) {
-        if (1 < bestDist) { bestDist = 1; bestIdx = i; }
-      }
-      
-      // Allow prefix matching for 3+ characters
-      if (lt.length >= 3 && qt.length >= 3 && (lt.startsWith(qt) || qt.startsWith(lt))) {
-        if (1.5 < bestDist) { bestDist = 1.5; bestIdx = i; }
+      const ls = lineStems?.[i] ?? "";
+
+      // 1. Exact token match
+      if (lt === qt) {
+        bestIdx = i;
+        bestDist = 0;
+        totalBonus += 50;
+        break;
       }
 
+      // 2. Sound-alike stem match
+      if (qs && ls && (ls === qs || ls.includes(qs) || qs.includes(ls))) {
+        if (0.5 < bestDist) {
+          bestDist = 0.5;
+          bestIdx = i;
+          totalBonus += 35;
+        }
+      }
+
+      // 3. Substring match for tokens of at least 4 chars
+      if (lt.length >= 4 && qt.length >= 4 && (lt.includes(qt) || qt.includes(lt))) {
+        if (1 < bestDist) {
+          bestDist = 1;
+          bestIdx = i;
+          totalBonus += 25;
+        }
+      }
+
+      // 4. Prefix match for 3+ chars
+      if (lt.length >= 3 && qt.length >= 3 && (lt.startsWith(qt) || qt.startsWith(lt))) {
+        if (1.5 < bestDist) {
+          bestDist = 1.5;
+          bestIdx = i;
+          totalBonus += 20;
+        }
+      }
+
+      // 5. Typo tolerance via Levenshtein or Trigram similarity
       if (Math.abs(lt.length - qt.length) <= 3) {
-        // More lenient threshold: max 3 edits, or 40% of the length
         const threshold = Math.min(3, Math.max(1, Math.floor(Math.max(lt.length, qt.length) * 0.4)));
         const d = editDist(lt, qt, threshold);
         if (d <= threshold && d < bestDist) {
           bestDist = d;
           bestIdx = i;
+          totalBonus += 15;
+        } else {
+          const sim = trigramSimilarity(lt, qt);
+          if (sim >= 0.6 && 2 < bestDist) {
+            bestDist = 2;
+            bestIdx = i;
+            totalBonus += 10;
+          }
         }
       }
     }
     if (bestIdx !== -1) indices.add(bestIdx);
   }
-  return Array.from(indices);
+
+  return { indices: Array.from(indices), scoreBonus: totalBonus };
 }
 
 function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
@@ -242,102 +276,113 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
   const qs = stemTokens(query);
   if (!qn.flat) return [];
 
+  const rawQueryLower = query.toLowerCase().trim();
+  const qRawTokens = query.trim().split(/\s+/).filter(Boolean);
+
   const hits: SongHit[] = [];
 
   for (const song of songs) {
     const data = searchIndex!.get(song.id);
     if (!data) continue;
 
-    // --- title score ---
+    // --- TITLE SCORING ---
     let titleScore = 0;
-    if (data.titleNorm === qn.flat) titleScore = 300;
-    else if (data.titleNorm.replace(/\s+/g, "").includes(qn.flat)) titleScore = 200;
-    else if (qn.flat.includes(data.titleNorm.replace(/\s+/g, ""))) titleScore = 150;
-    else if (qn.tokens.length) {
+    const titleLower = data.titleLower;
+
+    if (titleLower === rawQueryLower || data.titleNorm === qn.flat) {
+      titleScore = 1000; // Rank 1: Exact title match
+    } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qn.flat)) {
+      titleScore = 750; // Rank 2: Title contains query
+    } else if (qn.tokens.length) {
       const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
-      const indices = getMatchIndices(tTokens, qn.tokens);
-      titleScore = (indices.length / qn.tokens.length) * 80;
+      const { indices, scoreBonus } = getMatchIndices(tTokens, qn.tokens);
+      if (indices.length > 0) {
+        titleScore = (indices.length / qn.tokens.length) * 200 + scoreBonus;
+      }
     }
 
-    if (titleScore === 0 && qs.length && data.titleStem) {
-      const tStem = data.titleStem.split(/\s+/).filter((t) => t.length >= 2);
-      const indices = getMatchIndices(tStem, qs);
-      titleScore = (indices.length / qs.length) * 40;
-    }
-
-    // --- line-level scoring ---
+    // --- LYRIC LINE SCORING ---
     let bestLine: LineEntry | null = null;
+    let bestLineIndex = -1;
     let bestLineScore = 0;
     let bestHighlightTokens: string[] = [];
 
-    for (const line of data.lines) {
+    const totalLines = data.lines.length;
+
+    for (let li = 0; li < totalLines; li++) {
+      const line = data.lines[li];
       let ls = 0;
       let indices: number[] = [];
 
-      // Exact-substring match on flat (no-space) normalized strings
-      if (line.normalized.replace(/\s+/g, "") === qn.flat) {
-        ls = 250;
+      const lineFlat = line.normalized.replace(/\s+/g, "");
+
+      // Exact line match
+      if (lineFlat === qn.flat || line.text.toLowerCase() === rawQueryLower) {
+        ls = 600; // Rank 3: Exact lyric match
         indices = line.rawTokens.map((_, i) => i);
-      } else if (line.normalized.replace(/\s+/g, "").includes(qn.flat)) {
-        ls = 160;
-        indices = getMatchIndices(line.normTokens, qn.tokens);
-      } else if (qn.flat.includes(line.normalized.replace(/\s+/g, ""))) {
-        ls = 120;
-        indices = getMatchIndices(line.normTokens, qn.tokens);
+      } else if (lineFlat.includes(qn.flat)) {
+        ls = 450;
+        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+        indices = res.indices;
+      } else if (qn.flat.includes(lineFlat) && lineFlat.length >= 4) {
+        ls = 350;
+        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+        indices = res.indices;
       } else if (qn.tokens.length) {
-        indices = getMatchIndices(line.normTokens, qn.tokens);
-        ls = (indices.length / qn.tokens.length) * 100;
+        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+        indices = res.indices;
+        if (indices.length > 0) {
+          ls = (indices.length / qn.tokens.length) * 150 + res.scoreBonus;
+        }
       }
 
-      // Stem overlap bonus
-      if (ls > 0 && qs.length && line.stemTokens.length) {
-        const stemIndices = getMatchIndices(line.stemTokens, qs);
-        ls += (stemIndices.length / qs.length) * 30;
-        for (const idx of stemIndices) if (!indices.includes(idx)) indices.push(idx);
+      // Line Position Ranking Bonuses
+      if (ls > 0) {
+        if (li === 0) {
+          ls += 250; // Rank 4: First line match bonus
+        } else if (li === totalLines - 1) {
+          ls += 100; // Rank 6: Last line match bonus
+        } else {
+          ls += 150; // Rank 5: Middle line / chorus match bonus
+        }
       }
 
       if (ls > bestLineScore) {
         bestLineScore = ls;
         bestLine = line;
+        bestLineIndex = li;
         bestHighlightTokens = indices.map((i) => line.rawTokens[i]).filter(Boolean);
       }
     }
 
-    const total = titleScore + bestLineScore;
+    const totalScore = titleScore + bestLineScore;
 
-    if (total > 0 && (titleScore >= 30 || bestLineScore >= 40)) {
+    if (totalScore > 0 && (titleScore >= 100 || bestLineScore >= 100)) {
       let matchedText = data.firstLine;
       const contextLines: { text: string; isMatch: boolean }[] = [];
 
-      if (bestLine) {
+      if (bestLine && bestLineIndex >= 0) {
         matchedText = bestLine.text;
-        const idx = data.lines.indexOf(bestLine);
-        
-        let startIdx = Math.max(0, idx - 1);
-        let endIdx = Math.min(data.lines.length - 1, idx + 1);
-        
-        if (idx === 0) {
-          endIdx = Math.min(data.lines.length - 1, 2); // Show first 3 lines
-        } else if (idx === data.lines.length - 1) {
-          startIdx = Math.max(0, data.lines.length - 3); // Show last 3 lines
-        }
-        
+        const startIdx = Math.max(0, bestLineIndex - 1);
+        const endIdx = Math.min(totalLines - 1, bestLineIndex + 1);
+
         for (let i = startIdx; i <= endIdx; i++) {
           contextLines.push({
             text: data.lines[i].text,
-            isMatch: i === idx
+            isMatch: i === bestLineIndex,
           });
         }
       } else {
-         contextLines.push({ text: data.firstLine, isMatch: true });
+        contextLines.push({ text: data.firstLine, isMatch: true });
       }
 
-      // Always pass the raw query tokens + matched Tamil words to the highlighter
-      const finalHighlightTokens = Array.from(new Set([...qn.tokens, ...bestHighlightTokens]));
+      const finalHighlightTokens = Array.from(
+        new Set([...qRawTokens, ...qn.tokens, ...bestHighlightTokens]),
+      );
 
       hits.push({
         song,
-        score: total,
+        score: totalScore,
         firstLine: data.firstLine,
         matchedLine: matchedText,
         contextLines,
