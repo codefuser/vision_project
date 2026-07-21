@@ -4,6 +4,8 @@ import {
   tanglishNorm,
   songLower,
   editDist,
+  damerauLevenshtein,
+  jaroWinkler,
   trigramSimilarity,
 } from "./normalize";
 import { getCachedSearchIndex, setCachedSearchIndex } from "./cache";
@@ -34,19 +36,41 @@ export interface SongSearchData {
   titleLower: string;
 }
 
-let searchIndex: Map<number, SongSearchData> | null = null;
+let searchIndex = new Map<number, SongSearchData>();
+let tokenInvertedIndex = new Map<string, Set<number>>();
+let stemInvertedIndex = new Map<string, Set<number>>();
 let indexedSongsId: string | null = null;
 
 function songsId(songs: Song[]): string {
   return songs.map((s) => `${s.id}:${s.content.length}`).join(",");
 }
 
+function addIndexToken(map: Map<string, Set<number>>, token: string, songId: number) {
+  if (!token || token.length < 2) return;
+  let set = map.get(token);
+  if (!set) {
+    set = new Set<number>();
+    map.set(token, set);
+  }
+  set.add(songId);
+}
+
 export function buildSearchIndex(songs: Song[]) {
-  searchIndex = new Map();
+  searchIndex.clear();
+  tokenInvertedIndex.clear();
+  stemInvertedIndex.clear();
+
   let totalLines = 0;
 
   for (const song of songs) {
     const lines: LineEntry[] = [];
+    const titleNorm = tanglishNorm(song.title);
+    const titleStem = song.titleStem || songStem(song.title);
+    const titleLower = songLower(song.title);
+
+    for (const t of titleNorm.split(/\s+/)) addIndexToken(tokenInvertedIndex, t, song.id);
+    for (const s of titleStem.split(/\s+/)) addIndexToken(stemInvertedIndex, s, song.id);
+
     for (let si = 0; si < song.slides.length; si++) {
       const slideLines = song.slides[si]
         .split("\n")
@@ -65,6 +89,9 @@ export function buildSearchIndex(songs: Song[]) {
             normTokens.push(norm);
             stemTokens.push(stem);
             validRawTokens.push(raw);
+
+            addIndexToken(tokenInvertedIndex, norm, song.id);
+            addIndexToken(stemInvertedIndex, stem, song.id);
           }
         }
 
@@ -83,72 +110,16 @@ export function buildSearchIndex(songs: Song[]) {
     searchIndex.set(song.id, {
       firstLine,
       lines,
-      titleNorm: tanglishNorm(song.title),
-      titleStem: song.titleStem,
-      titleLower: songLower(song.title),
+      titleNorm,
+      titleStem,
+      titleLower,
     });
   }
+
   indexedSongsId = songsId(songs);
-  console.log(`[Songs] Indexed ${searchIndex.size} songs, ${totalLines} lines`);
-
-  // Cache pre-computed index to IndexedDB asynchronously
-  const serialized = Array.from(searchIndex.entries());
-  void setCachedSearchIndex(indexedSongsId, serialized);
-}
-
-export function updateSearchIndex(song: Song) {
-  if (!searchIndex) return;
-  const lines: LineEntry[] = [];
-  for (let si = 0; si < song.slides.length; si++) {
-    const slideLines = song.slides[si]
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-    for (const text of slideLines) {
-      const rawTokensArray = text.split(/\s+/);
-      const normTokens: string[] = [];
-      const stemTokens: string[] = [];
-      const validRawTokens: string[] = [];
-
-      for (const raw of rawTokensArray) {
-        const norm = tanglishNorm(raw);
-        const stem = songStem(raw);
-        if (norm && stem) {
-          normTokens.push(norm);
-          stemTokens.push(stem);
-          validRawTokens.push(raw);
-        }
-      }
-
-      lines.push({
-        text,
-        normalized: normTokens.join(" "),
-        normTokens,
-        stem: stemTokens.join(" "),
-        stemTokens,
-        rawTokens: validRawTokens,
-      });
-    }
-  }
-  const firstLine = lines.length > 0 ? lines[0].text : song.title;
-  searchIndex.set(song.id, {
-    firstLine,
-    lines,
-    titleNorm: tanglishNorm(song.title),
-    titleStem: song.titleStem,
-    titleLower: songLower(song.title),
-  });
-  queryCache.clear();
-}
-
-export function removeSearchIndex(songId: number) {
-  if (!searchIndex) return;
-  searchIndex.delete(songId);
-  queryCache.clear();
-}
-
-export function markSearchIndexUpdated(songs: Song[]) {
-  indexedSongsId = songsId(songs);
+  console.log(
+    `[Songs Search] Built Inverted Candidate Index: ${searchIndex.size} songs, ${totalLines} lines`,
+  );
 }
 
 const queryCache = new Map<string, SongHit[]>();
@@ -159,14 +130,14 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
   if (!q) return [];
 
   const currentId = songsId(songs);
-  if (!searchIndex || indexedSongsId !== currentId) {
+  if (!searchIndex.size || indexedSongsId !== currentId) {
     buildSearchIndex(songs);
   }
 
   const cached = queryCache.get(q);
   if (cached) return cached.slice(0, limit);
 
-  const hits = runSearch(q, songs, limit);
+  const hits = runCandidateSearch(q, songs, limit);
 
   if (queryCache.size >= MAX_CACHE) {
     const firstKey = queryCache.keys().next().value;
@@ -190,6 +161,41 @@ function stemTokens(s: string): string[] {
   return songStem(s)
     .split(/\s+/)
     .filter((t) => t.length >= 2);
+}
+
+function getCandidateSongIds(qTokens: string[], qStems: string[], songs: Song[]): Set<number> {
+  const candidates = new Set<number>();
+
+  for (const qt of qTokens) {
+    const ids = tokenInvertedIndex.get(qt);
+    if (ids) for (const id of ids) candidates.add(id);
+  }
+  for (const qs of qStems) {
+    const ids = stemInvertedIndex.get(qs);
+    if (ids) for (const id of ids) candidates.add(id);
+  }
+
+  // Prefix matching on tokens if candidates < 10
+  if (candidates.size < 10 && qTokens.length > 0) {
+    for (const qt of qTokens) {
+      if (qt.length < 3) continue;
+      for (const [token, ids] of tokenInvertedIndex.entries()) {
+        if (token.startsWith(qt) || qt.startsWith(token)) {
+          for (const id of ids) candidates.add(id);
+          if (candidates.size >= 50) break;
+        }
+      }
+    }
+  }
+
+  // Fallback to top 100 songs if candidates empty
+  if (candidates.size === 0) {
+    for (let i = 0; i < Math.min(100, songs.length); i++) {
+      candidates.add(songs[i].id);
+    }
+  }
+
+  return candidates;
 }
 
 function getMatchIndices(
@@ -229,7 +235,15 @@ function getMatchIndices(
         }
       }
 
-      // 3. Substring match for tokens of at least 4 chars
+      // 3. Jaro-Winkler prefix & typo match
+      const jw = jaroWinkler(lt, qt);
+      if (jw >= 0.85 && 0.8 < bestDist) {
+        bestDist = 0.8;
+        bestIdx = i;
+        totalBonus += Math.floor(jw * 30);
+      }
+
+      // 4. Substring match for 4+ chars
       if (lt.length >= 4 && qt.length >= 4 && (lt.includes(qt) || qt.includes(lt))) {
         if (1 < bestDist) {
           bestDist = 1;
@@ -238,30 +252,14 @@ function getMatchIndices(
         }
       }
 
-      // 4. Prefix match for 3+ chars
-      if (lt.length >= 3 && qt.length >= 3 && (lt.startsWith(qt) || qt.startsWith(lt))) {
-        if (1.5 < bestDist) {
-          bestDist = 1.5;
-          bestIdx = i;
-          totalBonus += 20;
-        }
-      }
-
-      // 5. Typo tolerance via Levenshtein or Trigram similarity
+      // 5. Damerau-Levenshtein / Bounded edit distance
       if (Math.abs(lt.length - qt.length) <= 3) {
         const threshold = Math.min(3, Math.max(1, Math.floor(Math.max(lt.length, qt.length) * 0.4)));
-        const d = editDist(lt, qt, threshold);
+        const d = damerauLevenshtein(lt, qt);
         if (d <= threshold && d < bestDist) {
           bestDist = d;
           bestIdx = i;
-          totalBonus += 15;
-        } else {
-          const sim = trigramSimilarity(lt, qt);
-          if (sim >= 0.6 && 2 < bestDist) {
-            bestDist = 2;
-            bestIdx = i;
-            totalBonus += 10;
-          }
+          totalBonus += 20;
         }
       }
     }
@@ -271,7 +269,7 @@ function getMatchIndices(
   return { indices: Array.from(indices), scoreBonus: totalBonus };
 }
 
-function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
+function runCandidateSearch(query: string, songs: Song[], limit: number): SongHit[] {
   const qn = normTokens(query);
   const qs = stemTokens(query);
   if (!qn.flat) return [];
@@ -279,10 +277,15 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
   const rawQueryLower = query.toLowerCase().trim();
   const qRawTokens = query.trim().split(/\s+/).filter(Boolean);
 
+  const candidateIds = getCandidateSongIds(qn.tokens, qs, songs);
+  const songLookup = new Map(songs.map((s) => [s.id, s]));
+
   const hits: SongHit[] = [];
 
-  for (const song of songs) {
-    const data = searchIndex!.get(song.id);
+  for (const songId of candidateIds) {
+    const song = songLookup.get(songId);
+    if (!song) continue;
+    const data = searchIndex.get(songId);
     if (!data) continue;
 
     // --- TITLE SCORING ---
@@ -290,9 +293,9 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
     const titleLower = data.titleLower;
 
     if (titleLower === rawQueryLower || data.titleNorm === qn.flat) {
-      titleScore = 1000; // Rank 1: Exact title match
+      titleScore = 1000;
     } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qn.flat)) {
-      titleScore = 750; // Rank 2: Title contains query
+      titleScore = 750;
     } else if (qn.tokens.length) {
       const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
       const { indices, scoreBonus } = getMatchIndices(tTokens, qn.tokens);
@@ -316,9 +319,8 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
 
       const lineFlat = line.normalized.replace(/\s+/g, "");
 
-      // Exact line match
       if (lineFlat === qn.flat || line.text.toLowerCase() === rawQueryLower) {
-        ls = 600; // Rank 3: Exact lyric match
+        ls = 600;
         indices = line.rawTokens.map((_, i) => i);
       } else if (lineFlat.includes(qn.flat)) {
         ls = 450;
@@ -339,11 +341,11 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
       // Line Position Ranking Bonuses
       if (ls > 0) {
         if (li === 0) {
-          ls += 250; // Rank 4: First line match bonus
+          ls += 250;
         } else if (li === totalLines - 1) {
-          ls += 100; // Rank 6: Last line match bonus
+          ls += 100;
         } else {
-          ls += 150; // Rank 5: Middle line / chorus match bonus
+          ls += 150;
         }
       }
 
@@ -357,7 +359,7 @@ function runSearch(query: string, songs: Song[], limit: number): SongHit[] {
 
     const totalScore = titleScore + bestLineScore;
 
-    if (totalScore > 0 && (titleScore >= 100 || bestLineScore >= 100)) {
+    if (totalScore > 0 && (titleScore >= 80 || bestLineScore >= 80)) {
       let matchedText = data.firstLine;
       const contextLines: { text: string; isMatch: boolean }[] = [];
 

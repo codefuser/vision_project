@@ -1,11 +1,13 @@
 import { supabase } from "../supabase";
 import { songStem, songLower } from "./normalize";
+import { get, set } from "idb-keyval";
 
 export interface RawSong {
   id: number;
   title: string;
   content: string;
-  scale: string;
+  scale?: string;
+  updated_at?: string;
 }
 
 export interface Song {
@@ -13,21 +15,22 @@ export interface Song {
   title: string;
   content: string;
   scale: string;
-  /** Stanzas split on blank lines. */
   slides: string[];
-  /** Marks a user-created song so we can edit / delete it. */
   userCreated?: boolean;
-  // Search indexes — all pre-computed once on build:
   titleLower: string;
   contentLower: string;
   titleStem: string;
   contentStem: string;
   slideStems: string[];
+  updatedAt?: string;
 }
 
 let cache: Song[] | null = null;
 let userSongsRef: Song[] = [];
 let inflight: Promise<Song[]> | null = null;
+
+const SONGS_CACHE_KEY = "vision_songs_cache_v3";
+const LAST_SYNC_KEY = "vision_songs_last_sync_timestamp";
 
 export function buildSlides(content: string): string[] {
   return content
@@ -42,6 +45,7 @@ export function buildSong(raw: {
   content: string;
   scale?: string;
   userCreated?: boolean;
+  updated_at?: string;
 }): Song {
   const title = (raw.title || "").trim();
   const content = (raw.content || "").trim();
@@ -58,14 +62,21 @@ export function buildSong(raw: {
     titleStem: songStem(title),
     contentStem: songStem(content),
     slideStems: slides.map(songStem),
+    updatedAt: raw.updated_at,
   };
 }
 
 function buildFromRaw(r: RawSong): Song {
-  return buildSong({ id: r.id, title: r.title, content: r.content, scale: r.scale });
+  return buildSong({
+    id: r.id,
+    title: r.title,
+    content: r.content,
+    scale: r.scale,
+    updated_at: r.updated_at,
+  });
 }
 
-/** Returns library songs + any user-created songs (user overrides win by id). */
+/** Returns library songs + any user-created songs. */
 export function getSongs(): Song[] | null {
   if (!cache) return null;
   if (!userSongsRef.length) return cache;
@@ -77,37 +88,44 @@ export function isSongsLoaded(): boolean {
   return !!cache;
 }
 
-/** Called by the songs store whenever the persisted user-songs list changes
- *  so subsequent searches include them without re-fetching the library. */
 export function setUserSongs(songs: Song[]) {
   userSongsRef = songs;
 }
 
-import { get, set } from "idb-keyval";
-
-const CACHE_KEY = "vision_songs_cache_v2";
-
+/**
+ * Offline-First Song Loader:
+ * Reads songs 100% from IndexedDB for instant startup.
+ * Triggers lightweight delta background sync only if Supabase data changed.
+ */
 export async function loadSongs(): Promise<Song[]> {
   if (cache) return cache;
   if (inflight) return inflight;
-  
+
   inflight = (async () => {
     try {
-      // 1. Try IndexedDB first for instant load
-      const cachedRaw = await get<RawSong[]>(CACHE_KEY);
+      // 1. Try IndexedDB first for 100% offline-first instant startup
+      const cachedRaw = await get<RawSong[]>(SONGS_CACHE_KEY);
       if (cachedRaw && cachedRaw.length > 0) {
         cache = cachedRaw.map(buildFromRaw);
         inflight = null;
-        console.log(`[Songs] Loaded ${cache.length} songs from IndexedDB`);
-        
-        // 2. Background sync with Supabase
-        syncSongsFromSupabase().catch((err) => console.error("Background sync failed:", err));
-        
+        console.log(`[Songs] Loaded ${cache.length} songs instantly from IndexedDB`);
+
+        // Build candidate search index immediately
+        import("./search").then(({ buildSearchIndex }) => {
+          const combined = getSongs();
+          if (combined) buildSearchIndex(combined);
+        });
+
+        // 2. Trigger lightweight background delta sync (0 downloads if unchanged)
+        backgroundDeltaSync().catch((err) =>
+          console.warn("[Songs] Delta sync check error:", err),
+        );
+
         return cache;
       }
-      
-      // 3. If no cache, block and load from Supabase
-      const data = await syncSongsFromSupabase();
+
+      // 3. Cold boot fallback: Download dataset once and store in IndexedDB
+      const data = await fullFetchFromSupabase();
       inflight = null;
       return data;
     } catch (e) {
@@ -118,31 +136,98 @@ export async function loadSongs(): Promise<Song[]> {
   return inflight;
 }
 
-async function syncSongsFromSupabase(): Promise<Song[]> {
+async function fullFetchFromSupabase(): Promise<Song[]> {
+  console.log("[Songs] Initial dataset download from Supabase…");
   const allRows: RawSong[] = [];
   let start = 0;
   const limit = 1000;
-  
+
   while (true) {
     const { data, error } = await supabase
       .from("songs")
-      .select("id, title, content, scale")
+      .select("id, title, content, scale, updated_at")
       .range(start, start + limit - 1);
     if (error) throw error;
     allRows.push(...(data as RawSong[]));
     if (data.length < limit) break;
     start += limit;
   }
-  
-  await set(CACHE_KEY, allRows);
+
+  const latestTs = allRows.reduce((max, r) => {
+    if (!r.updated_at) return max;
+    return r.updated_at > max ? r.updated_at : max;
+  }, "");
+
+  await set(SONGS_CACHE_KEY, allRows);
+  if (latestTs) await set(LAST_SYNC_KEY, latestTs);
+
   cache = allRows.map(buildFromRaw);
-  
-  // Rebuild the search index with the fresh data (including user overrides)
+
   import("./search").then(({ buildSearchIndex }) => {
     const combined = getSongs();
     if (combined) buildSearchIndex(combined);
   });
-  
-  console.log(`[Songs] Synced ${cache.length} songs from Supabase`);
+
+  console.log(`[Songs] Dataset stored in IndexedDB: ${cache.length} songs`);
   return cache;
+}
+
+/**
+ * Lightweight Background Delta Sync:
+ * Queries Supabase for latest timestamp. If up-to-date, downloads ZERO songs.
+ * If modified, fetches only updated rows and merges incrementally.
+ */
+async function backgroundDeltaSync(): Promise<void> {
+  const lastSync = await get<string>(LAST_SYNC_KEY);
+
+  // Ask Supabase for the latest single updated_at timestamp
+  const { data: latestRows, error: checkErr } = await supabase
+    .from("songs")
+    .select("updated_at")
+    .order("updated_at", { ascending: false })
+    .limit(1);
+
+  if (checkErr || !latestRows || !latestRows.length) return;
+
+  const remoteLatest = latestRows[0]?.updated_at;
+  if (!remoteLatest) return;
+
+  // If local timestamp matches remote latest, 0 bytes downloaded!
+  if (lastSync && remoteLatest <= lastSync) {
+    console.log("[Songs] Cache is up to date — 0 bytes downloaded.");
+    return;
+  }
+
+  console.log(`[Songs] Delta update detected (${remoteLatest} > ${lastSync}). Syncing delta…`);
+
+  // Fetch ONLY changed rows since lastSync
+  let query = supabase.from("songs").select("id, title, content, scale, updated_at");
+  if (lastSync) {
+    query = query.gt("updated_at", lastSync);
+  }
+
+  const { data: changedRows, error: fetchErr } = await query;
+  if (fetchErr || !changedRows || !changedRows.length) return;
+
+  // Merge changed rows into cached dataset
+  const cachedRaw = (await get<RawSong[]>(SONGS_CACHE_KEY)) || [];
+  const rawMap = new Map<number, RawSong>(cachedRaw.map((r) => [r.id, r]));
+
+  for (const row of changedRows as RawSong[]) {
+    rawMap.set(row.id, row);
+  }
+
+  const updatedRaw = Array.from(rawMap.values());
+  await set(SONGS_CACHE_KEY, updatedRaw);
+  await set(LAST_SYNC_KEY, remoteLatest);
+
+  cache = updatedRaw.map(buildFromRaw);
+
+  // Update search index incrementally
+  import("./search").then(({ buildSearchIndex }) => {
+    const combined = getSongs();
+    if (combined) buildSearchIndex(combined);
+  });
+
+  console.log(`[Songs] Merged ${changedRows.length} changed songs into IndexedDB`);
 }

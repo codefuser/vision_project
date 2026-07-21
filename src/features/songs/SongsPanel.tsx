@@ -217,21 +217,16 @@ export function SongsPanel() {
       return;
     }
 
-    let isCancelled = false;
-    void executeSearch(q, 200).then(({ hits, searchMs: ms }) => {
-      if (isCancelled) return;
-      const filtered = hits.filter((h) => applyFilter(h.song)).slice(0, 120);
-      setSearchMs(ms);
-      startTransition(() => {
-        setResults(filtered);
-        setActiveIdx(0);
-      });
+    const t0 = performance.now();
+    const hits = searchSongs(q, songs, 200)
+      .filter((h) => applyFilter(h.song))
+      .slice(0, 120);
+    setSearchMs(performance.now() - t0);
+    startTransition(() => {
+      setResults(hits);
+      setActiveIdx(0);
     });
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [debouncedQuery, loaded, allSongs, executeSearch, recent, userSongs, favorites, filter, counts]);
+  }, [debouncedQuery, loaded, allSongs, recent, userSongs, favorites, filter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
 

@@ -1,18 +1,21 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { MonitorPlay } from "lucide-react";
 import { startupManager, buildSteps } from "@/lib/startup/startup-manager";
 
 const PARTICLE_COUNT = 10;
-
 const BAR_COLORS = ["#4F8CFF", "#7C5CFF", "#45D6FF", "#7C5CFF", "#4F8CFF"];
-
 const BAR_DELAYS = [0, 0.15, 0.3, 0.15, 0];
 
 export function StartupScreen({ onReady, children }: { onReady: () => void; children: ReactNode }) {
   const [progress, setProgress] = useState(startupManager.progress);
+  const [smoothPercent, setSmoothPercent] = useState(0);
   const [fadeOut, setFadeOut] = useState(false);
   const [showApp, setShowApp] = useState(false);
   const [complete, setComplete] = useState(false);
+
+  const currentPercentRef = useRef(0);
+  const targetPercentRef = useRef(0);
+  const animationFrameRef = useRef<number | null>(null);
 
   const particles = useMemo(() => {
     return Array.from({ length: PARTICLE_COUNT }, (_, i) => ({
@@ -24,19 +27,44 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
     }));
   }, []);
 
+  // Update target percentage when startupManager emits progress
   useEffect(() => {
-    const unsub = startupManager.subscribe(setProgress);
+    const unsub = startupManager.subscribe((p) => {
+      setProgress(p);
+      targetPercentRef.current = p.percent;
+    });
     return unsub;
+  }, []);
+
+  // Smooth 60 FPS requestAnimationFrame lerp loop based on real work progress
+  useEffect(() => {
+    const updateProgressLoop = () => {
+      const diff = targetPercentRef.current - currentPercentRef.current;
+      if (Math.abs(diff) > 0.1) {
+        currentPercentRef.current += diff * 0.15; // Smooth continuous lerp
+        setSmoothPercent(Math.round(currentPercentRef.current));
+      } else {
+        currentPercentRef.current = targetPercentRef.current;
+        setSmoothPercent(targetPercentRef.current);
+      }
+      animationFrameRef.current = requestAnimationFrame(updateProgressLoop);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(updateProgressLoop);
+    return () => {
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+    };
   }, []);
 
   useEffect(() => {
     if (progress.done) {
+      targetPercentRef.current = 100;
       setComplete(true);
-      const t1 = setTimeout(() => setFadeOut(true), 500);
+      const t1 = setTimeout(() => setFadeOut(true), 250);
       const t2 = setTimeout(() => {
         setShowApp(true);
         onReady();
-      }, 1000);
+      }, 600);
       return () => {
         clearTimeout(t1);
         clearTimeout(t2);
@@ -55,7 +83,7 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-700 ${
+      className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-background transition-opacity duration-500 ${
         fadeOut ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
     >
@@ -81,7 +109,7 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
       <div className="relative flex flex-col items-center gap-7">
         <div className="relative flex items-center justify-center">
           <div
-            className={`absolute h-20 w-20 rounded-full blur-xl transition-all duration-700 ${
+            className={`absolute h-20 w-20 rounded-full blur-xl transition-all duration-500 ${
               complete ? "scale-150 opacity-0" : "opacity-100"
             }`}
             style={{
@@ -110,9 +138,7 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
           </p>
         </div>
 
-        <div
-          style={{ animation: "startup-fade-in-up 0.6s ease-out 0.15s both" }}
-        >
+        <div style={{ animation: "startup-fade-in-up 0.6s ease-out 0.15s both" }}>
           <LoadingBars complete={complete} />
         </div>
 
@@ -122,23 +148,29 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
         >
           <StatusMessage message={progress.message} />
 
-          <div className="flex items-center gap-2 text-xs tabular-nums" style={{ color: "rgba(255,255,255,0.35)" }}>
-            <div className="relative h-1 w-48 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+          <div
+            className="flex items-center gap-2 text-xs tabular-nums"
+            style={{ color: "rgba(255,255,255,0.35)" }}
+          >
+            <div
+              className="relative h-1 w-48 overflow-hidden rounded-full"
+              style={{ background: "rgba(255,255,255,0.08)" }}
+            >
               <div
-                className="h-full w-full rounded-full transition-all duration-500 ease-out"
+                className="h-full w-full rounded-full transition-all duration-150 ease-out"
                 style={{
-                  width: `${progress.percent}%`,
+                  width: `${smoothPercent}%`,
                   background: "linear-gradient(90deg, #4F8CFF, #7C5CFF, #45D6FF)",
                   boxShadow: "0 0 6px rgba(79,140,255,0.3)",
                 }}
               />
             </div>
-            <span className="min-w-[3ch] text-right">{progress.percent}%</span>
+            <span className="min-w-[3ch] text-right">{smoothPercent}%</span>
           </div>
         </div>
 
         <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.15)" }}>
-          Offline-first · Local only
+          Offline-first · Local cache ready
         </div>
       </div>
     </div>
@@ -181,13 +213,13 @@ function StatusMessage({ message }: { message: string }) {
     const t1 = setTimeout(() => {
       setDisplayed(message);
       setVisible(true);
-    }, 200);
+    }, 100);
     return () => clearTimeout(t1);
   }, [message, displayed]);
 
   return (
     <p
-      className={`h-4 text-center text-xs transition-opacity duration-200 ${
+      className={`h-4 text-center text-xs transition-opacity duration-150 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
       style={{ color: "rgba(255,255,255,0.4)" }}

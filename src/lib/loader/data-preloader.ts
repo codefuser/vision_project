@@ -1,5 +1,7 @@
 import type { FolderRecord, MediaRecord, PlaylistRecord } from "@/db/schema";
 import { setCachedFolders, setCachedMedia, setCachedPlaylists } from "@/db/cache";
+import { loadBible } from "@/lib/bible/loader";
+import { loadSongs } from "@/lib/songs/loader";
 
 let preloadPromise: Promise<void> | null = null;
 
@@ -10,14 +12,20 @@ export function preloadAllData(): Promise<void> {
 }
 
 async function doPreload(): Promise<void> {
-  const [{ useBibleStore }, { useSongsStore }] = await Promise.all([
-    import("@/lib/bible/store"),
-    import("@/lib/songs/store"),
-  ]);
+  // Pre-load Songs and both Bibles (EN + Tamil) into memory during application startup
   await Promise.allSettled([
-    useBibleStore.getState().ensureBoth(),
-    useSongsStore.getState().ensureLoaded(),
+    loadSongs(),
+    loadBible("en"),
+    loadBible("ta"),
   ]);
+
+  // Pre-build search index for Songs
+  const [{ getSongs }, { buildSearchIndex }] = await Promise.all([
+    import("@/lib/songs/loader"),
+    import("@/lib/songs/search"),
+  ]);
+  const songs = getSongs();
+  if (songs) buildSearchIndex(songs);
 }
 
 let backgroundPreloaded = false;
@@ -25,16 +33,14 @@ let backgroundPreloaded = false;
 export function preloadAllPageData() {
   if (backgroundPreloaded) return;
   backgroundPreloaded = true;
-  setTimeout(() => {
-    import("@/db/repo").then(async ({ listFolders, listAllMedia, listPlaylists }) => {
-      const [folders, media, playlists] = await Promise.all([
-        listFolders().catch(() => [] as FolderRecord[]),
-        listAllMedia().catch(() => [] as MediaRecord[]),
-        listPlaylists().catch(() => [] as PlaylistRecord[]),
-      ]);
-      setCachedFolders(folders);
-      setCachedMedia(media);
-      setCachedPlaylists(playlists);
-    });
-  }, 1000);
+  import("@/db/repo").then(async ({ listFolders, listAllMedia, listPlaylists }) => {
+    const [folders, media, playlists] = await Promise.all([
+      listFolders().catch(() => [] as FolderRecord[]),
+      listAllMedia().catch(() => [] as MediaRecord[]),
+      listPlaylists().catch(() => [] as PlaylistRecord[]),
+    ]);
+    setCachedFolders(folders);
+    setCachedMedia(media);
+    setCachedPlaylists(playlists);
+  });
 }
