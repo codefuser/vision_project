@@ -1,4 +1,4 @@
-﻿import "./lib/error-capture";
+import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage, renderNotFoundPage, isNotFoundRequest } from "./lib/error-page";
@@ -7,15 +7,15 @@ type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
-let serverEntryPromise: Promise<ServerEntry> | undefined;
+import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
+
+const fetchHandler = createStartHandler(defaultStreamHandler);
+const serverEntry: ServerEntry = {
+  fetch: fetchHandler as any
+};
 
 async function getServerEntry(): Promise<ServerEntry> {
-  if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
-  }
-  return serverEntryPromise;
+  return serverEntry;
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
