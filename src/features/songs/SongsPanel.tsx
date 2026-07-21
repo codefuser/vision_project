@@ -35,7 +35,7 @@ import { SongEditorDialog } from "./SongEditorDialog";
 import { SplitPane } from "@/components/ui/split-pane";
 import { suggestTanglish } from "@/lib/text/tanglish";
 
-type SongFilter = "all" | "favorites" | "recent" | "added" | "most" | "mine" | "author";
+export type SongFilter = "all" | "favorites" | "recent" | "added" | "most" | "mine";
 const FILTER_LABELS: Record<SongFilter, string> = {
   all: "All Songs",
   favorites: "Favorites",
@@ -43,7 +43,6 @@ const FILTER_LABELS: Record<SongFilter, string> = {
   added: "Recently Added",
   most: "Most Used",
   mine: "My Songs",
-  author: "Author",
 };
 
 export function SongsPanel() {
@@ -98,9 +97,6 @@ export function SongsPanel() {
   const [filter, setFilter] = useState<SongFilter>(
     () => (wsSongsSearch.filter as SongFilter) || "all",
   );
-  const [authorFilter, setAuthorFilter] = useState<string | null>(
-    wsSongsSearch.authorFilter ?? null,
-  );
 
   // Restore persisted query and selection on mount
   useEffect(() => {
@@ -117,10 +113,10 @@ export function SongsPanel() {
       });
     }
   }, []);
-  // Sync filter/author changes to workspace store
+  // Sync filter changes to workspace store
   useEffect(() => {
-    setSongsSearch({ filter, authorFilter });
-  }, [filter, authorFilter]);
+    setSongsSearch({ filter });
+  }, [filter]);
   // Sync selectedSongId to workspace store
   useEffect(() => {
     setSelectedSongId(selectedSongId);
@@ -133,19 +129,6 @@ export function SongsPanel() {
   useEffect(() => {
     void ensureLoaded();
   }, [ensureLoaded]);
-
-  // Distinct author list (built from the loaded library + user songs).
-  const authors = useMemo(() => {
-    if (!loaded) return [] as string[];
-    const songs = getSongs();
-    if (!songs) return [];
-    const set = new Set<string>();
-    for (const s of songs) {
-      const a = (s.artist || "").trim();
-      if (a) set.add(a);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [loaded, userSongs]);
 
   useEffect(() => {
     if (!loaded) return;
@@ -161,7 +144,6 @@ export function SongsPanel() {
       if (filter === "recent") return recentIds.has(s.id);
       if (filter === "added") return userIds.has(s.id);
       if (filter === "most") return (counts[s.id] ?? 0) > 0;
-      if (filter === "author") return !!authorFilter && (s.artist || "").trim() === authorFilter;
       return true;
     };
 
@@ -222,9 +204,7 @@ export function SongsPanel() {
           if (s) push(s);
         }
       }
-      if (filter === "author" && authorFilter) {
-        for (const s of songs) push(s);
-      }
+
       const limit = filter === "all" ? 80 : 500;
       if (filter === "all") {
         for (let i = 0; i < songs.length && out.length < limit; i++) push(songs[i]);
@@ -243,7 +223,7 @@ export function SongsPanel() {
       setResults(hits);
       setActiveIdx(0);
     });
-  }, [debouncedQuery, loaded, recent, userSongs, favorites, filter, authorFilter, counts]);
+  }, [debouncedQuery, loaded, recent, userSongs, favorites, filter, counts]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
 
@@ -477,7 +457,7 @@ export function SongsPanel() {
             >
               <Filter className="h-3.5 w-3.5" />
               <span className="hidden max-w-[140px] truncate @sm:inline">
-                {filter === "author" && authorFilter ? authorFilter : FILTER_LABELS[filter]}
+                {FILTER_LABELS[filter]}
               </span>
             </button>
           </DropdownMenuTrigger>
@@ -491,35 +471,10 @@ export function SongsPanel() {
                 key={f}
                 onClick={() => {
                   setFilter(f);
-                  setAuthorFilter(null);
                 }}
                 className={cn("text-xs", filter === f && "bg-accent font-semibold text-primary")}
               >
                 {FILTER_LABELS[f]}
-              </DropdownMenuItem>
-            ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
-              Author {authorFilter ? `· ${authorFilter}` : ""}
-            </DropdownMenuLabel>
-            {authors.length === 0 && (
-              <div className="px-2 py-1.5 text-[11px] text-muted-foreground">No authors</div>
-            )}
-            {authors.slice(0, 200).map((a) => (
-              <DropdownMenuItem
-                key={a}
-                onClick={() => {
-                  setFilter("author");
-                  setAuthorFilter(a);
-                }}
-                className={cn(
-                  "text-xs",
-                  filter === "author" &&
-                    authorFilter === a &&
-                    "bg-accent font-semibold text-primary",
-                )}
-              >
-                <span className="truncate">{a}</span>
               </DropdownMenuItem>
             ))}
           </DropdownMenuContent>
@@ -789,7 +744,6 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
           <div className="truncate text-[12px] font-semibold">{song.title}</div>
           <div className="text-[10px] text-muted-foreground">
             {song.slides.length} slide{song.slides.length === 1 ? "" : "s"}
-            {song.artist ? ` · ${song.artist}` : ""}
           </div>
         </div>
         <button
@@ -981,12 +935,7 @@ const SongRow = memo(
               )}
             </div>
 
-            {(song.artist || song.album) && (
-              <div className="flex items-center gap-3 text-[10px] font-medium text-muted-foreground/70 mb-2">
-                {song.artist && <span>👤 {song.artist}</span>}
-                {song.album && <span>💿 {song.album}</span>}
-              </div>
-            )}
+
 
             <div className="mt-1.5 space-y-0.5 border-l-2 border-primary/30 pl-2 max-w-[95%]">
               {hit.contextLines.map((line, i) => (

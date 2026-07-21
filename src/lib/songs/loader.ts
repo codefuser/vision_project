@@ -5,8 +5,6 @@ export interface RawSong {
   id: number;
   title: string;
   content: string;
-  artist: string;
-  album: string;
   scale: string;
 }
 
@@ -14,8 +12,6 @@ export interface Song {
   id: number;
   title: string;
   content: string;
-  artist: string;
-  album: string;
   scale: string;
   /** Stanzas split on blank lines. */
   slides: string[];
@@ -44,8 +40,6 @@ export function buildSong(raw: {
   id: number;
   title: string;
   content: string;
-  artist?: string;
-  album?: string;
   scale?: string;
   userCreated?: boolean;
 }): Song {
@@ -56,8 +50,6 @@ export function buildSong(raw: {
     id: raw.id,
     title,
     content,
-    artist: raw.artist ?? "",
-    album: raw.album ?? "",
     scale: raw.scale ?? "",
     slides,
     userCreated: raw.userCreated,
@@ -70,7 +62,7 @@ export function buildSong(raw: {
 }
 
 function buildFromRaw(r: RawSong): Song {
-  return buildSong({ id: r.id, title: r.title, content: r.content, artist: r.artist, album: r.album, scale: r.scale });
+  return buildSong({ id: r.id, title: r.title, content: r.content, scale: r.scale });
 }
 
 /** Returns library songs + any user-created songs (user overrides win by id). */
@@ -134,7 +126,7 @@ async function syncSongsFromSupabase(): Promise<Song[]> {
   while (true) {
     const { data, error } = await supabase
       .from("songs")
-      .select("id, title, content, artist, album, scale")
+      .select("id, title, content, scale")
       .range(start, start + limit - 1);
     if (error) throw error;
     allRows.push(...(data as RawSong[]));

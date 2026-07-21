@@ -42,8 +42,6 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
         id: lib.id,
         title: lib.title,
         content: lib.content,
-        artist: lib.artist,
-        album: lib.album,
         scale: lib.scale,
         isUser: false,
       };
@@ -52,13 +50,11 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
 
   const [title, setTitle] = useState("");
   const [lyrics, setLyrics] = useState("");
-  const [artist, setArtist] = useState("");
 
   useEffect(() => {
     if (!open) return;
     setTitle(editing?.title ?? "");
     setLyrics(editing?.content ?? "");
-    setArtist(editing?.artist ?? "");
   }, [open, editing]);
 
   const slides = useMemo(() => buildSlides(lyrics), [lyrics]);
@@ -79,13 +75,11 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
         id: editing.id,
         title: t,
         content: c,
-        artist: artist.trim(),
-        album: editing.album,
         scale: editing.scale,
       });
       toast.success(editing.isUser ? "Song updated" : "Library song overridden");
     } else {
-      const id = addUserSong({ title: t, content: c, artist: artist.trim() });
+      const id = addUserSong({ title: t, content: c });
       selectSong(id);
       toast.success("Song created");
     }
@@ -115,16 +109,6 @@ export function SongEditorDialog({ open, onOpenChange, editingId }: Props) {
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="பாடல் தலைப்பு"
                 autoFocus
-              />
-            </div>
-            <div>
-              <label className="text-[11px] font-medium text-muted-foreground">
-                Artist (optional)
-              </label>
-              <Input
-                value={artist}
-                onChange={(e) => setArtist(e.target.value)}
-                placeholder="இசையமைப்பாளர் / பாடகர்"
               />
             </div>
             <div>
