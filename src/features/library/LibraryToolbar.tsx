@@ -42,7 +42,7 @@ interface LibraryToolbarProps {
   onSortChange: (field: SortField) => void;
   onToggleSortOrder: () => void;
   onNewFolder: () => void;
-  onImportClick: () => void;
+  onUploadClick: () => void;
 }
 
 export function LibraryToolbar({
@@ -68,13 +68,13 @@ export function LibraryToolbar({
   onSortChange,
   onToggleSortOrder,
   onNewFolder,
-  onImportClick,
+  onUploadClick,
 }: LibraryToolbarProps) {
   return (
-    <header className="flex shrink-0 flex-col border-b border-border bg-card/60 backdrop-blur">
-      {/* Upper Command Bar */}
+    <header className="flex shrink-0 flex-col border-b border-border bg-card/60 backdrop-blur select-none">
+      {/* Upper Windows Explorer Command Bar */}
       <div className="flex h-11 items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40">
-        {/* Left Navigation Buttons */}
+        {/* Navigation Buttons */}
         <div className="flex items-center gap-1">
           <button
             onClick={onGoBack}
@@ -96,14 +96,14 @@ export function LibraryToolbar({
             onClick={onGoUp}
             disabled={!currentFolderId}
             className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
-            title="Up one folder level"
+            title="Up to parent folder"
           >
             <ArrowUp className="h-4 w-4" />
           </button>
           <button
             onClick={onRefresh}
             className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            title="Refresh library"
+            title="Refresh File Manager"
           >
             <RotateCw className="h-3.5 w-3.5" />
           </button>
@@ -120,19 +120,19 @@ export function LibraryToolbar({
           />
         </div>
 
-        {/* Search Bar */}
+        {/* Search Input */}
         <div className="relative w-64">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search Church Library…"
+            placeholder="Search File Manager…"
             className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
           />
         </div>
 
-        {/* Quick Action Buttons */}
+        {/* Actions */}
         <div className="flex items-center gap-1.5">
           <button
             onClick={onNewFolder}
@@ -143,12 +143,12 @@ export function LibraryToolbar({
             <span>New Folder</span>
           </button>
           <button
-            onClick={onImportClick}
+            onClick={onUploadClick}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-md bg-primary px-3 py-1 text-xs font-medium text-primary-foreground shadow-sm transition hover:bg-primary/90"
-            title="Import Media / Songs / Verses"
+            title="Upload Files to current folder"
           >
             <Upload className="h-3.5 w-3.5" />
-            <span>Import</span>
+            <span>Upload</span>
           </button>
         </div>
       </div>
@@ -157,7 +157,7 @@ export function LibraryToolbar({
       <div className="flex h-9 items-center justify-between gap-2 px-3 text-xs bg-muted/20">
         {/* Sort Controls */}
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-muted-foreground">Sort by:</span>
+          <span className="text-[11px] font-medium text-muted-foreground">Sort:</span>
           <select
             value={sortField}
             onChange={(e) => onSortChange(e.target.value as SortField)}
@@ -166,7 +166,7 @@ export function LibraryToolbar({
             <option value="name">Name</option>
             <option value="type">Type</option>
             <option value="createdAt">Date Created</option>
-            <option value="size">File Size</option>
+            <option value="size">Size</option>
           </select>
           <button
             onClick={onToggleSortOrder}

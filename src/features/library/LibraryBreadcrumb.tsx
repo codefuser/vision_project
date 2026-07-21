@@ -18,7 +18,6 @@ export function LibraryBreadcrumb({
   onSelectCategory,
   onSelectFolder,
 }: LibraryBreadcrumbProps) {
-  // Build folder hierarchy ancestry if currentFolderId is selected
   const ancestors: FolderRecord[] = [];
   if (currentFolderId) {
     let curr: FolderRecord | undefined = folders.find((f) => f.id === currentFolderId);
@@ -30,20 +29,18 @@ export function LibraryBreadcrumb({
     }
   }
 
-  const categoryLabel = currentCategory === "all" ? "Library" : capitalize(currentCategory);
-
   return (
-    <nav className="flex items-center gap-1 overflow-x-auto py-1 text-xs text-muted-foreground">
+    <nav className="flex items-center gap-1 overflow-x-auto py-1 text-xs text-muted-foreground select-none">
       <button
         onClick={() => {
           onSelectCategory("all");
           onSelectFolder(null);
         }}
         className="flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-1 transition hover:bg-accent hover:text-foreground"
-        title="Go to Library Root"
+        title="Go to Home Root"
       >
         <Home className="h-3.5 w-3.5 text-primary" />
-        <span className="font-semibold text-foreground">{categoryLabel}</span>
+        <span className="font-semibold text-foreground">Home</span>
       </button>
 
       {ancestors.map((folder, index) => (
@@ -62,9 +59,4 @@ export function LibraryBreadcrumb({
       ))}
     </nav>
   );
-}
-
-function capitalize(s: string): string {
-  if (!s) return "";
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

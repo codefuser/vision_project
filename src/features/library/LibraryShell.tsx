@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useLibrary } from "@/stores/library.store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
 import { createFolder, renameFolder, deleteFolderDeep, moveMedia, duplicateMedia, deleteMedia, renameMedia } from "@/db/repo";
-import type { FolderRecord, MediaRecord } from "@/db/schema";
+import type { FolderRecord } from "@/db/schema";
 import { LibraryToolbar } from "./LibraryToolbar";
 import { LibraryTreeNav } from "./LibraryTreeNav";
 import { LibraryExplorerGrid } from "./LibraryExplorerGrid";
@@ -11,6 +11,7 @@ import { LibraryContextMenu } from "./LibraryContextMenu";
 import { SongImportDialog, BibleImportDialog, TextImportDialog } from "./LibraryImportDialogs";
 import { FloatingActionButton } from "./FloatingActionButton";
 import type { LibraryItem, CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
+import type { Song } from "@/lib/songs/loader";
 import { MediaAdapter } from "@/projection";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
@@ -24,14 +25,10 @@ export function LibraryShell() {
     currentFolderId,
     selection,
     search,
-    filter,
     loaded,
     setSearch,
-    setFilter,
     setFolder,
     toggleSelect,
-    clearSelection,
-    selectAll,
     refreshAll,
     refreshMedia,
     refreshFolders,
@@ -40,6 +37,13 @@ export function LibraryShell() {
   const favIds = useMediaFavorites((s) => s.ids);
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
+
+  // Resizable Panel Widths (VS Code style splitters)
+  const [leftWidth, setLeftWidth] = useState(240);
+  const [rightWidth, setRightWidth] = useState(320);
+
+  const isResizingLeft = useRef(false);
+  const isResizingRight = useRef(false);
 
   // View States
   const [currentCategory, setCurrentCategory] = useState<CategoryFilter>("all");
@@ -62,11 +66,11 @@ export function LibraryShell() {
   const [showTextImport, setShowTextImport] = useState(false);
   const [renameTarget, setRenameTarget] = useState<LibraryItem | null>(null);
 
-  // Custom Items (Songs, Bible Verses, Texts imported into Library)
+  // Custom Items
   const [customItems, setCustomItems] = useState<LibraryItem[]>(() => {
     if (typeof window === "undefined") return [];
     try {
-      const saved = window.localStorage.getItem("vision_library_custom_items_v1");
+      const saved = window.localStorage.getItem("vision_file_manager_custom_items_v1");
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
@@ -75,13 +79,37 @@ export function LibraryShell() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem("vision_library_custom_items_v1", JSON.stringify(customItems));
+      window.localStorage.setItem("vision_file_manager_custom_items_v1", JSON.stringify(customItems));
     } catch {}
   }, [customItems]);
 
   useEffect(() => {
     if (!loaded) void refreshAll();
   }, [loaded, refreshAll]);
+
+  // Panel Drag-to-Resize Listeners
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizingLeft.current) {
+        setLeftWidth(Math.max(160, Math.min(450, e.clientX)));
+      } else if (isResizingRight.current) {
+        setRightWidth(Math.max(220, Math.min(550, window.innerWidth - e.clientX)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      isResizingLeft.current = false;
+      isResizingRight.current = false;
+      document.body.style.cursor = "default";
+    };
+
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+    };
+  }, []);
 
   // Transform MediaRecords + CustomItems into unified LibraryItem array
   const allLibraryItems = useMemo<LibraryItem[]>(() => {
@@ -106,7 +134,12 @@ export function LibraryShell() {
     return [...mediaItems, ...customItems];
   }, [media, customItems, favSet]);
 
-  // Category & Search Filtering
+  // Subfolders under current folder context
+  const currentSubfolders = useMemo(() => {
+    return folders.filter((f) => f.parentId === currentFolderId);
+  }, [folders, currentFolderId]);
+
+  // Filtered File Items
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
 
@@ -256,7 +289,7 @@ export function LibraryShell() {
       songData: song,
     };
     setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Imported Song: ${song.title}`);
+    toast.success(`Imported Song to current folder: ${song.title}`);
   };
 
   const handleImportBible = (verse: { book: number; bookName: string; chapter: number; verse: number; text: string }) => {
@@ -270,7 +303,7 @@ export function LibraryShell() {
       bibleData: { ...verse, translation: "KJV" },
     };
     setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Imported Bible Verse: ${newItem.name}`);
+    toast.success(`Imported Verse to current folder: ${newItem.name}`);
   };
 
   const handleCreateText = (title: string, content: string) => {
@@ -284,7 +317,7 @@ export function LibraryShell() {
       textData: { content },
     };
     setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Created Text: ${title}`);
+    toast.success(`Created Text in current folder: ${title}`);
   };
 
   const handleCreateFolder = async (parentId: string | null = currentFolderId) => {
@@ -314,7 +347,7 @@ export function LibraryShell() {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-background">
-      {/* Top Toolbar */}
+      {/* Top File Explorer Toolbar */}
       <LibraryToolbar
         currentCategory={currentCategory}
         currentFolderId={currentFolderId}
@@ -338,13 +371,26 @@ export function LibraryShell() {
         onSortChange={setSortField}
         onToggleSortOrder={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
         onNewFolder={() => void handleCreateFolder()}
-        onImportClick={() => setShowSongImport(true)}
+        onUploadClick={() => {
+          const el = document.createElement("input");
+          el.type = "file";
+          el.multiple = true;
+          el.onchange = async () => {
+            if (el.files && el.files.length) {
+              const { importFiles } = await import("@/db/repo");
+              await importFiles(Array.from(el.files), currentFolderId);
+              await refreshMedia();
+              toast.success(`Uploaded ${el.files.length} file(s) to current folder`);
+            }
+          };
+          el.click();
+        }}
       />
 
-      {/* 3-Pane Explorer Body */}
+      {/* Resizable 3-Pane Explorer Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Pane 1: Left Navigation Sidebar */}
-        <div className="w-56 shrink-0 border-r border-border">
+        <div style={{ width: `${leftWidth}px` }} className="shrink-0">
           <LibraryTreeNav
             currentCategory={currentCategory}
             currentFolderId={currentFolderId}
@@ -372,38 +418,62 @@ export function LibraryShell() {
           />
         </div>
 
+        {/* Left Resize Splitter Handle */}
+        <div
+          onMouseDown={() => {
+            isResizingLeft.current = true;
+            document.body.style.cursor = "col-resize";
+          }}
+          className="w-1 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          title="Drag to resize left tree panel"
+        />
+
         {/* Pane 2: Center File Explorer Grid */}
         <LibraryExplorerGrid
           items={filteredItems}
+          subfolders={currentSubfolders}
           selection={selection}
           viewMode={viewMode}
           zoomLevel={zoomLevel}
           onItemClick={handleItemClick}
           onItemDoubleClick={handleItemDoubleClick}
+          onFolderDoubleClick={navigateToFolder}
           onContextMenu={handleContextMenu}
           onToggleFavorite={(item) => {
             if (item.mediaRecord) toggleFav(item.id);
           }}
         />
 
-        {/* Pane 3: Right Inspector / Live Preview Pane */}
-        <LibraryPreviewPane
-          item={inspectedItem}
-          onClose={() => setInspectedItem(null)}
-          onProject={projectItem}
+        {/* Right Resize Splitter Handle */}
+        <div
+          onMouseDown={() => {
+            isResizingRight.current = true;
+            document.body.style.cursor = "col-resize";
+          }}
+          className="w-1 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          title="Drag to resize right inspector panel"
         />
+
+        {/* Pane 3: Right Inspector / Live Preview Pane */}
+        <div style={{ width: `${rightWidth}px` }} className="shrink-0">
+          <LibraryPreviewPane
+            item={inspectedItem}
+            onClose={() => setInspectedItem(null)}
+            onProject={projectItem}
+          />
+        </div>
       </div>
 
       {/* Status Bar Footer */}
-      <footer className="flex h-6 items-center justify-between border-t border-border px-3 text-[11px] text-muted-foreground bg-muted/20">
+      <footer className="flex h-6 items-center justify-between border-t border-border px-3 text-[11px] text-muted-foreground bg-muted/20 select-none">
         <div>
           <span>{filteredItems.length} items</span>
           {selection.size > 0 && <span className="ml-3 font-medium text-foreground">{selection.size} selected</span>}
         </div>
         <div className="flex items-center gap-3">
-          <span>Church Content Library</span>
+          <span>File Manager</span>
           <span>·</span>
-          <span>Vision Projector v2.0</span>
+          <span>Windows Explorer View</span>
         </div>
       </footer>
 
@@ -413,7 +483,6 @@ export function LibraryShell() {
         onImportSong={() => setShowSongImport(true)}
         onImportBible={() => setShowBibleImport(true)}
         onImportMedia={() => {
-          // Open system file import
           const el = document.createElement("input");
           el.type = "file";
           el.multiple = true;
@@ -422,7 +491,7 @@ export function LibraryShell() {
               const { importFiles } = await import("@/db/repo");
               await importFiles(Array.from(el.files), currentFolderId);
               await refreshMedia();
-              toast.success(`Imported ${el.files.length} file(s)`);
+              toast.success(`Uploaded ${el.files.length} file(s)`);
             }
           };
           el.click();

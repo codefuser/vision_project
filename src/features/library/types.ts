@@ -1,4 +1,4 @@
-import type { MediaRecord, FolderRecord, MediaType } from "@/db/schema";
+import type { MediaRecord, FolderRecord } from "@/db/schema";
 import type { Song } from "@/lib/songs/loader";
 
 export type LibraryItemType =
@@ -37,13 +37,6 @@ export type CategoryFilter =
 export type SortField = "name" | "type" | "createdAt" | "size" | "updatedAt";
 export type SortOrder = "asc" | "desc";
 
-export interface SystemFolder {
-  id: CategoryFilter;
-  name: string;
-  icon: string;
-  count?: number;
-}
-
 export interface LibraryItem {
   id: string;
   name: string;
@@ -58,7 +51,7 @@ export interface LibraryItem {
   height?: number;
   blobId?: string;
   thumbBlobId?: string | null;
-  // Specific payloads
+  // Payload objects
   songData?: Song;
   bibleData?: {
     book: number;
@@ -72,6 +65,7 @@ export interface LibraryItem {
     content: string;
     category?: string;
   };
+  folderRecord?: FolderRecord;
   mediaRecord?: MediaRecord;
   isFavorite?: boolean;
 }

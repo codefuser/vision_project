@@ -9,13 +9,12 @@ import {
   Megaphone,
   Folder,
   Info,
-  Calendar,
-  HardDrive,
-  Maximize2,
 } from "lucide-react";
 import type { LibraryItem } from "./types";
 import { formatBytes, formatDuration } from "@/lib/files";
 import { Thumb } from "@/components/Thumb";
+import { projectSongSlide } from "@/projection/adapters/song.adapter";
+import { toast } from "sonner";
 
 interface LibraryPreviewPaneProps {
   item: LibraryItem | null;
@@ -26,11 +25,11 @@ interface LibraryPreviewPaneProps {
 export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewPaneProps) {
   if (!item) {
     return (
-      <aside className="flex h-full w-72 shrink-0 flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
+      <aside className="flex h-full w-80 shrink-0 flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
         <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
         <p className="font-medium text-foreground">No item selected</p>
         <p className="mt-1 text-[11px] opacity-70">
-          Select any song, Bible verse, media, or text file to inspect properties & preview.
+          Select any file to inspect properties & preview slides.
         </p>
       </aside>
     );
@@ -54,29 +53,17 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
       </div>
 
       {/* Main Preview Thumbnail / Content View */}
-      <div className="my-4 overflow-hidden rounded-lg border border-border bg-black/40 p-2 shadow-inner">
+      <div className="my-3 overflow-hidden rounded-lg border border-border bg-black/40 p-2 shadow-inner">
         {item.mediaRecord ? (
           <Thumb media={item.mediaRecord} className="aspect-video w-full rounded" />
         ) : item.type === "song" && item.songData ? (
-          <div className="flex flex-col gap-2 max-h-48 overflow-y-auto p-2 bg-muted/20 rounded font-sans text-xs">
+          <div className="flex flex-col gap-1.5 p-2 bg-muted/20 rounded text-xs">
             <span className="font-bold text-primary">{item.songData.title}</span>
             {item.songData.scale && (
-              <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <span className="text-[10px] uppercase text-muted-foreground">
                 Key: {item.songData.scale}
               </span>
             )}
-            <div className="mt-1 space-y-1.5 text-[11px] text-muted-foreground">
-              {item.songData.slides.slice(0, 3).map((slide, i) => (
-                <div key={i} className="rounded border border-border/40 bg-background/60 p-1.5">
-                  <p className="line-clamp-3 whitespace-pre-line">{slide}</p>
-                </div>
-              ))}
-              {item.songData.slides.length > 3 && (
-                <span className="text-[10px] italic opacity-60">
-                  +{item.songData.slides.length - 3} more slides
-                </span>
-              )}
-            </div>
           </div>
         ) : item.type === "bible" && item.bibleData ? (
           <div className="flex flex-col gap-2 p-3 bg-muted/20 rounded text-xs">
@@ -86,13 +73,6 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
             <p className="mt-1 text-[11px] text-foreground leading-relaxed italic">
               "{item.bibleData.text}"
             </p>
-            <span className="text-[10px] text-muted-foreground uppercase">
-              Translation: {item.bibleData.translation}
-            </span>
-          </div>
-        ) : item.type === "text" && item.textData ? (
-          <div className="p-3 text-xs bg-muted/20 rounded max-h-48 overflow-y-auto whitespace-pre-wrap">
-            {item.textData.content}
           </div>
         ) : (
           <div className="flex aspect-video items-center justify-center bg-muted/10 rounded">
@@ -101,19 +81,55 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
         )}
       </div>
 
-      {/* Primary Action Button */}
-      <button
-        onClick={() => onProject(item)}
-        className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-primary py-2 text-xs font-semibold text-primary-foreground shadow transition hover:bg-primary/90"
-      >
-        <Play className="h-3.5 w-3.5 fill-current" />
-        <span>Project to Screen</span>
-      </button>
+      {/* Individual Slide Cards Section for Songs */}
+      {item.type === "song" && item.songData && (
+        <div className="my-3 flex flex-col gap-2">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            Slides ({item.songData.slides.length})
+          </span>
+          <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+            {item.songData.slides.map((slideText, idx) => (
+              <div
+                key={idx}
+                className="group relative flex flex-col justify-between rounded-lg border border-border/60 bg-card p-2.5 shadow-sm transition hover:border-primary/60"
+              >
+                <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground mb-1">
+                  <span>Slide {idx + 1}</span>
+                  <button
+                    onClick={() => {
+                      projectSongSlide({ songId: item.songData!.id, slideIndex: idx });
+                      toast.success(`Projected Slide ${idx + 1}`);
+                    }}
+                    className="flex h-5 items-center gap-1 rounded bg-primary/10 px-1.5 text-primary hover:bg-primary hover:text-primary-foreground transition"
+                  >
+                    <Play className="h-2.5 w-2.5 fill-current" />
+                    <span>Project</span>
+                  </button>
+                </div>
+                <p className="whitespace-pre-line text-xs text-foreground/90 leading-tight">
+                  {slideText}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-      {/* File Properties & Metadata Grid */}
-      <div className="mt-6 flex flex-col gap-2.5 text-xs">
+      {/* Primary Action Button */}
+      {item.type !== "song" && (
+        <button
+          onClick={() => onProject(item)}
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-primary py-2 text-xs font-semibold text-primary-foreground shadow transition hover:bg-primary/90"
+        >
+          <Play className="h-3.5 w-3.5 fill-current" />
+          <span>Project to Screen</span>
+        </button>
+      )}
+
+      {/* File Properties Grid */}
+      <div className="mt-4 flex flex-col gap-2 text-xs">
         <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-          Item Properties
+          File Properties
         </span>
 
         <div className="flex items-center justify-between border-b border-border/40 py-1">
@@ -123,7 +139,7 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
 
         {item.size !== undefined && (
           <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">File Size</span>
+            <span className="text-muted-foreground">Size</span>
             <span className="font-medium tabular-nums text-foreground">{formatBytes(item.size)}</span>
           </div>
         )}
@@ -137,21 +153,10 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
 
         {item.width && item.height ? (
           <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">Resolution</span>
+            <span className="text-muted-foreground">Dimensions</span>
             <span className="font-medium tabular-nums text-foreground">{item.width} × {item.height}</span>
           </div>
         ) : null}
-
-        <div className="flex items-center justify-between border-b border-border/40 py-1">
-          <span className="text-muted-foreground">Created</span>
-          <span className="font-medium tabular-nums text-foreground">
-            {new Date(item.createdAt).toLocaleDateString(undefined, {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
-          </span>
-        </div>
       </div>
     </aside>
   );

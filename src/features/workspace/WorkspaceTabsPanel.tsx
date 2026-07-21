@@ -24,7 +24,7 @@ const TABS: {
   focus: Exclude<FocusZone, null>;
   shortcutId: string;
 }[] = [
-  { id: "media", label: "Media", icon: ImageIcon, focus: "media", shortcutId: "tab.media" },
+  { id: "media", label: "File Manager", icon: ImageIcon, focus: "media", shortcutId: "tab.media" },
   { id: "bible", label: "Bible", icon: BookOpen, focus: "bible", shortcutId: "tab.bible" },
   { id: "songs", label: "Songs", icon: Music, focus: "songs", shortcutId: "tab.songs" },
   { id: "text", label: "Text", icon: Type, focus: "text", shortcutId: "tab.text" },

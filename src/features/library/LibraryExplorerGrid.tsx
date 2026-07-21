@@ -1,4 +1,4 @@
-import React, { useRef, useState, useCallback, useMemo } from "react";
+import React, { useRef, useState, useMemo } from "react";
 import {
   Music,
   BookOpen,
@@ -7,38 +7,42 @@ import {
   Megaphone,
   Folder,
   Star,
+  Layers,
 } from "lucide-react";
 import type { LibraryItem, ViewMode } from "./types";
+import type { FolderRecord } from "@/db/schema";
 import { formatBytes, formatDuration } from "@/lib/files";
 import { Thumb } from "@/components/Thumb";
 import { cn } from "@/lib/utils";
 
 interface LibraryExplorerGridProps {
   items: LibraryItem[];
+  subfolders: FolderRecord[];
   selection: Set<string>;
   viewMode: ViewMode;
   zoomLevel: number;
   onItemClick: (e: React.MouseEvent, item: LibraryItem, index: number) => void;
   onItemDoubleClick: (e: React.MouseEvent, item: LibraryItem) => void;
+  onFolderDoubleClick: (folderId: string) => void;
   onContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
   onToggleFavorite: (item: LibraryItem) => void;
-  onDropItemToFolder?: (itemId: string, folderId: string) => void;
 }
 
 export function LibraryExplorerGrid({
   items,
+  subfolders,
   selection,
   viewMode,
   zoomLevel,
   onItemClick,
   onItemDoubleClick,
+  onFolderDoubleClick,
   onContextMenu,
   onToggleFavorite,
-  onDropItemToFolder,
 }: LibraryExplorerGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Rubberband rectangle selection box calculation state
+  // Rubberband drag selection state
   const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -70,24 +74,25 @@ export function LibraryExplorerGrid({
     setDragBox(null);
   };
 
-  // Compute Grid Columns based on viewMode & zoomLevel
   const gridStyle = useMemo(() => {
-    let baseWidth = 180;
-    if (viewMode === "large-icons") baseWidth = 240;
-    if (viewMode === "small-icons") baseWidth = 120;
-    const itemWidth = Math.max(100, Math.floor(baseWidth * zoomLevel));
+    let baseWidth = 200;
+    if (viewMode === "large-icons") baseWidth = 260;
+    if (viewMode === "small-icons") baseWidth = 140;
+    const itemWidth = Math.max(120, Math.floor(baseWidth * zoomLevel));
     return {
       gridTemplateColumns: `repeat(auto-fill, minmax(${itemWidth}px, 1fr))`,
     };
   }, [viewMode, zoomLevel]);
 
-  if (!items.length) {
+  const hasContent = items.length > 0 || subfolders.length > 0;
+
+  if (!hasContent) {
     return (
       <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground select-none">
         <Folder className="mb-2 h-12 w-12 text-muted-foreground/30" />
-        <p className="text-sm font-medium">Folder is empty</p>
+        <p className="text-sm font-medium text-foreground">This folder is empty</p>
         <p className="mt-1 text-xs opacity-70">
-          Import songs, Bible verses, media, or text using the toolbar or bottom + button.
+          Upload media or import songs and Bible verses to add content.
         </p>
       </div>
     );
@@ -114,6 +119,30 @@ export function LibraryExplorerGrid({
             </tr>
           </thead>
           <tbody>
+            {/* Render Subfolders */}
+            {subfolders.map((folder) => (
+              <tr
+                key={folder.id}
+                onDoubleClick={() => onFolderDoubleClick(folder.id)}
+                className="cursor-pointer border-b border-border/30 transition hover:bg-accent/60 text-foreground font-medium"
+              >
+                <td className="py-2 px-3 text-center">
+                  <Folder className="h-4 w-4 text-amber-400" />
+                </td>
+                <td className="py-2 px-3">{folder.name}</td>
+                <td className="py-2 px-3 text-muted-foreground">Folder</td>
+                <td className="py-2 px-3 text-muted-foreground">—</td>
+                <td className="py-2 px-3 tabular-nums text-muted-foreground">
+                  {new Date(folder.createdAt).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })}
+                </td>
+              </tr>
+            ))}
+
+            {/* Render Items */}
             {items.map((item, index) => {
               const selected = selection.has(item.id);
               return (
@@ -156,7 +185,7 @@ export function LibraryExplorerGrid({
     );
   }
 
-  // Render Grid Card View
+  // Render Grid Cards View
   return (
     <div
       ref={containerRef}
@@ -165,7 +194,6 @@ export function LibraryExplorerGrid({
       onMouseUp={handleMouseUp}
       className="relative flex-1 overflow-y-auto p-4 select-none"
     >
-      {/* Rubberband Drag Selection Rectangle */}
       {dragBox && (
         <div
           className="pointer-events-none absolute z-30 border border-primary bg-primary/20 rounded"
@@ -173,12 +201,30 @@ export function LibraryExplorerGrid({
             left: `${Math.min(dragBox.startX, dragBox.currentX)}px`,
             top: `${Math.min(dragBox.startY, dragBox.currentY)}px`,
             width: `${Math.abs(dragBox.currentX - dragBox.startX)}px`,
-            height: `${Math.abs(dragBox.currentY - dragBox.startY)}px`,
+            height: `${Math.abs(dragBox.currentY - dragBox.startX)}px`,
           }}
         />
       )}
 
-      <div className="grid gap-3.5" style={gridStyle}>
+      <div className="grid gap-4" style={gridStyle}>
+        {/* Render Subfolder Cards */}
+        {subfolders.map((folder) => (
+          <div
+            key={folder.id}
+            onDoubleClick={() => onFolderDoubleClick(folder.id)}
+            className="group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border border-border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400/60 hover:shadow-md"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
+              <Folder className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-foreground">{folder.name}</p>
+              <span className="text-[10px] text-muted-foreground">Folder</span>
+            </div>
+          </div>
+        ))}
+
+        {/* Render Item File Cards */}
         {items.map((item, index) => {
           const selected = selection.has(item.id);
 
@@ -186,40 +232,60 @@ export function LibraryExplorerGrid({
             <div
               key={item.id}
               draggable
-              onDragStart={(e) => {
-                e.dataTransfer.setData("text/plain", item.id);
-              }}
+              onDragStart={(e) => e.dataTransfer.setData("text/plain", item.id)}
               onClick={(e) => onItemClick(e, item, index)}
               onDoubleClick={(e) => onItemDoubleClick(e, item)}
               onContextMenu={(e) => onContextMenu(e, item)}
               className={cn(
-                "group relative flex flex-col cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
                 selected ? "border-primary ring-2 ring-primary bg-primary/5" : "border-border hover:border-primary/50",
               )}
             >
-              {/* Thumbnail / File Card Preview Area */}
-              <div className="relative aspect-video w-full overflow-hidden bg-black/30 flex items-center justify-center">
+              {/* Thumbnail / Document Preview Card Area */}
+              <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40 border-b border-border/40">
                 {item.mediaRecord ? (
-                  <Thumb media={item.mediaRecord} className="aspect-video w-full object-cover" />
-                ) : item.type === "song" ? (
-                  <div className="flex flex-col items-center gap-1.5 p-2 text-center text-purple-400">
-                    <Music className="h-8 w-8" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-purple-300">Song</span>
+                  <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
+                ) : item.type === "song" && item.songData ? (
+                  /* Miniature Document Preview for Songs */
+                  <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-purple-950/40 via-card to-background">
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
+                        <Music className="h-3 w-3" /> Song Document
+                      </span>
+                      <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
+                        {item.songData.slides.length} slides
+                      </span>
+                    </div>
+
+                    <div className="my-1 space-y-1 text-[10.5px] leading-tight text-foreground/80 line-clamp-3">
+                      {item.songData.slides[0]?.split("\n").slice(0, 3).map((line, i) => (
+                        <p key={i} className="truncate italic">
+                          {line}
+                        </p>
+                      ))}
+                    </div>
                   </div>
-                ) : item.type === "bible" ? (
-                  <div className="flex flex-col items-center gap-1.5 p-2 text-center text-blue-400">
-                    <BookOpen className="h-8 w-8" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-blue-300">Bible Verse</span>
+                ) : item.type === "bible" && item.bibleData ? (
+                  <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-blue-950/40 via-card to-background">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                      <BookOpen className="h-3 w-3" /> Bible Verse
+                    </span>
+                    <p className="text-[11px] font-semibold text-primary line-clamp-2">
+                      {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
+                    </p>
                   </div>
                 ) : item.type === "text" ? (
-                  <div className="flex flex-col items-center gap-1.5 p-2 text-center text-amber-400">
-                    <Megaphone className="h-8 w-8" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Text / Announcement</span>
+                  <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-amber-950/40 via-card to-background">
+                    <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">
+                      <Megaphone className="h-3 w-3" /> Text / Announcement
+                    </span>
+                    <p className="text-[11px] text-foreground/80 line-clamp-2">
+                      {item.textData?.content}
+                    </p>
                   </div>
                 ) : (
-                  <div className="flex flex-col items-center gap-1.5 p-2 text-center text-amber-400">
+                  <div className="flex h-full items-center justify-center">
                     <Folder className="h-10 w-10 text-amber-400" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300">Folder</span>
                   </div>
                 )}
 
@@ -240,11 +306,11 @@ export function LibraryExplorerGrid({
               </div>
 
               {/* Card Label Footer */}
-              <div className="px-2.5 py-2">
-                <p className="truncate text-xs font-medium text-foreground" title={item.name}>
+              <div className="px-3 py-2">
+                <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
                   {item.name}
                 </p>
-                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
                   <span className="capitalize">{item.type}</span>
                   <span className="tabular-nums">
                     {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : ""}
