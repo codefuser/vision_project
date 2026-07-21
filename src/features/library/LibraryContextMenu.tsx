@@ -92,8 +92,21 @@ export function LibraryContextMenu({
       <div
         ref={menuRef}
         style={{ left: `${adjustedX}px`, top: `${adjustedY}px` }}
-        className="fixed z-50 w-52 overflow-hidden rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-xl backdrop-blur select-none"
+        className="fixed z-50 w-52 overflow-hidden rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-2xl backdrop-blur select-none"
       >
+        <button
+          onClick={() => {
+            onPaste();
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Clipboard className="h-3.5 w-3.5" />
+          <span>Paste (Ctrl+V)</span>
+        </button>
+
+        <div className="my-1 h-px bg-border/60" />
+
         <button
           onClick={() => {
             onNewFolder?.();
@@ -104,6 +117,7 @@ export function LibraryContextMenu({
           <FolderPlus className="h-3.5 w-3.5 text-amber-400" />
           <span>New Folder</span>
         </button>
+
         <button
           onClick={() => {
             onRefresh?.();
@@ -114,7 +128,9 @@ export function LibraryContextMenu({
           <RotateCw className="h-3.5 w-3.5" />
           <span>Refresh</span>
         </button>
+
         <div className="my-1 h-px bg-border/60" />
+
         <button
           onClick={() => {
             onSelectAll?.();
@@ -133,7 +149,7 @@ export function LibraryContextMenu({
     <div
       ref={menuRef}
       style={{ left: `${adjustedX}px`, top: `${adjustedY}px` }}
-      className="fixed z-50 w-52 overflow-hidden rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-xl backdrop-blur select-none"
+      className="fixed z-50 w-52 overflow-hidden rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-2xl backdrop-blur select-none"
     >
       <button
         onClick={() => {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import {
   Folder,
   FolderOpen,
@@ -48,14 +48,40 @@ export function LibraryTreeNav({
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
-  const toggleExpand = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  // Auto-expand folder on drag hover timer
+  const dragHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const toggleExpand = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     setExpandedFolders((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
+
+  const handleDragOverNode = (folderId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragOverFolderId !== folderId) {
+      setDragOverFolderId(folderId);
+
+      // Clear previous timer
+      if (dragHoverTimerRef.current) clearTimeout(dragHoverTimerRef.current);
+
+      // Set 600ms hover timer to auto-expand collapsed folder
+      dragHoverTimerRef.current = setTimeout(() => {
+        setExpandedFolders((prev) => new Set(prev).add(folderId));
+      }, 600);
+    }
+  };
+
+  const handleDragLeaveNode = () => {
+    setDragOverFolderId(null);
+    if (dragHoverTimerRef.current) {
+      clearTimeout(dragHoverTimerRef.current);
+      dragHoverTimerRef.current = null;
+    }
   };
 
   // Build parent-child tree mapping
@@ -84,20 +110,17 @@ export function LibraryTreeNav({
             onSelectFolder(folder.id);
             onSelectCategory("all");
           }}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setDragOverFolderId(folder.id);
-          }}
-          onDragLeave={() => setDragOverFolderId(null)}
+          onDragOver={(e) => handleDragOverNode(folder.id, e)}
+          onDragLeave={handleDragLeaveNode}
           onDrop={(e) => {
             e.preventDefault();
-            setDragOverFolderId(null);
+            handleDragLeaveNode();
             const itemId = e.dataTransfer.getData("text/plain");
             if (itemId) onDropItemToFolder(itemId, folder.id);
           }}
           style={{ paddingLeft: `${depth * 14 + 10}px` }}
           className={cn(
-            "group flex h-7 cursor-pointer items-center justify-between pr-2 text-xs transition rounded-md my-0.5 select-none",
+            "group flex h-7 cursor-pointer items-center justify-between pr-2 text-xs transition rounded-md my-0.5 select-none shrink-0",
             isDragOver ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
             isSelected
               ? "bg-primary text-primary-foreground font-medium shadow-sm"
@@ -176,7 +199,7 @@ export function LibraryTreeNav({
 
   return (
     <aside className="flex h-full w-full flex-col overflow-y-auto bg-card/40 p-2 border-r border-border select-none">
-      {/* Home Root */}
+      {/* File Manager Root */}
       <button
         onClick={() => {
           onSelectCategory("all");
@@ -194,7 +217,7 @@ export function LibraryTreeNav({
           if (itemId) onDropItemToFolder(itemId, null);
         }}
         className={cn(
-          "flex h-8 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition mb-2 font-semibold",
+          "flex h-8 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition mb-2 font-semibold shrink-0",
           dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
           currentCategory === "all" && currentFolderId === null
             ? "bg-primary text-primary-foreground shadow-sm"
@@ -203,7 +226,7 @@ export function LibraryTreeNav({
       >
         <div className="flex items-center gap-2">
           <Home className="h-4 w-4 text-primary" />
-          <span>Home</span>
+          <span>File Manager</span>
         </div>
         <span className="text-[10px] tabular-nums font-mono opacity-80">
           {categoryCounts.all}
@@ -211,7 +234,7 @@ export function LibraryTreeNav({
       </button>
 
       {/* Categories */}
-      <div className="mb-3 flex flex-col border-t border-border/50 pt-2">
+      <div className="mb-3 flex flex-col border-t border-border/50 pt-2 shrink-0">
         <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
           File Categories
         </span>
@@ -221,7 +244,7 @@ export function LibraryTreeNav({
             onSelectFolder(null);
           }}
           className={cn(
-            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5",
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
             currentCategory === "songs" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -238,7 +261,7 @@ export function LibraryTreeNav({
             onSelectFolder(null);
           }}
           className={cn(
-            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5",
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
             currentCategory === "bible" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -255,7 +278,7 @@ export function LibraryTreeNav({
             onSelectFolder(null);
           }}
           className={cn(
-            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5",
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
             currentCategory === "images" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -272,7 +295,7 @@ export function LibraryTreeNav({
             onSelectFolder(null);
           }}
           className={cn(
-            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5",
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
             currentCategory === "videos" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -289,7 +312,7 @@ export function LibraryTreeNav({
             onSelectFolder(null);
           }}
           className={cn(
-            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5",
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
             currentCategory === "announcements" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -302,8 +325,8 @@ export function LibraryTreeNav({
       </div>
 
       {/* Folders Tree Section */}
-      <div className="flex flex-col border-t border-border/60 pt-2">
-        <div className="flex items-center justify-between px-2 py-1">
+      <div className="flex flex-col border-t border-border/60 pt-2 flex-1 min-h-0">
+        <div className="flex items-center justify-between px-2 py-1 shrink-0">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
             Folders Tree
           </span>
@@ -316,7 +339,7 @@ export function LibraryTreeNav({
           </button>
         </div>
 
-        <div className="flex flex-col mt-1">
+        <div className="flex flex-col mt-1 overflow-y-auto">
           {rootFolders.length === 0 ? (
             <p className="px-2 py-2 text-[11px] text-muted-foreground/60 italic">
               No custom folders created.

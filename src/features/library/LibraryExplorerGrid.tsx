@@ -55,7 +55,6 @@ export function LibraryExplorerGrid({
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Inline editing state for textbox
-  const [editingText, setEditingText] = useState("");
   const [creatingFolderName, setCreatingFolderName] = useState("New Folder");
 
   // Rubberband selection state
@@ -105,8 +104,11 @@ export function LibraryExplorerGrid({
   if (!hasContent) {
     return (
       <div
-        onContextMenu={(e) => onContextMenu(e, null)}
-        className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground select-none"
+        onContextMenu={(e) => {
+          e.preventDefault();
+          onContextMenu(e, null);
+        }}
+        className="flex h-full flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground select-none"
       >
         <Folder className="mb-2 h-12 w-12 text-muted-foreground/30" />
         <p className="text-sm font-medium text-foreground">This folder is empty</p>
@@ -125,9 +127,10 @@ export function LibraryExplorerGrid({
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onContextMenu={(e) => {
+        e.preventDefault();
         if (e.target === containerRef.current) onContextMenu(e, null);
       }}
-      className="relative flex-1 overflow-y-auto p-4 select-none"
+      className="relative flex-1 min-w-0 overflow-y-auto p-4 select-none"
     >
       {dragBox && (
         <div
@@ -167,7 +170,15 @@ export function LibraryExplorerGrid({
           return (
             <div
               key={folder.id}
-              onDoubleClick={() => onFolderDoubleClick(folder.id)}
+              onDoubleClick={(e) => {
+                e.stopPropagation();
+                onFolderDoubleClick(folder.id);
+              }}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onContextMenu(e, null);
+              }}
               className="group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border border-border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400/60 hover:shadow-md"
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
@@ -217,7 +228,10 @@ export function LibraryExplorerGrid({
               onDragStart={(e) => e.dataTransfer.setData("text/plain", item.id)}
               onClick={(e) => onItemClick(e, item, index)}
               onDoubleClick={(e) => onItemDoubleClick(e, item)}
-              onContextMenu={(e) => onContextMenu(e, item)}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                onContextMenu(e, item);
+              }}
               className={cn(
                 "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
                 selected ? "border-primary ring-2 ring-primary bg-primary/5" : "border-border hover:border-primary/50",

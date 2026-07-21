@@ -39,7 +39,7 @@ export function LibraryShell() {
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
-  // Resizable Panel Widths (VS Code style splitters)
+  // Rigid Resizable Panel Widths (VS Code style splitters)
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(320);
 
@@ -95,7 +95,7 @@ export function LibraryShell() {
     if (!loaded) void refreshAll();
   }, [loaded, refreshAll]);
 
-  // Resizable Panels Event Listeners
+  // Panel Drag-to-Resize Listeners
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft.current) {
@@ -214,7 +214,6 @@ export function LibraryShell() {
     setInlineEditingId(null);
     if (!newName.trim()) return;
 
-    // Check if target is a folder
     const folderTarget = folders.find((f) => f.id === id);
     if (folderTarget) {
       if (!validateUniqueFolder(newName, folderTarget.parentId, folderTarget.id)) return;
@@ -224,7 +223,6 @@ export function LibraryShell() {
       return;
     }
 
-    // Check if target is media item
     const itemTarget = allLibraryItems.find((i) => i.id === id);
     if (itemTarget) {
       if (itemTarget.mediaRecord) {
@@ -243,6 +241,36 @@ export function LibraryShell() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Arrow Keys Grid Navigation
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        if (filteredItems.length === 0) return;
+        const currentIdx = filteredItems.findIndex((i) => selection.has(i.id));
+        const nextIdx = currentIdx < filteredItems.length - 1 ? currentIdx + 1 : 0;
+        clearSelection();
+        toggleSelect(filteredItems[nextIdx].id, false);
+        setInspectedItem(filteredItems[nextIdx]);
+        return;
+      }
+
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        if (filteredItems.length === 0) return;
+        const currentIdx = filteredItems.findIndex((i) => selection.has(i.id));
+        const prevIdx = currentIdx > 0 ? currentIdx - 1 : filteredItems.length - 1;
+        clearSelection();
+        toggleSelect(filteredItems[prevIdx].id, false);
+        setInspectedItem(filteredItems[prevIdx]);
+        return;
+      }
+
+      // Enter: Project / Open Selected Item
+      if (e.key === "Enter" && selectedItems.length === 1) {
+        e.preventDefault();
+        void projectItem(selectedItems[0]);
+        return;
+      }
 
       // F2: Start Inline Rename
       if (e.key === "F2" && selectedItems.length === 1) {
@@ -277,7 +305,7 @@ export function LibraryShell() {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && selectedItems.length > 0) {
         e.preventDefault();
         setClipboard({ action: "copy", items: selectedItems });
-        toast.info(`Copied ${selectedItems.length} item(s) to clipboard`);
+        toast.info(`Copied ${selectedItems.length} item(s)`);
         return;
       }
 
@@ -470,7 +498,10 @@ export function LibraryShell() {
   };
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+    <div
+      onContextMenu={(e) => e.preventDefault()}
+      className="flex h-full w-full flex-col overflow-hidden bg-background select-none"
+    >
       {/* Top File Explorer Toolbar */}
       <LibraryToolbar
         currentCategory={currentCategory}
@@ -514,7 +545,7 @@ export function LibraryShell() {
       {/* Resizable 3-Pane Explorer Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Pane 1: Left Navigation Sidebar */}
-        <div style={{ width: `${leftWidth}px` }} className="shrink-0">
+        <div style={{ width: `${leftWidth}px` }} className="h-full shrink-0 overflow-hidden border-r border-border">
           <LibraryTreeNav
             currentCategory={currentCategory}
             currentFolderId={currentFolderId}
@@ -543,34 +574,36 @@ export function LibraryShell() {
             isResizingLeft.current = true;
             document.body.style.cursor = "col-resize";
           }}
-          className="w-1 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          className="w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
           title="Drag to resize left tree panel"
         />
 
         {/* Pane 2: Center File Explorer Grid */}
-        <LibraryExplorerGrid
-          items={filteredItems}
-          subfolders={currentSubfolders}
-          selection={selection}
-          viewMode={viewMode}
-          zoomLevel={zoomLevel}
-          bibleLang={bibleLang}
-          inlineEditingId={inlineEditingId}
-          inlineCreatingFolder={inlineCreatingFolder}
-          onInlineRenameSubmit={handleInlineRenameSubmit}
-          onInlineCreateSubmit={handleCreateFolderSubmit}
-          onInlineCancel={() => {
-            setInlineEditingId(null);
-            setInlineCreatingFolder(false);
-          }}
-          onItemClick={handleItemClick}
-          onItemDoubleClick={handleItemDoubleClick}
-          onFolderDoubleClick={navigateToFolder}
-          onContextMenu={handleContextMenu}
-          onToggleFavorite={(item) => {
-            if (item.mediaRecord) toggleFav(item.id);
-          }}
-        />
+        <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
+          <LibraryExplorerGrid
+            items={filteredItems}
+            subfolders={currentSubfolders}
+            selection={selection}
+            viewMode={viewMode}
+            zoomLevel={zoomLevel}
+            bibleLang={bibleLang}
+            inlineEditingId={inlineEditingId}
+            inlineCreatingFolder={inlineCreatingFolder}
+            onInlineRenameSubmit={handleInlineRenameSubmit}
+            onInlineCreateSubmit={handleCreateFolderSubmit}
+            onInlineCancel={() => {
+              setInlineEditingId(null);
+              setInlineCreatingFolder(false);
+            }}
+            onItemClick={handleItemClick}
+            onItemDoubleClick={handleItemDoubleClick}
+            onFolderDoubleClick={navigateToFolder}
+            onContextMenu={handleContextMenu}
+            onToggleFavorite={(item) => {
+              if (item.mediaRecord) toggleFav(item.id);
+            }}
+          />
+        </div>
 
         {/* Right Resize Splitter Handle */}
         <div
@@ -578,12 +611,12 @@ export function LibraryShell() {
             isResizingRight.current = true;
             document.body.style.cursor = "col-resize";
           }}
-          className="w-1 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          className="w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
           title="Drag to resize right inspector panel"
         />
 
         {/* Pane 3: Right Inspector / Live Preview Pane */}
-        <div style={{ width: `${rightWidth}px` }} className="shrink-0">
+        <div style={{ width: `${rightWidth}px` }} className="h-full shrink-0 overflow-hidden border-l border-border">
           <LibraryPreviewPane
             item={inspectedItem}
             bibleLang={bibleLang}
@@ -603,7 +636,7 @@ export function LibraryShell() {
         <div className="flex items-center gap-3">
           <span>File Manager</span>
           <span>·</span>
-          <span>Windows Explorer View</span>
+          <span>Desktop OS View</span>
         </div>
       </footer>
 
