@@ -16,6 +16,7 @@ import type { BibleLang } from "@/lib/bible/loader";
 import { MediaAdapter } from "@/projection";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
+import { formatBytes } from "@/lib/files";
 import { toast } from "sonner";
 
 export function LibraryShell() {
@@ -182,6 +183,11 @@ export function LibraryShell() {
   const selectedItems = useMemo(() => {
     return filteredItems.filter((i) => selection.has(i.id));
   }, [filteredItems, selection]);
+
+  // Folder Total Size Calculation
+  const totalFolderSizeBytes = useMemo(() => {
+    return filteredItems.reduce((acc, item) => acc + (item.size || 0), 0);
+  }, [filteredItems]);
 
   // Unique Folder Validation
   const validateUniqueFolder = useCallback(
@@ -438,7 +444,7 @@ export function LibraryShell() {
         chapter: item.bibleData.chapter,
         verse: item.bibleData.verse,
       });
-      toast.success(`Projecting Verse (${bibleLang.toUpperCase()}): ${item.name}`);
+      toast.success(`Projecting Passage (${bibleLang.toUpperCase()}): ${item.name}`);
     }
   }, [bibleLang]);
 
@@ -455,24 +461,33 @@ export function LibraryShell() {
   }, []);
 
   // Import Handler Logic
-  const handleImportSong = (song: Song) => {
-    const newItem: LibraryItem = {
-      id: `song-${song.id}-${Date.now()}`,
-      name: song.title,
+  const handleImportSongBatch = (songs: Song[]) => {
+    const newItems: LibraryItem[] = songs.map((s, idx) => ({
+      id: `song-${s.id}-${Date.now()}-${idx}`,
+      name: s.title,
       type: "song",
       folderId: currentFolderId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      songData: song,
-    };
-    setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Imported Song to current folder: ${song.title}`);
+      songData: s,
+    }));
+    setCustomItems((prev) => [...newItems, ...prev]);
+    toast.success(`Imported ${songs.length} Song(s) to current folder`);
   };
 
-  const handleImportBible = (verse: { book: number; bookName: string; chapter: number; verse: number; text: string; lang: BibleLang }) => {
+  const handleImportBible = (verse: {
+    book: number;
+    bookName: string;
+    chapter: number;
+    verse: number;
+    verseEnd: number;
+    text: string;
+    lang: BibleLang;
+  }) => {
+    const rangeStr = verse.verse === verse.verseEnd ? `${verse.verse}` : `${verse.verse}-${verse.verseEnd}`;
     const newItem: LibraryItem = {
-      id: `bible-${verse.book}-${verse.chapter}-${verse.verse}-${Date.now()}`,
-      name: `${verse.bookName} ${verse.chapter}:${verse.verse}`,
+      id: `bible-${verse.book}-${verse.chapter}-${verse.verse}-${verse.verseEnd}-${Date.now()}`,
+      name: `${verse.bookName} ${verse.chapter}:${rangeStr}`,
       type: "bible",
       folderId: currentFolderId,
       createdAt: Date.now(),
@@ -480,7 +495,7 @@ export function LibraryShell() {
       bibleData: { ...verse, translation: verse.lang },
     };
     setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Imported Verse to current folder: ${newItem.name}`);
+    toast.success(`Imported Bible Passage: ${newItem.name}`);
   };
 
   const handleCreateText = (title: string, content: string) => {
@@ -497,12 +512,32 @@ export function LibraryShell() {
     toast.success(`Created Text in current folder: ${title}`);
   };
 
+  const handleDeleteItems = (items: LibraryItem[]) => {
+    const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
+    const customIds = new Set(items.filter((i) => !i.mediaRecord).map((i) => i.id));
+    if (mediaIds.length) {
+      deleteMedia(mediaIds).then(refreshMedia);
+    }
+    if (customIds.size) {
+      setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
+    }
+    toast.success(`Deleted ${items.length} item(s)`);
+  };
+
+  const handleDuplicateItems = (items: LibraryItem[]) => {
+    const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
+    if (mediaIds.length) {
+      duplicateMedia(mediaIds).then(refreshMedia);
+    }
+    toast.success(`Duplicated ${items.length} item(s)`);
+  };
+
   return (
     <div
       onContextMenu={(e) => e.preventDefault()}
       className="flex h-full w-full flex-col overflow-hidden bg-background select-none"
     >
-      {/* Top File Explorer Toolbar */}
+      {/* Top Quick Action File Explorer Toolbar */}
       <LibraryToolbar
         currentCategory={currentCategory}
         currentFolderId={currentFolderId}
@@ -512,6 +547,7 @@ export function LibraryShell() {
         zoomLevel={zoomLevel}
         sortField={sortField}
         sortOrder={sortOrder}
+        selectedCount={selectedItems.length}
         canGoBack={historyIdx > 0}
         canGoForward={historyIdx < history.length - 1}
         onGoBack={goBack}
@@ -540,9 +576,43 @@ export function LibraryShell() {
           };
           el.click();
         }}
+        onCutClick={() => {
+          if (selectedItems.length) {
+            setClipboard({ action: "cut", items: selectedItems });
+            toast.info(`Cut ${selectedItems.length} item(s)`);
+          }
+        }}
+        onCopyClick={() => {
+          if (selectedItems.length) {
+            setClipboard({ action: "copy", items: selectedItems });
+            toast.info(`Copied ${selectedItems.length} item(s)`);
+          }
+        }}
+        onPasteClick={() => {
+          if (!clipboard) return;
+          if (clipboard.action === "cut") {
+            const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+            if (mediaIds.length) {
+              moveMedia(mediaIds, currentFolderId).then(refreshMedia);
+            }
+            setCustomItems((prev) =>
+              prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
+            );
+            toast.success(`Moved ${clipboard.items.length} item(s)`);
+            setClipboard(null);
+          } else {
+            const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+            if (mediaIds.length) {
+              duplicateMedia(mediaIds).then(refreshMedia);
+            }
+            toast.success(`Pasted ${clipboard.items.length} item(s)`);
+          }
+        }}
+        onDuplicateClick={() => handleDuplicateItems(selectedItems)}
+        onDeleteClick={() => handleDeleteItems(selectedItems)}
       />
 
-      {/* Resizable 3-Pane Explorer Body */}
+      {/* Rigid 3-Pane Explorer Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Pane 1: Left Navigation Sidebar */}
         <div style={{ width: `${leftWidth}px` }} className="h-full shrink-0 overflow-hidden border-r border-border">
@@ -615,28 +685,38 @@ export function LibraryShell() {
           title="Drag to resize right inspector panel"
         />
 
-        {/* Pane 3: Right Inspector / Live Preview Pane */}
+        {/* Pane 3: Right Docked Inspector / Live Preview Pane */}
         <div style={{ width: `${rightWidth}px` }} className="h-full shrink-0 overflow-hidden border-l border-border">
           <LibraryPreviewPane
             item={inspectedItem}
+            folders={folders}
+            allMedia={allLibraryItems}
             bibleLang={bibleLang}
             onBibleLangChange={setBibleLang}
             onClose={() => setInspectedItem(null)}
             onProject={projectItem}
+            onRename={(i) => setInlineEditingId(i.id)}
+            onDelete={handleDeleteItems}
+            onDuplicate={handleDuplicateItems}
           />
         </div>
       </div>
 
       {/* Status Bar Footer */}
       <footer className="flex h-6 items-center justify-between border-t border-border px-3 text-[11px] text-muted-foreground bg-muted/20 select-none">
-        <div>
+        <div className="flex items-center gap-3">
           <span>{filteredItems.length} items</span>
-          {selection.size > 0 && <span className="ml-3 font-medium text-foreground">{selection.size} selected</span>}
+          <span>·</span>
+          <span>{formatBytes(totalFolderSizeBytes)}</span>
+          {selection.size > 0 && <span className="ml-3 font-semibold text-foreground">{selection.size} selected</span>}
         </div>
         <div className="flex items-center gap-3">
-          <span>File Manager</span>
+          <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+            <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+            Local Cache Synced
+          </span>
           <span>·</span>
-          <span>Desktop OS View</span>
+          <span>Digital Asset Manager (DAM)</span>
         </div>
       </footer>
 
@@ -674,12 +754,7 @@ export function LibraryShell() {
           onPreview={setInspectedItem}
           onProject={projectItem}
           onRename={(item) => setInlineEditingId(item.id)}
-          onDuplicate={(items) => {
-            const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
-            if (mediaIds.length) {
-              duplicateMedia(mediaIds).then(refreshMedia);
-            }
-          }}
+          onDuplicate={handleDuplicateItems}
           onMove={() => {}}
           onCopy={(items) => {
             setClipboard({ action: "copy", items });
@@ -709,17 +784,7 @@ export function LibraryShell() {
               toast.success(`Pasted ${clipboard.items.length} item(s)`);
             }
           }}
-          onDelete={(items) => {
-            const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
-            const customIds = new Set(items.filter((i) => !i.mediaRecord).map((i) => i.id));
-            if (mediaIds.length) {
-              deleteMedia(mediaIds).then(refreshMedia);
-            }
-            if (customIds.size) {
-              setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
-            }
-            toast.success(`Deleted ${items.length} item(s)`);
-          }}
+          onDelete={handleDeleteItems}
           onToggleFavorite={(item) => {
             if (item.mediaRecord) toggleFav(item.id);
           }}
@@ -734,7 +799,7 @@ export function LibraryShell() {
       <SongImportDialog
         open={showSongImport}
         onClose={() => setShowSongImport(false)}
-        onImport={handleImportSong}
+        onImportBatch={handleImportSongBatch}
       />
       <BibleImportDialog
         open={showBibleImport}

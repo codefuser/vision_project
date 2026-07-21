@@ -52,13 +52,14 @@ export interface LibraryItem {
   height?: number;
   blobId?: string;
   thumbBlobId?: string | null;
-  // Specific payloads
+  // Payload objects
   songData?: Song;
   bibleData?: {
     book: number;
     bookName: string;
     chapter: number;
     verse: number;
+    verseEnd?: number;
     text?: string;
     translation?: BibleLang;
   };

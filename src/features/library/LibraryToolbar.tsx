@@ -13,6 +13,11 @@ import {
   ZoomIn,
   ZoomOut,
   Upload,
+  Copy,
+  Scissors,
+  Clipboard,
+  Trash2,
+  Layers,
 } from "lucide-react";
 import { LibraryBreadcrumb } from "./LibraryBreadcrumb";
 import type { CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
@@ -28,6 +33,7 @@ interface LibraryToolbarProps {
   zoomLevel: number;
   sortField: SortField;
   sortOrder: SortOrder;
+  selectedCount: number;
   canGoBack: boolean;
   canGoForward: boolean;
   onGoBack: () => void;
@@ -43,6 +49,11 @@ interface LibraryToolbarProps {
   onToggleSortOrder: () => void;
   onNewFolder: () => void;
   onUploadClick: () => void;
+  onCutClick: () => void;
+  onCopyClick: () => void;
+  onPasteClick: () => void;
+  onDuplicateClick: () => void;
+  onDeleteClick: () => void;
 }
 
 export function LibraryToolbar({
@@ -54,6 +65,7 @@ export function LibraryToolbar({
   zoomLevel,
   sortField,
   sortOrder,
+  selectedCount,
   canGoBack,
   canGoForward,
   onGoBack,
@@ -69,12 +81,17 @@ export function LibraryToolbar({
   onToggleSortOrder,
   onNewFolder,
   onUploadClick,
+  onCutClick,
+  onCopyClick,
+  onPasteClick,
+  onDuplicateClick,
+  onDeleteClick,
 }: LibraryToolbarProps) {
   return (
     <header className="flex shrink-0 flex-col border-b border-border bg-card/60 backdrop-blur select-none">
-      {/* Upper Windows Explorer Command Bar */}
+      {/* Upper Command Bar */}
       <div className="flex h-11 items-center justify-between gap-2 px-3 py-1.5 border-b border-border/40">
-        {/* Navigation Buttons */}
+        {/* Navigation History */}
         <div className="flex items-center gap-1">
           <button
             onClick={onGoBack}
@@ -109,7 +126,7 @@ export function LibraryToolbar({
           </button>
         </div>
 
-        {/* Center Breadcrumb */}
+        {/* Center Path Breadcrumb */}
         <div className="flex flex-1 max-w-xl items-center rounded-md border border-input bg-background/80 px-2">
           <LibraryBreadcrumb
             currentCategory={currentCategory}
@@ -120,8 +137,8 @@ export function LibraryToolbar({
           />
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-64">
+        {/* Search Bar */}
+        <div className="relative w-60">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <input
             type="text"
@@ -132,8 +149,8 @@ export function LibraryToolbar({
           />
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-1.5">
+        {/* Quick Action Buttons */}
+        <div className="flex items-center gap-1">
           <button
             onClick={onNewFolder}
             className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium transition hover:bg-accent"
@@ -153,33 +170,80 @@ export function LibraryToolbar({
         </div>
       </div>
 
-      {/* Lower View & Sorting Controls Bar */}
+      {/* Lower Quick Action Toolbar & View Controls */}
       <div className="flex h-9 items-center justify-between gap-2 px-3 text-xs bg-muted/20">
-        {/* Sort Controls */}
-        <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-muted-foreground">Sort:</span>
-          <select
-            value={sortField}
-            onChange={(e) => onSortChange(e.target.value as SortField)}
-            className="h-7 cursor-pointer rounded border border-input bg-background px-2 text-xs focus:outline-none"
-          >
-            <option value="name">Name</option>
-            <option value="type">Type</option>
-            <option value="createdAt">Date Created</option>
-            <option value="size">Size</option>
-          </select>
+        {/* Quick Clipboard Actions */}
+        <div className="flex items-center gap-1 border-r border-border/60 pr-3">
           <button
-            onClick={onToggleSortOrder}
-            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded border border-input bg-background text-[11px] hover:bg-accent"
-            title="Toggle sort order"
+            onClick={onCutClick}
+            disabled={selectedCount === 0}
+            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+            title="Cut (Ctrl+X)"
           >
-            <SlidersHorizontal className="h-3 w-3" />
-            <span>{sortOrder === "asc" ? "Ascending" : "Descending"}</span>
+            <Scissors className="h-3.5 w-3.5" />
+            <span>Cut</span>
+          </button>
+          <button
+            onClick={onCopyClick}
+            disabled={selectedCount === 0}
+            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+            title="Copy (Ctrl+C)"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            <span>Copy</span>
+          </button>
+          <button
+            onClick={onPasteClick}
+            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+            title="Paste (Ctrl+V)"
+          >
+            <Clipboard className="h-3.5 w-3.5" />
+            <span>Paste</span>
+          </button>
+          <button
+            onClick={onDuplicateClick}
+            disabled={selectedCount === 0}
+            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:pointer-events-none"
+            title="Duplicate"
+          >
+            <Layers className="h-3.5 w-3.5" />
+            <span>Duplicate</span>
+          </button>
+          <button
+            onClick={onDeleteClick}
+            disabled={selectedCount === 0}
+            className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded hover:bg-destructive/20 text-destructive disabled:opacity-30 disabled:pointer-events-none"
+            title="Delete (Del)"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            <span>Delete</span>
           </button>
         </div>
 
-        {/* View Mode Selectors */}
-        <div className="flex items-center gap-2">
+        {/* Sort & View Controls */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <span className="text-[11px] font-medium text-muted-foreground">Sort:</span>
+            <select
+              value={sortField}
+              onChange={(e) => onSortChange(e.target.value as SortField)}
+              className="h-7 cursor-pointer rounded border border-input bg-background px-2 text-xs focus:outline-none"
+            >
+              <option value="name">Name</option>
+              <option value="type">Type</option>
+              <option value="createdAt">Date Created</option>
+              <option value="size">Size</option>
+            </select>
+            <button
+              onClick={onToggleSortOrder}
+              className="flex h-7 px-2 cursor-pointer items-center gap-1 rounded border border-input bg-background text-[11px] hover:bg-accent"
+              title="Toggle Sort Order"
+            >
+              <SlidersHorizontal className="h-3 w-3" />
+              <span>{sortOrder === "asc" ? "Ascending" : "Descending"}</span>
+            </button>
+          </div>
+
           <div className="flex items-center rounded border border-input bg-background p-0.5">
             <button
               onClick={() => onViewModeChange("large-icons")}
