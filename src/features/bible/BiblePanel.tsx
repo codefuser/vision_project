@@ -557,14 +557,24 @@ export function BiblePanel() {
   const primaryLang: BibleLang = displayMode === "ta" ? "ta" : "en";
   const showingRecent = !query.trim() && recent.length > 0;
 
-  const lanes = containerWidth > 1100 ? 3 : containerWidth > 650 ? 2 : 1;
+  const cols = containerWidth > 1000 ? 3 : containerWidth > 600 ? 2 : 1;
+
+  const rows = useMemo(() => {
+    const chunks: { hits: DisplayHit[]; startIndex: number }[] = [];
+    for (let i = 0; i < results.length; i += cols) {
+      chunks.push({
+        hits: results.slice(i, i + cols),
+        startIndex: i,
+      });
+    }
+    return chunks;
+  }, [results, cols]);
 
   const virtualizer = useVirtualizer({
-    count: results.length,
+    count: rows.length,
     getScrollElement: () => listRef.current,
-    estimateSize: () => 140,
-    overscan: 5 * lanes,
-    lanes,
+    estimateSize: () => 160,
+    overscan: 3,
   });
 
   return (
@@ -659,68 +669,92 @@ export function BiblePanel() {
                 position: "relative",
               }}
             >
-              {virtualizer.getVirtualItems().map((virtualItem) => {
-                const i = virtualItem.index;
-                const dh = results[i];
-                const h = dh.hit;
-                const pair = dh.pair;
-                const stableKey = favKey(h.book, h.chapter, h.verse);
-                const isFav = fav.has(stableKey);
-                const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
-                const refSecondary = pair
-                  ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}`
-                  : null;
-                const isProjected = (projectedRef ?? "").includes(refPrimary);
-                const isActive = activeIdx === i;
+              {virtualizer.getVirtualItems().map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                if (!row) return null;
 
                 return (
-                  <VerseRow
-                    key={virtualItem.key}
-                    virtualItem={virtualItem}
-                    virtualizer={virtualizer}
-                    dh={dh}
-                    stableKey={stableKey}
-                    isFav={isFav}
-                    refPrimary={refPrimary}
-                    refSecondary={refSecondary}
-                    isProjected={isProjected}
-                    isActive={isActive}
-                    primaryLang={primaryLang}
-                    onSelect={() => selectIdx(i)}
-                    onProject={() => project(dh)}
-                    onToggleFav={() => {
-                      if (isFav) removeFavorite(stableKey);
-                      else
-                        addFavorite({
-                          lang: primaryLang,
-                          book: h.book,
-                          chapter: h.chapter,
-                          verse: h.verse,
-                          ref: `${h.bookName} ${h.chapter}:${h.verse}`,
-                          text: h.text,
-                        });
+                  <div
+                    key={virtualRow.key}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                      paddingBottom: "0.75rem",
                     }}
-                  />
+                  >
+                    <div
+                      className={cn(
+                        "grid gap-3 items-stretch",
+                        cols === 3 ? "grid-cols-3" : cols === 2 ? "grid-cols-2" : "grid-cols-1",
+                      )}
+                    >
+                      {row.hits.map((dh, colIdx) => {
+                        const i = row.startIndex + colIdx;
+                        const h = dh.hit;
+                        const pair = dh.pair;
+                        const stableKey = favKey(h.book, h.chapter, h.verse);
+                        const isFav = fav.has(stableKey);
+                        const refPrimary = `${h.bookNameLocal} ${h.chapter}:${h.verse}`;
+                        const refSecondary = pair
+                          ? `${pair.bookNameLocal} ${pair.chapter}:${pair.verse}`
+                          : null;
+                        const isProjected = (projectedRef ?? "").includes(refPrimary);
+                        const isActive = activeIdx === i;
+
+                        return (
+                          <VerseCard
+                            key={stableKey}
+                            dh={dh}
+                            stableKey={stableKey}
+                            isFav={isFav}
+                            refPrimary={refPrimary}
+                            refSecondary={refSecondary}
+                            isProjected={isProjected}
+                            isActive={isActive}
+                            primaryLang={primaryLang}
+                            onSelect={() => selectIdx(i)}
+                            onProject={() => project(dh)}
+                            onToggleFav={() => {
+                              if (isFav) removeFavorite(stableKey);
+                              else
+                                addFavorite({
+                                  lang: primaryLang,
+                                  book: h.book,
+                                  chapter: h.chapter,
+                                  verse: h.verse,
+                                  ref: `${h.bookName} ${h.chapter}:${h.verse}`,
+                                  text: h.text,
+                                });
+                            }}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
                 );
               })}
             </div>
           );
         })()}
 
-
         {!query.trim() && favorites.length > 0 && (
           <div className="mt-4 border-t border-border pt-3">
             <div className="px-1 pb-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
               Favorites
             </div>
-            <div className="grid grid-cols-1 gap-2 @md:grid-cols-2 @3xl:grid-cols-3">
+            <div className="grid grid-cols-1 gap-2 items-stretch @md:grid-cols-2 @3xl:grid-cols-3">
               {favorites.slice(0, 30).map((f) => (
                 <button
                   key={f.id}
                   onClick={() =>
                     projectVerseAt({ book: f.book, chapter: f.chapter, verse: f.verse })
                   }
-                  className="flex cursor-pointer flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left hover:border-primary/40 hover:bg-accent/40"
+                  className="flex h-full cursor-pointer flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left hover:border-primary/40 hover:bg-accent/40"
                 >
                   <div className="text-[11px] font-semibold text-primary">{f.ref}</div>
                   <div className="whitespace-pre-wrap text-xs text-muted-foreground">{f.text}</div>
@@ -778,9 +812,7 @@ function BibleSearchInput({
   );
 }
 
-const VerseRow = memo(function VerseRow({
-  virtualItem,
-  virtualizer,
+const VerseCard = memo(function VerseCard({
   dh,
   stableKey,
   isFav,
@@ -793,8 +825,6 @@ const VerseRow = memo(function VerseRow({
   onProject,
   onToggleFav,
 }: {
-  virtualItem: any;
-  virtualizer: any;
   dh: DisplayHit;
   stableKey: string;
   isFav: boolean;
@@ -812,89 +842,75 @@ const VerseRow = memo(function VerseRow({
 
   return (
     <div
-      data-index={virtualItem.index}
-      ref={virtualizer.measureElement}
-      style={{
-        position: "absolute",
-        top: 0,
-        left: `${(virtualItem.lane * 100) / virtualizer.options.lanes}%`,
-        width: `${100 / virtualizer.options.lanes}%`,
-        transform: `translateY(${virtualItem.start}px)`,
-        padding: "0 0.35rem",
-        paddingBottom: "0.6rem",
+      onClick={() => {
+        onSelect();
+        onProject();
       }}
+      className={cn(
+        "group relative flex h-full cursor-pointer flex-col rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
+        "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
+        isProjected
+          ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/25"
+          : isActive
+            ? "border-primary/70 ring-1 ring-primary/20"
+            : "border-border",
+      )}
     >
-      <div
-        onClick={() => {
-          onSelect();
-          onProject();
-        }}
-        className={cn(
-          "group relative flex h-full cursor-pointer flex-col rounded-lg border-2 bg-card/80 backdrop-blur-sm transition-all",
-          "hover:-translate-y-px hover:border-primary/70 hover:bg-card hover:shadow-lg hover:shadow-primary/10",
-          isProjected
-            ? "border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/25"
-            : isActive
-              ? "border-primary/70 ring-1 ring-primary/20"
-              : "border-border",
-        )}
-      >
-        <div className="flex items-center gap-1.5 rounded-t-[inherit] border-b border-border/60 bg-muted/40 px-2 py-1">
-          <span className="truncate text-[11px] font-bold tracking-tight text-primary">
-            {refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary}
-          </span>
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {isFav && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
-            {isProjected && (
-              <span className="inline-flex items-center gap-1 rounded bg-primary px-1 py-px text-[9px] font-bold uppercase text-primary-foreground">
-                <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />
-                Live
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex-1 space-y-1.5 px-2.5 py-2">
-          <p className="whitespace-pre-wrap text-[12.5px] leading-snug text-foreground/95">
-            {h.text}
-          </p>
-          {pair && (
-            <div className="border-t border-dashed border-border/50 pt-1.5">
-              <p className="whitespace-pre-wrap text-[12px] leading-snug text-muted-foreground">
-                {pair.text}
-              </p>
-            </div>
+      <div className="flex items-center gap-1.5 rounded-t-[inherit] border-b border-border/60 bg-muted/40 px-2 py-1">
+        <span className="truncate text-[11px] font-bold tracking-tight text-primary">
+          {refSecondary ? `${refPrimary} / ${refSecondary}` : refPrimary}
+        </span>
+        <div className="ml-auto flex shrink-0 items-center gap-1">
+          {isFav && <Star className="h-3 w-3 fill-amber-500 text-amber-500" />}
+          {isProjected && (
+            <span className="inline-flex items-center gap-1 rounded bg-primary px-1 py-px text-[9px] font-bold uppercase text-primary-foreground">
+              <span className="h-1 w-1 animate-pulse rounded-full bg-primary-foreground" />
+              Live
+            </span>
           )}
         </div>
+      </div>
 
-        <div className="mt-auto flex items-center gap-0.5 rounded-b-[inherit] border-t border-border/40 bg-muted/20 px-1.5 py-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onToggleFav();
-            }}
-            className={cn(
-              "inline-flex h-6 w-6 items-center justify-center rounded transition",
-              isFav
-                ? "text-amber-500 hover:bg-amber-500/10"
-                : "text-muted-foreground hover:bg-accent hover:text-foreground",
-            )}
-            title={isFav ? "Remove favorite" : "Add favorite"}
-          >
-            <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-              onProject();
-            }}
-            className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground transition hover:opacity-90"
-            title="Project verse (Enter)"
-          >
-            <Send className="h-3 w-3" /> Project
-          </button>
-        </div>
+      <div className="flex-1 space-y-1.5 px-2.5 py-2">
+        <p className="whitespace-pre-wrap text-[12.5px] leading-snug text-foreground/95">
+          {h.text}
+        </p>
+        {pair && (
+          <div className="border-t border-dashed border-border/50 pt-1.5">
+            <p className="whitespace-pre-wrap text-[12px] leading-snug text-muted-foreground">
+              {pair.text}
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="mt-auto flex items-center gap-0.5 rounded-b-[inherit] border-t border-border/40 bg-muted/20 px-1.5 py-1">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFav();
+          }}
+          className={cn(
+            "inline-flex h-6 w-6 items-center justify-center rounded transition",
+            isFav
+              ? "text-amber-500 hover:bg-amber-500/10"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+          title={isFav ? "Remove favorite" : "Add favorite"}
+        >
+          <Star className={cn("h-3.5 w-3.5", isFav && "fill-current")} />
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onSelect();
+            onProject();
+          }}
+          className="ml-auto inline-flex items-center gap-1 rounded bg-primary px-2 py-0.5 text-[10px] font-semibold text-primary-foreground transition hover:opacity-90"
+          title="Project verse (Enter)"
+        >
+          <Send className="h-3 w-3" /> Project
+        </button>
       </div>
     </div>
   );

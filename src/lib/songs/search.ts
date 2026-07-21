@@ -211,11 +211,20 @@ function getMatchIndices(lineTokens: string[], qTokens: string[]): number[] {
     for (let i = 0; i < lineTokens.length; i++) {
       const lt = lineTokens[i];
       if (lt === qt) { bestIdx = i; bestDist = 0; break; }
-      if (lt.includes(qt) || qt.includes(lt)) {
+      
+      // Only allow substring matching if both are at least 4 characters, or one is exactly the other (handled above)
+      if (lt.length >= 4 && qt.length >= 4 && (lt.includes(qt) || qt.includes(lt))) {
         if (1 < bestDist) { bestDist = 1; bestIdx = i; }
       }
+      
+      // Allow prefix matching for 3+ characters
+      if (lt.length >= 3 && qt.length >= 3 && (lt.startsWith(qt) || qt.startsWith(lt))) {
+        if (1.5 < bestDist) { bestDist = 1.5; bestIdx = i; }
+      }
+
       if (Math.abs(lt.length - qt.length) <= 3) {
-        const threshold = Math.min(3, Math.max(lt.length, qt.length) * 0.4);
+        // More lenient threshold: max 3 edits, or 40% of the length
+        const threshold = Math.min(3, Math.max(1, Math.floor(Math.max(lt.length, qt.length) * 0.4)));
         const d = editDist(lt, qt, threshold);
         if (d <= threshold && d < bestDist) {
           bestDist = d;

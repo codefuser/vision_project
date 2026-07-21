@@ -152,7 +152,7 @@ export function tanglishNorm(s: string): string {
     .replace(/f/g, "p")
     .replace(/w/g, "v")
     .replace(/h/g, "");
-  t = t.replace(/oo/g, "u").replace(/ee/g, "i").replace(/aa/g, "a");
+  t = t.replace(/oo/g, "u").replace(/ee/g, "i").replace(/aa/g, "a").replace(/ea/g, "e");
   t = t.replace(/([ptkmnlrsvy])\1+/g, "$1");
   t = t.replace(/[^a-z\s]/g, "");
   t = t.replace(/\s+/g, " ").trim();
