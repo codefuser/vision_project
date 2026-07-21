@@ -10,13 +10,9 @@ import {
   Image as ImageIcon,
   Video as VideoIcon,
   Megaphone,
-  Presentation,
-  ListMusic,
-  Star,
-  Clock,
-  Trash2,
   Plus,
   Pencil,
+  Trash2,
 } from "lucide-react";
 import type { FolderRecord } from "@/db/schema";
 import type { CategoryFilter } from "./types";
@@ -50,6 +46,7 @@ export function LibraryTreeNav({
   onDropItemToFolder,
 }: LibraryTreeNavProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   const toggleExpand = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -77,6 +74,7 @@ export function LibraryTreeNav({
     const hasChildren = children.length > 0;
     const isExpanded = expandedFolders.has(folder.id);
     const isSelected = currentFolderId === folder.id;
+    const isDragOver = dragOverFolderId === folder.id;
     const count = folderCounts[folder.id] || 0;
 
     return (
@@ -86,15 +84,21 @@ export function LibraryTreeNav({
             onSelectFolder(folder.id);
             onSelectCategory("all");
           }}
-          onDragOver={(e) => e.preventDefault()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverFolderId(folder.id);
+          }}
+          onDragLeave={() => setDragOverFolderId(null)}
           onDrop={(e) => {
             e.preventDefault();
+            setDragOverFolderId(null);
             const itemId = e.dataTransfer.getData("text/plain");
             if (itemId) onDropItemToFolder(itemId, folder.id);
           }}
           style={{ paddingLeft: `${depth * 14 + 10}px` }}
           className={cn(
             "group flex h-7 cursor-pointer items-center justify-between pr-2 text-xs transition rounded-md my-0.5 select-none",
+            isDragOver ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
             isSelected
               ? "bg-primary text-primary-foreground font-medium shadow-sm"
               : "text-muted-foreground hover:bg-accent hover:text-foreground",
@@ -143,7 +147,7 @@ export function LibraryTreeNav({
                   onRenameFolder(folder);
                 }}
                 className="h-4 w-4 flex items-center justify-center rounded hover:bg-background/80"
-                title="Rename"
+                title="Rename (F2)"
               >
                 <Pencil className="h-2.5 w-2.5" />
               </button>
@@ -178,8 +182,20 @@ export function LibraryTreeNav({
           onSelectCategory("all");
           onSelectFolder(null);
         }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOverFolderId("root");
+        }}
+        onDragLeave={() => setDragOverFolderId(null)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOverFolderId(null);
+          const itemId = e.dataTransfer.getData("text/plain");
+          if (itemId) onDropItemToFolder(itemId, null);
+        }}
         className={cn(
           "flex h-8 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition mb-2 font-semibold",
+          dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
           currentCategory === "all" && currentFolderId === null
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-foreground hover:bg-accent",

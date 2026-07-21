@@ -7,12 +7,12 @@ import {
   Megaphone,
   Folder,
   Star,
-  Layers,
 } from "lucide-react";
 import type { LibraryItem, ViewMode } from "./types";
 import type { FolderRecord } from "@/db/schema";
 import { formatBytes, formatDuration } from "@/lib/files";
 import { Thumb } from "@/components/Thumb";
+import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { cn } from "@/lib/utils";
 
 interface LibraryExplorerGridProps {
@@ -21,10 +21,16 @@ interface LibraryExplorerGridProps {
   selection: Set<string>;
   viewMode: ViewMode;
   zoomLevel: number;
+  bibleLang: BibleLang;
+  inlineEditingId: string | null;
+  inlineCreatingFolder: boolean;
+  onInlineRenameSubmit: (id: string, newName: string) => void;
+  onInlineCreateSubmit: (name: string) => void;
+  onInlineCancel: () => void;
   onItemClick: (e: React.MouseEvent, item: LibraryItem, index: number) => void;
   onItemDoubleClick: (e: React.MouseEvent, item: LibraryItem) => void;
   onFolderDoubleClick: (folderId: string) => void;
-  onContextMenu: (e: React.MouseEvent, item: LibraryItem) => void;
+  onContextMenu: (e: React.MouseEvent, item: LibraryItem | null) => void;
   onToggleFavorite: (item: LibraryItem) => void;
 }
 
@@ -34,6 +40,12 @@ export function LibraryExplorerGrid({
   selection,
   viewMode,
   zoomLevel,
+  bibleLang,
+  inlineEditingId,
+  inlineCreatingFolder,
+  onInlineRenameSubmit,
+  onInlineCreateSubmit,
+  onInlineCancel,
   onItemClick,
   onItemDoubleClick,
   onFolderDoubleClick,
@@ -42,7 +54,11 @@ export function LibraryExplorerGrid({
 }: LibraryExplorerGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Rubberband drag selection state
+  // Inline editing state for textbox
+  const [editingText, setEditingText] = useState("");
+  const [creatingFolderName, setCreatingFolderName] = useState("New Folder");
+
+  // Rubberband selection state
   const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -75,112 +91,28 @@ export function LibraryExplorerGrid({
   };
 
   const gridStyle = useMemo(() => {
-    let baseWidth = 200;
-    if (viewMode === "large-icons") baseWidth = 260;
-    if (viewMode === "small-icons") baseWidth = 140;
-    const itemWidth = Math.max(120, Math.floor(baseWidth * zoomLevel));
+    let baseWidth = 220;
+    if (viewMode === "large-icons") baseWidth = 280;
+    if (viewMode === "small-icons") baseWidth = 150;
+    const itemWidth = Math.max(130, Math.floor(baseWidth * zoomLevel));
     return {
       gridTemplateColumns: `repeat(auto-fill, minmax(${itemWidth}px, 1fr))`,
     };
   }, [viewMode, zoomLevel]);
 
-  const hasContent = items.length > 0 || subfolders.length > 0;
+  const hasContent = items.length > 0 || subfolders.length > 0 || inlineCreatingFolder;
 
   if (!hasContent) {
     return (
-      <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground select-none">
+      <div
+        onContextMenu={(e) => onContextMenu(e, null)}
+        className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground select-none"
+      >
         <Folder className="mb-2 h-12 w-12 text-muted-foreground/30" />
         <p className="text-sm font-medium text-foreground">This folder is empty</p>
         <p className="mt-1 text-xs opacity-70">
           Upload media or import songs and Bible verses to add content.
         </p>
-      </div>
-    );
-  }
-
-  // Render Details List View
-  if (viewMode === "list" || viewMode === "details") {
-    return (
-      <div
-        ref={containerRef}
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        className="relative flex-1 overflow-y-auto p-2 select-none"
-      >
-        <table className="w-full text-left text-xs border-collapse">
-          <thead>
-            <tr className="border-b border-border/60 text-[11px] font-semibold text-muted-foreground">
-              <th className="py-2 px-3 w-8"></th>
-              <th className="py-2 px-3">Name</th>
-              <th className="py-2 px-3">Type</th>
-              <th className="py-2 px-3">Size / Length</th>
-              <th className="py-2 px-3">Date Added</th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* Render Subfolders */}
-            {subfolders.map((folder) => (
-              <tr
-                key={folder.id}
-                onDoubleClick={() => onFolderDoubleClick(folder.id)}
-                className="cursor-pointer border-b border-border/30 transition hover:bg-accent/60 text-foreground font-medium"
-              >
-                <td className="py-2 px-3 text-center">
-                  <Folder className="h-4 w-4 text-amber-400" />
-                </td>
-                <td className="py-2 px-3">{folder.name}</td>
-                <td className="py-2 px-3 text-muted-foreground">Folder</td>
-                <td className="py-2 px-3 text-muted-foreground">—</td>
-                <td className="py-2 px-3 tabular-nums text-muted-foreground">
-                  {new Date(folder.createdAt).toLocaleDateString(undefined, {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })}
-                </td>
-              </tr>
-            ))}
-
-            {/* Render Items */}
-            {items.map((item, index) => {
-              const selected = selection.has(item.id);
-              return (
-                <tr
-                  key={item.id}
-                  onClick={(e) => onItemClick(e, item, index)}
-                  onDoubleClick={(e) => onItemDoubleClick(e, item)}
-                  onContextMenu={(e) => onContextMenu(e, item)}
-                  className={cn(
-                    "cursor-pointer border-b border-border/30 transition hover:bg-accent/60",
-                    selected ? "bg-primary/15 font-medium text-primary" : "text-foreground",
-                  )}
-                >
-                  <td className="py-2 px-3 text-center">
-                    <TypeIcon type={item.type} />
-                  </td>
-                  <td className="py-2 px-3 font-medium">
-                    <div className="flex items-center gap-2 truncate max-w-md">
-                      <span>{item.name}</span>
-                      {item.isFavorite && <Star className="h-3 w-3 fill-amber-400 text-amber-400" />}
-                    </div>
-                  </td>
-                  <td className="py-2 px-3 capitalize text-muted-foreground">{item.type}</td>
-                  <td className="py-2 px-3 tabular-nums text-muted-foreground">
-                    {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : "—"}
-                  </td>
-                  <td className="py-2 px-3 tabular-nums text-muted-foreground">
-                    {new Date(item.createdAt).toLocaleDateString(undefined, {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
       </div>
     );
   }
@@ -192,6 +124,9 @@ export function LibraryExplorerGrid({
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onContextMenu={(e) => {
+        if (e.target === containerRef.current) onContextMenu(e, null);
+      }}
       className="relative flex-1 overflow-y-auto p-4 select-none"
     >
       {dragBox && (
@@ -207,26 +142,73 @@ export function LibraryExplorerGrid({
       )}
 
       <div className="grid gap-4" style={gridStyle}>
-        {/* Render Subfolder Cards */}
-        {subfolders.map((folder) => (
-          <div
-            key={folder.id}
-            onDoubleClick={() => onFolderDoubleClick(folder.id)}
-            className="group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border border-border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400/60 hover:shadow-md"
-          >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
-              <Folder className="h-6 w-6" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold text-foreground">{folder.name}</p>
-              <span className="text-[10px] text-muted-foreground">Folder</span>
-            </div>
+        {/* Render Inline Folder Creation Card */}
+        {inlineCreatingFolder && (
+          <div className="flex items-center gap-3 overflow-hidden rounded-xl border border-primary bg-primary/10 p-3 shadow-md">
+            <Folder className="h-6 w-6 text-amber-400 shrink-0" />
+            <input
+              type="text"
+              autoFocus
+              value={creatingFolderName}
+              onChange={(e) => setCreatingFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") onInlineCreateSubmit(creatingFolderName);
+                if (e.key === "Escape") onInlineCancel();
+              }}
+              onBlur={() => onInlineCreateSubmit(creatingFolderName)}
+              className="w-full rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
+            />
           </div>
-        ))}
+        )}
 
-        {/* Render Item File Cards */}
+        {/* Render Subfolder Cards */}
+        {subfolders.map((folder) => {
+          const isRenaming = inlineEditingId === folder.id;
+          return (
+            <div
+              key={folder.id}
+              onDoubleClick={() => onFolderDoubleClick(folder.id)}
+              className="group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border border-border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400/60 hover:shadow-md"
+            >
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
+                <Folder className="h-6 w-6" />
+              </div>
+              <div className="min-w-0 flex-1">
+                {isRenaming ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    defaultValue={folder.name}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onInlineRenameSubmit(folder.id, (e.target as HTMLInputElement).value);
+                      if (e.key === "Escape") onInlineCancel();
+                    }}
+                    onBlur={(e) => onInlineRenameSubmit(folder.id, e.target.value)}
+                    className="w-full rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
+                  />
+                ) : (
+                  <>
+                    <p className="truncate text-xs font-semibold text-foreground">{folder.name}</p>
+                    <span className="text-[10px] text-muted-foreground">Folder</span>
+                  </>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Render File Cards */}
         {items.map((item, index) => {
           const selected = selection.has(item.id);
+          const isRenaming = inlineEditingId === item.id;
+
+          // Fetch Bible verse text dynamically for active language
+          const verseText =
+            item.type === "bible" && item.bibleData
+              ? getVerse(bibleLang, item.bibleData.book, item.bibleData.chapter, item.bibleData.verse) ||
+                item.bibleData.text ||
+                "Verse text not found."
+              : "";
 
           return (
             <div
@@ -258,7 +240,7 @@ export function LibraryExplorerGrid({
                     </div>
 
                     <div className="my-1 space-y-1 text-[10.5px] leading-tight text-foreground/80 line-clamp-3">
-                      {item.songData.slides[0]?.split("\n").slice(0, 3).map((line, i) => (
+                      {item.songData.slides[0]?.split("\n").slice(0, 4).map((line, i) => (
                         <p key={i} className="truncate italic">
                           {line}
                         </p>
@@ -266,20 +248,32 @@ export function LibraryExplorerGrid({
                     </div>
                   </div>
                 ) : item.type === "bible" && item.bibleData ? (
+                  /* Dynamic Verse Preview Card for Bible Items */
                   <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-blue-950/40 via-card to-background">
-                    <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                      <BookOpen className="h-3 w-3" /> Bible Verse
-                    </span>
-                    <p className="text-[11px] font-semibold text-primary line-clamp-2">
-                      {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
+                        <BookOpen className="h-3 w-3" /> Bible Verse
+                      </span>
+                      <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
+                        {bibleLang === "en" ? "English" : "Tamil"}
+                      </span>
+                    </div>
+
+                    <div className="my-1 flex flex-col justify-center">
+                      <p className="text-[11px] font-bold text-primary">
+                        {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
+                      </p>
+                      <p className="mt-0.5 text-[10.5px] text-foreground/85 line-clamp-3 italic leading-tight">
+                        "{verseText}"
+                      </p>
+                    </div>
                   </div>
                 ) : item.type === "text" ? (
                   <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-amber-950/40 via-card to-background">
                     <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">
-                      <Megaphone className="h-3 w-3" /> Text / Announcement
+                      <Megaphone className="h-3 w-3" /> Announcement
                     </span>
-                    <p className="text-[11px] text-foreground/80 line-clamp-2">
+                    <p className="text-[11px] text-foreground/80 line-clamp-3 leading-tight">
                       {item.textData?.content}
                     </p>
                   </div>
@@ -307,15 +301,31 @@ export function LibraryExplorerGrid({
 
               {/* Card Label Footer */}
               <div className="px-3 py-2">
-                <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
-                  {item.name}
-                </p>
-                <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span className="capitalize">{item.type}</span>
-                  <span className="tabular-nums">
-                    {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : ""}
-                  </span>
-                </div>
+                {isRenaming ? (
+                  <input
+                    type="text"
+                    autoFocus
+                    defaultValue={item.name}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") onInlineRenameSubmit(item.id, (e.target as HTMLInputElement).value);
+                      if (e.key === "Escape") onInlineCancel();
+                    }}
+                    onBlur={(e) => onInlineRenameSubmit(item.id, e.target.value)}
+                    className="w-full rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
+                  />
+                ) : (
+                  <>
+                    <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
+                      {item.name}
+                    </p>
+                    <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
+                      <span className="capitalize">{item.type}</span>
+                      <span className="tabular-nums">
+                        {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : ""}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           );
@@ -323,21 +333,4 @@ export function LibraryExplorerGrid({
       </div>
     </div>
   );
-}
-
-function TypeIcon({ type }: { type: string }) {
-  switch (type) {
-    case "song":
-      return <Music className="h-4 w-4 text-purple-400" />;
-    case "bible":
-      return <BookOpen className="h-4 w-4 text-blue-400" />;
-    case "image":
-      return <ImageIcon className="h-4 w-4 text-green-400" />;
-    case "video":
-      return <VideoIcon className="h-4 w-4 text-rose-400" />;
-    case "text":
-      return <Megaphone className="h-4 w-4 text-amber-400" />;
-    default:
-      return <Folder className="h-4 w-4 text-amber-400" />;
-  }
 }

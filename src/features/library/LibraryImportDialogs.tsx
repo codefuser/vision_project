@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { Search, Music, BookOpen, FileText, X, Check } from "lucide-react";
+import { Search, Music, BookOpen, FileText, X, Check, Languages } from "lucide-react";
 import { getSongs, type Song } from "@/lib/songs/loader";
 import { searchSongs, type SongHit } from "@/lib/songs/search";
-import { getBible, type BibleData } from "@/lib/bible/loader";
+import { getBible, getVerse, type BibleLang } from "@/lib/bible/loader";
 import type { LibraryItem } from "./types";
 
 // ─── 1. SONG IMPORT DIALOG ──────────────────────────────────────────────────
@@ -48,7 +48,7 @@ export function SongImportDialog({
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Music className="h-5 w-5 text-purple-400" />
-            <h2 className="text-sm font-semibold text-foreground">Import Song to Library</h2>
+            <h2 className="text-sm font-semibold text-foreground">Import Song to File Manager</h2>
           </div>
           <button onClick={onClose} className="rounded p-1 hover:bg-accent">
             <X className="h-4 w-4" />
@@ -150,14 +150,15 @@ export function BibleImportDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  onImport: (verse: { book: number; bookName: string; chapter: number; verse: number; text: string }) => void;
+  onImport: (verse: { book: number; bookName: string; chapter: number; verse: number; text: string; lang: BibleLang }) => void;
 }) {
+  const [lang, setLang] = useState<BibleLang>("en");
   const [book, setBook] = useState(1); // Genesis
   const [chapter, setChapter] = useState(1);
   const [verse, setVerse] = useState(1);
   const [text, setText] = useState("");
 
-  const BOOK_NAMES = [
+  const BOOK_NAMES_EN = [
     "Genesis", "Exodus", "Leviticus", "Numbers", "Deuteronomy", "Joshua", "Judges", "Ruth",
     "1 Samuel", "2 Samuel", "1 Kings", "2 Kings", "1 Chronicles", "2 Chronicles", "Ezra", "Nehemiah",
     "Esther", "Job", "Psalms", "Proverbs", "Ecclesiastes", "Song of Solomon", "Isaiah", "Jeremiah",
@@ -170,12 +171,9 @@ export function BibleImportDialog({
 
   useEffect(() => {
     if (!open) return;
-    const bible = getBible("en");
-    if (bible) {
-      const verseText = bible[book - 1]?.[chapter - 1]?.[verse - 1] || "Verse text not found.";
-      setText(verseText);
-    }
-  }, [open, book, chapter, verse]);
+    const verseText = getVerse(lang, book, chapter, verse) || "Verse text not found.";
+    setText(verseText);
+  }, [open, lang, book, chapter, verse]);
 
   if (!open) return null;
 
@@ -185,7 +183,7 @@ export function BibleImportDialog({
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <BookOpen className="h-5 w-5 text-blue-400" />
-            <h2 className="text-sm font-semibold text-foreground">Import Bible Verse to Library</h2>
+            <h2 className="text-sm font-semibold text-foreground">Import Bible Verse</h2>
           </div>
           <button onClick={onClose} className="rounded p-1 hover:bg-accent">
             <X className="h-4 w-4" />
@@ -193,6 +191,32 @@ export function BibleImportDialog({
         </div>
 
         <div className="p-4 flex flex-col gap-4 text-xs">
+          {/* Language Selector */}
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted/20 p-2">
+            <span className="flex items-center gap-1.5 font-medium text-foreground">
+              <Languages className="h-4 w-4 text-primary" />
+              <span>Language:</span>
+            </span>
+            <div className="flex items-center gap-1 rounded bg-background p-0.5 border border-border">
+              <button
+                onClick={() => setLang("en")}
+                className={`px-3 py-1 rounded text-xs font-semibold transition ${
+                  lang === "en" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                English (KJV)
+              </button>
+              <button
+                onClick={() => setLang("ta")}
+                className={`px-3 py-1 rounded text-xs font-semibold transition ${
+                  lang === "ta" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                Tamil (தமிழ்)
+              </button>
+            </div>
+          </div>
+
           <div className="grid grid-cols-3 gap-2">
             <div>
               <label className="text-[11px] font-medium text-muted-foreground">Book</label>
@@ -201,7 +225,7 @@ export function BibleImportDialog({
                 onChange={(e) => setBook(Number(e.target.value))}
                 className="mt-1 w-full rounded border border-input bg-background p-1.5 focus:outline-none"
               >
-                {BOOK_NAMES.map((name, i) => (
+                {BOOK_NAMES_EN.map((name, i) => (
                   <option key={i} value={i + 1}>
                     {name}
                   </option>
@@ -232,11 +256,16 @@ export function BibleImportDialog({
             </div>
           </div>
 
-          <div className="mt-2 rounded-lg border border-border bg-muted/20 p-3">
-            <span className="font-bold text-primary">
-              {BOOK_NAMES[book - 1]} {chapter}:{verse}
-            </span>
-            <p className="mt-1.5 text-foreground leading-relaxed italic">"{text}"</p>
+          <div className="mt-1 rounded-lg border border-border bg-muted/30 p-3">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-primary">
+                {BOOK_NAMES_EN[book - 1]} {chapter}:{verse}
+              </span>
+              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/10 text-primary">
+                {lang === "en" ? "English" : "Tamil"}
+              </span>
+            </div>
+            <p className="mt-2 text-foreground leading-relaxed italic line-clamp-4">"{text}"</p>
           </div>
         </div>
 
@@ -248,10 +277,11 @@ export function BibleImportDialog({
             onClick={() => {
               onImport({
                 book,
-                bookName: BOOK_NAMES[book - 1],
+                bookName: BOOK_NAMES_EN[book - 1],
                 chapter,
                 verse,
                 text,
+                lang,
               });
               onClose();
             }}
@@ -287,7 +317,7 @@ export function TextImportDialog({
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <FileText className="h-5 w-5 text-amber-400" />
-            <h2 className="text-sm font-semibold text-foreground">Create Text / Announcement</h2>
+            <h2 className="text-sm font-semibold text-foreground">Create Announcement / Text</h2>
           </div>
           <button onClick={onClose} className="rounded p-1 hover:bg-accent">
             <X className="h-4 w-4" />

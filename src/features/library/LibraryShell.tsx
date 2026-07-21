@@ -12,11 +12,11 @@ import { SongImportDialog, BibleImportDialog, TextImportDialog } from "./Library
 import { FloatingActionButton } from "./FloatingActionButton";
 import type { LibraryItem, CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
 import type { Song } from "@/lib/songs/loader";
+import type { BibleLang } from "@/lib/bible/loader";
 import { MediaAdapter } from "@/projection";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { toast } from "sonner";
-import { RenameDialog } from "@/components/RenameDialog";
 
 export function LibraryShell() {
   const {
@@ -29,6 +29,7 @@ export function LibraryShell() {
     setSearch,
     setFolder,
     toggleSelect,
+    clearSelection,
     refreshAll,
     refreshMedia,
     refreshFolders,
@@ -45,26 +46,33 @@ export function LibraryShell() {
   const isResizingLeft = useRef(false);
   const isResizingRight = useRef(false);
 
-  // View States
+  // View & Language States
   const [currentCategory, setCurrentCategory] = useState<CategoryFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [zoomLevel, setZoomLevel] = useState(1.0);
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
+  const [bibleLang, setBibleLang] = useState<BibleLang>("en");
 
   // Navigation History
   const [history, setHistory] = useState<(string | null)[]>([null]);
   const [historyIdx, setHistoryIdx] = useState(0);
 
-  // Inspector & Context Menu State
+  // Inline Editing & Creation State
+  const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
+  const [inlineCreatingFolder, setInlineCreatingFolder] = useState(false);
+
+  // Clipboard Buffer (Ctrl+C, Ctrl+X, Ctrl+V)
+  const [clipboard, setClipboard] = useState<{ action: "copy" | "cut"; items: LibraryItem[] } | null>(null);
+
+  // Context Menu State
   const [inspectedItem, setInspectedItem] = useState<LibraryItem | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: LibraryItem } | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: LibraryItem | null } | null>(null);
 
   // Dialog States
   const [showSongImport, setShowSongImport] = useState(false);
   const [showBibleImport, setShowBibleImport] = useState(false);
   const [showTextImport, setShowTextImport] = useState(false);
-  const [renameTarget, setRenameTarget] = useState<LibraryItem | null>(null);
 
   // Custom Items
   const [customItems, setCustomItems] = useState<LibraryItem[]>(() => {
@@ -87,7 +95,7 @@ export function LibraryShell() {
     if (!loaded) void refreshAll();
   }, [loaded, refreshAll]);
 
-  // Panel Drag-to-Resize Listeners
+  // Resizable Panels Event Listeners
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft.current) {
@@ -143,12 +151,10 @@ export function LibraryShell() {
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
 
-    // Folder Scope
     if (currentFolderId !== null) {
       out = out.filter((item) => item.folderId === currentFolderId);
     }
 
-    // Category Filter
     if (currentCategory === "songs") out = out.filter((i) => i.type === "song");
     else if (currentCategory === "bible") out = out.filter((i) => i.type === "bible");
     else if (currentCategory === "media") out = out.filter((i) => i.type === "image" || i.type === "video");
@@ -157,13 +163,11 @@ export function LibraryShell() {
     else if (currentCategory === "announcements") out = out.filter((i) => i.type === "text");
     else if (currentCategory === "favorites") out = out.filter((i) => i.isFavorite);
 
-    // Search Query Filter
     const q = search.trim().toLowerCase();
     if (q) {
       out = out.filter((i) => i.name.toLowerCase().includes(q));
     }
 
-    // Sort Order
     return [...out].sort((a, b) => {
       let valA: any = a[sortField] ?? "";
       let valB: any = b[sortField] ?? "";
@@ -174,6 +178,151 @@ export function LibraryShell() {
       return 0;
     });
   }, [allLibraryItems, currentFolderId, currentCategory, search, sortField, sortOrder]);
+
+  const selectedItems = useMemo(() => {
+    return filteredItems.filter((i) => selection.has(i.id));
+  }, [filteredItems, selection]);
+
+  // Unique Folder Validation
+  const validateUniqueFolder = useCallback(
+    (name: string, targetFolderId: string | null = currentFolderId, excludeFolderId?: string) => {
+      const trimmed = name.trim().toLowerCase();
+      const existing = folders.find(
+        (f) => f.parentId === targetFolderId && f.name.trim().toLowerCase() === trimmed && f.id !== excludeFolderId,
+      );
+      if (existing) {
+        toast.error("A folder with this name already exists.");
+        return false;
+      }
+      return true;
+    },
+    [folders, currentFolderId],
+  );
+
+  // Folder Creation Action
+  const handleCreateFolderSubmit = async (name: string) => {
+    setInlineCreatingFolder(false);
+    if (!name.trim()) return;
+    if (!validateUniqueFolder(name, currentFolderId)) return;
+    const folder = await createFolder(name.trim(), currentFolderId);
+    await refreshFolders();
+    toast.success(`Created Folder: ${folder.name}`);
+  };
+
+  // Inline Rename Action
+  const handleInlineRenameSubmit = async (id: string, newName: string) => {
+    setInlineEditingId(null);
+    if (!newName.trim()) return;
+
+    // Check if target is a folder
+    const folderTarget = folders.find((f) => f.id === id);
+    if (folderTarget) {
+      if (!validateUniqueFolder(newName, folderTarget.parentId, folderTarget.id)) return;
+      await renameFolder(id, newName.trim());
+      await refreshFolders();
+      toast.success("Folder renamed");
+      return;
+    }
+
+    // Check if target is media item
+    const itemTarget = allLibraryItems.find((i) => i.id === id);
+    if (itemTarget) {
+      if (itemTarget.mediaRecord) {
+        await renameMedia(id, newName.trim());
+        await refreshMedia();
+      } else {
+        setCustomItems((prev) =>
+          prev.map((i) => (i.id === id ? { ...i, name: newName.trim() } : i)),
+        );
+      }
+      toast.success("Item renamed");
+    }
+  };
+
+  // Desktop Keyboard Shortcuts Listener
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // F2: Start Inline Rename
+      if (e.key === "F2" && selectedItems.length === 1) {
+        e.preventDefault();
+        setInlineEditingId(selectedItems[0].id);
+        return;
+      }
+
+      // Delete: Remove Selected
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedItems.length > 0) {
+        e.preventDefault();
+        const mediaIds = selectedItems.filter((i) => i.mediaRecord).map((i) => i.id);
+        const customIds = new Set(selectedItems.filter((i) => !i.mediaRecord).map((i) => i.id));
+        if (mediaIds.length) {
+          deleteMedia(mediaIds).then(refreshMedia);
+        }
+        if (customIds.size) {
+          setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
+        }
+        toast.success(`Deleted ${selectedItems.length} item(s)`);
+        return;
+      }
+
+      // Ctrl+A: Select All
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        filteredItems.forEach((i) => toggleSelect(i.id, true));
+        return;
+      }
+
+      // Ctrl+C: Copy
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "c" && selectedItems.length > 0) {
+        e.preventDefault();
+        setClipboard({ action: "copy", items: selectedItems });
+        toast.info(`Copied ${selectedItems.length} item(s) to clipboard`);
+        return;
+      }
+
+      // Ctrl+X: Cut
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "x" && selectedItems.length > 0) {
+        e.preventDefault();
+        setClipboard({ action: "cut", items: selectedItems });
+        toast.info(`Cut ${selectedItems.length} item(s)`);
+        return;
+      }
+
+      // Ctrl+V: Paste
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "v" && clipboard) {
+        e.preventDefault();
+        if (clipboard.action === "cut") {
+          const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+          if (mediaIds.length) {
+            moveMedia(mediaIds, currentFolderId).then(refreshMedia);
+          }
+          setCustomItems((prev) =>
+            prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
+          );
+          toast.success(`Moved ${clipboard.items.length} item(s) to current folder`);
+          setClipboard(null);
+        } else {
+          const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+          if (mediaIds.length) {
+            duplicateMedia(mediaIds).then(refreshMedia);
+          }
+          toast.success(`Pasted ${clipboard.items.length} item(s)`);
+        }
+        return;
+      }
+
+      // Esc: Clear selection & Cancel inline editing
+      if (e.key === "Escape") {
+        clearSelection();
+        setInlineEditingId(null);
+        setInlineCreatingFolder(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedItems, filteredItems, clipboard, currentFolderId, toggleSelect, clearSelection, refreshMedia]);
 
   // Counts Calculation
   const categoryCounts = useMemo<Record<CategoryFilter, number>>(() => {
@@ -256,14 +405,14 @@ export function LibraryShell() {
       toast.success(`Projecting Song: ${item.name}`);
     } else if (item.bibleData) {
       await projectVerse({
-        translation: item.bibleData.translation as any,
+        translation: bibleLang === "en" ? "KJV" : ("TCV" as any),
         book: item.bibleData.book,
         chapter: item.bibleData.chapter,
         verse: item.bibleData.verse,
       });
-      toast.success(`Projecting Verse: ${item.name}`);
+      toast.success(`Projecting Verse (${bibleLang.toUpperCase()}): ${item.name}`);
     }
-  }, []);
+  }, [bibleLang]);
 
   const handleItemDoubleClick = useCallback(
     (e: React.MouseEvent, item: LibraryItem) => {
@@ -272,7 +421,7 @@ export function LibraryShell() {
     [projectItem],
   );
 
-  const handleContextMenu = useCallback((e: React.MouseEvent, item: LibraryItem) => {
+  const handleContextMenu = useCallback((e: React.MouseEvent, item: LibraryItem | null) => {
     e.preventDefault();
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   }, []);
@@ -292,7 +441,7 @@ export function LibraryShell() {
     toast.success(`Imported Song to current folder: ${song.title}`);
   };
 
-  const handleImportBible = (verse: { book: number; bookName: string; chapter: number; verse: number; text: string }) => {
+  const handleImportBible = (verse: { book: number; bookName: string; chapter: number; verse: number; text: string; lang: BibleLang }) => {
     const newItem: LibraryItem = {
       id: `bible-${verse.book}-${verse.chapter}-${verse.verse}-${Date.now()}`,
       name: `${verse.bookName} ${verse.chapter}:${verse.verse}`,
@@ -300,7 +449,7 @@ export function LibraryShell() {
       folderId: currentFolderId,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      bibleData: { ...verse, translation: "KJV" },
+      bibleData: { ...verse, translation: verse.lang },
     };
     setCustomItems((prev) => [newItem, ...prev]);
     toast.success(`Imported Verse to current folder: ${newItem.name}`);
@@ -319,31 +468,6 @@ export function LibraryShell() {
     setCustomItems((prev) => [newItem, ...prev]);
     toast.success(`Created Text in current folder: ${title}`);
   };
-
-  const handleCreateFolder = async (parentId: string | null = currentFolderId) => {
-    const folder = await createFolder("New Folder", parentId);
-    await refreshFolders();
-    toast.success(`Created Folder: ${folder.name}`);
-  };
-
-  const handleDeleteItem = async (items: LibraryItem[]) => {
-    const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
-    const customIds = new Set(items.filter((i) => !i.mediaRecord).map((i) => i.id));
-
-    if (mediaIds.length) {
-      await deleteMedia(mediaIds);
-      await refreshMedia();
-    }
-
-    if (customIds.size) {
-      setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
-    }
-    toast.success(`Deleted ${items.length} item(s)`);
-  };
-
-  const selectedItems = useMemo(() => {
-    return filteredItems.filter((i) => selection.has(i.id));
-  }, [filteredItems, selection]);
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-background">
@@ -370,7 +494,7 @@ export function LibraryShell() {
         onZoomChange={setZoomLevel}
         onSortChange={setSortField}
         onToggleSortOrder={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
-        onNewFolder={() => void handleCreateFolder()}
+        onNewFolder={() => setInlineCreatingFolder(true)}
         onUploadClick={() => {
           const el = document.createElement("input");
           el.type = "file";
@@ -399,13 +523,8 @@ export function LibraryShell() {
             folderCounts={folderCounts}
             onSelectCategory={setCurrentCategory}
             onSelectFolder={navigateToFolder}
-            onCreateFolder={handleCreateFolder}
-            onRenameFolder={(f) => {
-              const name = prompt("Rename folder:", f.name);
-              if (name && name !== f.name) {
-                renameFolder(f.id, name).then(refreshFolders);
-              }
-            }}
+            onCreateFolder={() => setInlineCreatingFolder(true)}
+            onRenameFolder={(f) => setInlineEditingId(f.id)}
             onDeleteFolder={(f) => {
               if (confirm(`Delete folder "${f.name}"?`)) {
                 deleteFolderDeep(f.id).then(refreshFolders);
@@ -435,6 +554,15 @@ export function LibraryShell() {
           selection={selection}
           viewMode={viewMode}
           zoomLevel={zoomLevel}
+          bibleLang={bibleLang}
+          inlineEditingId={inlineEditingId}
+          inlineCreatingFolder={inlineCreatingFolder}
+          onInlineRenameSubmit={handleInlineRenameSubmit}
+          onInlineCreateSubmit={handleCreateFolderSubmit}
+          onInlineCancel={() => {
+            setInlineEditingId(null);
+            setInlineCreatingFolder(false);
+          }}
           onItemClick={handleItemClick}
           onItemDoubleClick={handleItemDoubleClick}
           onFolderDoubleClick={navigateToFolder}
@@ -458,6 +586,8 @@ export function LibraryShell() {
         <div style={{ width: `${rightWidth}px` }} className="shrink-0">
           <LibraryPreviewPane
             item={inspectedItem}
+            bibleLang={bibleLang}
+            onBibleLangChange={setBibleLang}
             onClose={() => setInspectedItem(null)}
             onProject={projectItem}
           />
@@ -479,7 +609,7 @@ export function LibraryShell() {
 
       {/* Floating Action Button */}
       <FloatingActionButton
-        onNewFolder={() => void handleCreateFolder()}
+        onNewFolder={() => setInlineCreatingFolder(true)}
         onImportSong={() => setShowSongImport(true)}
         onImportBible={() => setShowBibleImport(true)}
         onImportMedia={() => {
@@ -504,12 +634,13 @@ export function LibraryShell() {
         <LibraryContextMenu
           x={contextMenu.x}
           y={contextMenu.y}
-          selectedItems={selectedItems.length ? selectedItems : [contextMenu.item]}
+          selectedItems={contextMenu.item ? (selectedItems.length ? selectedItems : [contextMenu.item]) : []}
+          isCanvasBackground={!contextMenu.item}
           onClose={() => setContextMenu(null)}
           onOpen={projectItem}
           onPreview={setInspectedItem}
           onProject={projectItem}
-          onRename={setRenameTarget}
+          onRename={(item) => setInlineEditingId(item.id)}
           onDuplicate={(items) => {
             const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
             if (mediaIds.length) {
@@ -517,14 +648,52 @@ export function LibraryShell() {
             }
           }}
           onMove={() => {}}
-          onCopy={() => {}}
-          onCut={() => {}}
-          onPaste={() => {}}
-          onDelete={handleDeleteItem}
+          onCopy={(items) => {
+            setClipboard({ action: "copy", items });
+            toast.info(`Copied ${items.length} item(s)`);
+          }}
+          onCut={(items) => {
+            setClipboard({ action: "cut", items });
+            toast.info(`Cut ${items.length} item(s)`);
+          }}
+          onPaste={() => {
+            if (!clipboard) return;
+            if (clipboard.action === "cut") {
+              const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+              if (mediaIds.length) {
+                moveMedia(mediaIds, currentFolderId).then(refreshMedia);
+              }
+              setCustomItems((prev) =>
+                prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
+              );
+              toast.success(`Moved ${clipboard.items.length} item(s)`);
+              setClipboard(null);
+            } else {
+              const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
+              if (mediaIds.length) {
+                duplicateMedia(mediaIds).then(refreshMedia);
+              }
+              toast.success(`Pasted ${clipboard.items.length} item(s)`);
+            }
+          }}
+          onDelete={(items) => {
+            const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
+            const customIds = new Set(items.filter((i) => !i.mediaRecord).map((i) => i.id));
+            if (mediaIds.length) {
+              deleteMedia(mediaIds).then(refreshMedia);
+            }
+            if (customIds.size) {
+              setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
+            }
+            toast.success(`Deleted ${items.length} item(s)`);
+          }}
           onToggleFavorite={(item) => {
             if (item.mediaRecord) toggleFav(item.id);
           }}
           onShowProperties={setInspectedItem}
+          onNewFolder={() => setInlineCreatingFolder(true)}
+          onRefresh={refreshAll}
+          onSelectAll={() => filteredItems.forEach((i) => toggleSelect(i.id, true))}
         />
       )}
 
@@ -544,28 +713,6 @@ export function LibraryShell() {
         onClose={() => setShowTextImport(false)}
         onImport={handleCreateText}
       />
-
-      {/* Rename Dialog */}
-      {renameTarget && (
-        <RenameDialog
-          open={!!renameTarget}
-          initialName={renameTarget.name}
-          title="Item"
-          onCancel={() => setRenameTarget(null)}
-          onSubmit={async (name) => {
-            if (renameTarget.mediaRecord) {
-              await renameMedia(renameTarget.id, name);
-              await refreshMedia();
-            } else {
-              setCustomItems((prev) =>
-                prev.map((i) => (i.id === renameTarget.id ? { ...i, name } : i)),
-              );
-            }
-            setRenameTarget(null);
-            toast.success("Renamed");
-          }}
-        />
-      )}
     </div>
   );
 }

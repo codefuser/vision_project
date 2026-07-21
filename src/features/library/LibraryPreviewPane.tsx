@@ -9,20 +9,31 @@ import {
   Megaphone,
   Folder,
   Info,
+  Languages,
 } from "lucide-react";
 import type { LibraryItem } from "./types";
 import { formatBytes, formatDuration } from "@/lib/files";
 import { Thumb } from "@/components/Thumb";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
+import { getVerse, type BibleLang } from "@/lib/bible/loader";
+import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { toast } from "sonner";
 
 interface LibraryPreviewPaneProps {
   item: LibraryItem | null;
+  bibleLang: BibleLang;
+  onBibleLangChange: (lang: BibleLang) => void;
   onClose: () => void;
   onProject: (item: LibraryItem) => void;
 }
 
-export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewPaneProps) {
+export function LibraryPreviewPane({
+  item,
+  bibleLang,
+  onBibleLangChange,
+  onClose,
+  onProject,
+}: LibraryPreviewPaneProps) {
   if (!item) {
     return (
       <aside className="flex h-full w-80 shrink-0 flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
@@ -34,6 +45,14 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
       </aside>
     );
   }
+
+  // Calculate verse text dynamically for active language
+  const bibleVerseText =
+    item.type === "bible" && item.bibleData
+      ? getVerse(bibleLang, item.bibleData.book, item.bibleData.chapter, item.bibleData.verse) ||
+        item.bibleData.text ||
+        "Verse text unavailable."
+      : "";
 
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-card/60 p-4 select-none">
@@ -67,11 +86,16 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
           </div>
         ) : item.type === "bible" && item.bibleData ? (
           <div className="flex flex-col gap-2 p-3 bg-muted/20 rounded text-xs">
-            <span className="font-bold text-primary">
-              {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
-            </span>
-            <p className="mt-1 text-[11px] text-foreground leading-relaxed italic">
-              "{item.bibleData.text}"
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-primary">
+                {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
+              </span>
+              <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+                {bibleLang === "en" ? "KJV" : "TCV"}
+              </span>
+            </div>
+            <p className="mt-1 text-[11.5px] text-foreground leading-relaxed italic line-clamp-6">
+              "{bibleVerseText}"
             </p>
           </div>
         ) : (
@@ -81,11 +105,39 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
         )}
       </div>
 
+      {/* Bible Language Switcher (Tamil vs English) */}
+      {item.type === "bible" && item.bibleData && (
+        <div className="mb-3 flex items-center justify-between rounded-md border border-border bg-card p-2 text-xs">
+          <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
+            <Languages className="h-3.5 w-3.5 text-primary" />
+            <span>Bible Language:</span>
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => onBibleLangChange("en")}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
+                bibleLang === "en" ? "bg-primary text-primary-foreground font-semibold" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              English
+            </button>
+            <button
+              onClick={() => onBibleLangChange("ta")}
+              className={`px-2 py-0.5 rounded text-[11px] font-medium transition ${
+                bibleLang === "ta" ? "bg-primary text-primary-foreground font-semibold" : "bg-muted text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              Tamil
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Individual Slide Cards Section for Songs */}
       {item.type === "song" && item.songData && (
         <div className="my-3 flex flex-col gap-2">
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
-            Slides ({item.songData.slides.length})
+            Song Slides ({item.songData.slides.length})
           </span>
           <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
             {item.songData.slides.map((slideText, idx) => (
@@ -118,7 +170,19 @@ export function LibraryPreviewPane({ item, onClose, onProject }: LibraryPreviewP
       {/* Primary Action Button */}
       {item.type !== "song" && (
         <button
-          onClick={() => onProject(item)}
+          onClick={() => {
+            if (item.type === "bible" && item.bibleData) {
+              void projectVerse({
+                translation: bibleLang === "en" ? "KJV" : ("TCV" as any),
+                book: item.bibleData.book,
+                chapter: item.bibleData.chapter,
+                verse: item.bibleData.verse,
+              });
+              toast.success(`Projecting Verse (${bibleLang.toUpperCase()})`);
+            } else {
+              onProject(item);
+            }
+          }}
           className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-md bg-primary py-2 text-xs font-semibold text-primary-foreground shadow transition hover:bg-primary/90"
         >
           <Play className="h-3.5 w-3.5 fill-current" />

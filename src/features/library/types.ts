@@ -1,5 +1,6 @@
 import type { MediaRecord, FolderRecord } from "@/db/schema";
 import type { Song } from "@/lib/songs/loader";
+import type { BibleLang } from "@/lib/bible/loader";
 
 export type LibraryItemType =
   | "image"
@@ -51,15 +52,15 @@ export interface LibraryItem {
   height?: number;
   blobId?: string;
   thumbBlobId?: string | null;
-  // Payload objects
+  // Specific payloads
   songData?: Song;
   bibleData?: {
     book: number;
     bookName: string;
     chapter: number;
     verse: number;
-    text: string;
-    translation: string;
+    text?: string;
+    translation?: BibleLang;
   };
   textData?: {
     content: string;
