@@ -1,7 +1,4 @@
 {
   "version": 2,
-  "buildCommand": "vite build && nitro build --preset vercel",
-  "outputDirectory": ".vercel/output/static",
-  "cleanUrls": true,
-  "trailingSlash": false
+  "buildCommand": "vite build && nitro build --preset vercel"
 }

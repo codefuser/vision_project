@@ -1,7 +1,12 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
+import { LibraryPage } from "@/features/library/LibraryPage";
 
 export const Route = createFileRoute("/")({
-  beforeLoad: () => {
-    throw redirect({ to: "/library" });
-  },
+  head: () => ({
+    meta: [
+      { title: "Church Media — Projection Software" },
+      { name: "description", content: "Offline-first media projection software for churches." },
+    ],
+  }),
+  component: () => <LibraryPage />,
 });
