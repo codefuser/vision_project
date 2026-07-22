@@ -13,6 +13,9 @@ import {
   FolderPlus,
   RotateCw,
   CheckSquare,
+  FolderOpen,
+  ExternalLink,
+  FolderInput,
 } from "lucide-react";
 import type { LibraryItem } from "./types";
 
@@ -81,10 +84,11 @@ export function LibraryContextMenu({
   }, [onClose]);
 
   const targetItem = selectedItems[0];
+  const isFolderTarget = targetItem?.type === "folder" || !!targetItem?.folderRecord;
 
   // Adjust coordinates so menu stays inside viewport
   const adjustedX = Math.min(x, (typeof window !== "undefined" ? window.innerWidth : 1000) - 220);
-  const adjustedY = Math.min(y, (typeof window !== "undefined" ? window.innerHeight : 800) - 340);
+  const adjustedY = Math.min(y, (typeof window !== "undefined" ? window.innerHeight : 800) - 360);
 
   // Background Canvas Context Menu
   if (isCanvasBackground || !targetItem) {
@@ -145,6 +149,134 @@ export function LibraryContextMenu({
     );
   }
 
+  // Folder Specific Desktop Context Menu
+  if (isFolderTarget) {
+    return (
+      <div
+        ref={menuRef}
+        style={{ left: `${adjustedX}px`, top: `${adjustedY}px` }}
+        className="fixed z-50 w-52 overflow-hidden rounded-lg border border-border bg-popover/95 p-1 text-xs text-popover-foreground shadow-2xl backdrop-blur select-none"
+      >
+        <button
+          onClick={() => {
+            onOpen(targetItem);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 font-semibold hover:bg-accent"
+        >
+          <FolderOpen className="h-3.5 w-3.5 text-amber-400" />
+          <span>Open</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onOpen(targetItem);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+          <span>Open in New Tab</span>
+        </button>
+
+        <div className="my-1 h-px bg-border/60" />
+
+        <button
+          onClick={() => {
+            onRename(targetItem);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+          <span>Rename (F2)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onCopy(selectedItems);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Copy className="h-3.5 w-3.5" />
+          <span>Copy (Ctrl+C)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onCut(selectedItems);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Scissors className="h-3.5 w-3.5" />
+          <span>Cut (Ctrl+X)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onPaste();
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Clipboard className="h-3.5 w-3.5" />
+          <span>Paste (Ctrl+V)</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onDuplicate(selectedItems);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <Layers className="h-3.5 w-3.5" />
+          <span>Duplicate</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onMove(selectedItems);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        >
+          <FolderInput className="h-3.5 w-3.5" />
+          <span>Move</span>
+        </button>
+
+        <div className="my-1 h-px bg-border/60" />
+
+        <button
+          onClick={() => {
+            onDelete(selectedItems);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-destructive hover:bg-destructive/10"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+          <span>Delete</span>
+        </button>
+
+        <div className="my-1 h-px bg-border/60" />
+
+        <button
+          onClick={() => {
+            onShowProperties(targetItem);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent text-muted-foreground"
+        >
+          <Info className="h-3.5 w-3.5" />
+          <span>Properties</span>
+        </button>
+      </div>
+    );
+  }
+
+  // Files Desktop Context Menu
   return (
     <div
       ref={menuRef}
@@ -170,7 +302,7 @@ export function LibraryContextMenu({
         className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
       >
         <Eye className="h-3.5 w-3.5" />
-        <span>Open in Inspector</span>
+        <span>Preview</span>
       </button>
 
       <div className="my-1 h-px bg-border/60" />
@@ -188,13 +320,13 @@ export function LibraryContextMenu({
 
       <button
         onClick={() => {
-          onCut(selectedItems);
+          onMove(selectedItems);
           onClose();
         }}
         className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
       >
-        <Scissors className="h-3.5 w-3.5" />
-        <span>Cut (Ctrl+X)</span>
+        <FolderInput className="h-3.5 w-3.5" />
+        <span>Move</span>
       </button>
 
       <button
@@ -210,24 +342,24 @@ export function LibraryContextMenu({
 
       <button
         onClick={() => {
-          onPaste();
+          onCut(selectedItems);
           onClose();
         }}
         className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
       >
-        <Clipboard className="h-3.5 w-3.5" />
-        <span>Paste (Ctrl+V)</span>
+        <Scissors className="h-3.5 w-3.5" />
+        <span>Cut (Ctrl+X)</span>
       </button>
 
       <button
         onClick={() => {
-          onDuplicate(selectedItems);
+          onDelete(selectedItems);
           onClose();
         }}
-        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
+        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-destructive hover:bg-destructive/10"
       >
-        <Layers className="h-3.5 w-3.5" />
-        <span>Duplicate</span>
+        <Trash2 className="h-3.5 w-3.5" />
+        <span>Delete (Del)</span>
       </button>
 
       <div className="my-1 h-px bg-border/60" />
@@ -245,13 +377,13 @@ export function LibraryContextMenu({
 
       <button
         onClick={() => {
-          onDelete(selectedItems);
+          onDuplicate(selectedItems);
           onClose();
         }}
-        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-destructive hover:bg-destructive/10"
+        className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent"
       >
-        <Trash2 className="h-3.5 w-3.5" />
-        <span>Delete (Del)</span>
+        <Layers className="h-3.5 w-3.5" />
+        <span>Duplicate</span>
       </button>
 
       <div className="my-1 h-px bg-border/60" />

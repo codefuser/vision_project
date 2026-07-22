@@ -19,6 +19,13 @@ import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { formatBytes } from "@/lib/files";
 import { toast } from "sonner";
 
+// Undo Stack Action Types
+type UndoAction =
+  | { type: "move"; items: LibraryItem[]; previousFolderId: string | null; targetFolderId: string | null }
+  | { type: "delete"; items: LibraryItem[] }
+  | { type: "rename"; id: string; oldName: string; newName: string }
+  | { type: "createFolder"; folderId: string; folderName: string };
+
 export function LibraryShell() {
   const {
     folders,
@@ -40,7 +47,7 @@ export function LibraryShell() {
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
-  // Rigid Resizable Panel Widths (VS Code style splitters)
+  // Rigid Resizable Panel Widths
   const [leftWidth, setLeftWidth] = useState(240);
   const [rightWidth, setRightWidth] = useState(320);
 
@@ -58,6 +65,16 @@ export function LibraryShell() {
   // Navigation History
   const [history, setHistory] = useState<(string | null)[]>([null]);
   const [historyIdx, setHistoryIdx] = useState(0);
+
+  // Range Selection Tracker
+  const lastClickedIndexRef = useRef<number | null>(null);
+
+  // Undo Stack (`Ctrl+Z`)
+  const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+
+  const pushUndo = useCallback((action: UndoAction) => {
+    setUndoStack((prev) => [...prev.slice(-30), action]);
+  }, []);
 
   // Inline Editing & Creation State
   const [inlineEditingId, setInlineEditingId] = useState<string | null>(null);
@@ -143,12 +160,10 @@ export function LibraryShell() {
     return [...mediaItems, ...customItems];
   }, [media, customItems, favSet]);
 
-  // Subfolders under current folder context
   const currentSubfolders = useMemo(() => {
     return folders.filter((f) => f.parentId === currentFolderId);
   }, [folders, currentFolderId]);
 
-  // Filtered File Items
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
 
@@ -184,10 +199,57 @@ export function LibraryShell() {
     return filteredItems.filter((i) => selection.has(i.id));
   }, [filteredItems, selection]);
 
-  // Folder Total Size Calculation
   const totalFolderSizeBytes = useMemo(() => {
     return filteredItems.reduce((acc, item) => acc + (item.size || 0), 0);
   }, [filteredItems]);
+
+  // Execute Undo (`Ctrl+Z`)
+  const handleUndo = useCallback(async () => {
+    if (undoStack.length === 0) {
+      toast.info("Nothing to undo.");
+      return;
+    }
+
+    const lastAction = undoStack[undoStack.length - 1];
+    setUndoStack((prev) => prev.slice(0, -1));
+
+    if (lastAction.type === "move") {
+      const mediaIds = lastAction.items.filter((i) => i.mediaRecord).map((i) => i.id);
+      if (mediaIds.length) {
+        await moveMedia(mediaIds, lastAction.previousFolderId);
+        await refreshMedia();
+      }
+      setCustomItems((prev) =>
+        prev.map((i) =>
+          lastAction.items.some((c) => c.id === i.id) ? { ...i, folderId: lastAction.previousFolderId } : i,
+        ),
+      );
+      toast.success(`Undid Move: Restored ${lastAction.items.length} item(s)`);
+    } else if (lastAction.type === "delete") {
+      const customRestores = lastAction.items.filter((i) => !i.mediaRecord);
+      if (customRestores.length) {
+        setCustomItems((prev) => [...customRestores, ...prev]);
+      }
+      toast.success(`Undid Delete: Restored ${lastAction.items.length} item(s)`);
+    } else if (lastAction.type === "rename") {
+      const folderTarget = folders.find((f) => f.id === lastAction.id);
+      if (folderTarget) {
+        await renameFolder(lastAction.id, lastAction.oldName);
+        await refreshFolders();
+      } else {
+        await renameMedia(lastAction.id, lastAction.oldName);
+        await refreshMedia();
+        setCustomItems((prev) =>
+          prev.map((i) => (i.id === lastAction.id ? { ...i, name: lastAction.oldName } : i)),
+        );
+      }
+      toast.success(`Undid Rename: Restored "${lastAction.oldName}"`);
+    } else if (lastAction.type === "createFolder") {
+      await deleteFolderDeep(lastAction.folderId);
+      await refreshFolders();
+      toast.success(`Undid Folder Creation: Removed "${lastAction.folderName}"`);
+    }
+  }, [undoStack, folders, refreshMedia, refreshFolders]);
 
   // Unique Folder Validation
   const validateUniqueFolder = useCallback(
@@ -205,32 +267,34 @@ export function LibraryShell() {
     [folders, currentFolderId],
   );
 
-  // Folder Creation Action
   const handleCreateFolderSubmit = async (name: string) => {
     setInlineCreatingFolder(false);
     if (!name.trim()) return;
     if (!validateUniqueFolder(name, currentFolderId)) return;
     const folder = await createFolder(name.trim(), currentFolderId);
     await refreshFolders();
-    toast.success(`Created Folder: ${folder.name}`);
+    pushUndo({ type: "createFolder", folderId: folder.id, folderName: folder.name });
+    toast.success(`Created Folder: ${folder.name} (Ctrl+Z to Undo)`);
   };
 
-  // Inline Rename Action
   const handleInlineRenameSubmit = async (id: string, newName: string) => {
     setInlineEditingId(null);
     if (!newName.trim()) return;
 
     const folderTarget = folders.find((f) => f.id === id);
     if (folderTarget) {
+      if (folderTarget.name === newName.trim()) return;
       if (!validateUniqueFolder(newName, folderTarget.parentId, folderTarget.id)) return;
       await renameFolder(id, newName.trim());
       await refreshFolders();
-      toast.success("Folder renamed");
+      pushUndo({ type: "rename", id, oldName: folderTarget.name, newName: newName.trim() });
+      toast.success("Folder renamed (Ctrl+Z to Undo)");
       return;
     }
 
     const itemTarget = allLibraryItems.find((i) => i.id === id);
     if (itemTarget) {
+      if (itemTarget.name === newName.trim()) return;
       if (itemTarget.mediaRecord) {
         await renameMedia(id, newName.trim());
         await refreshMedia();
@@ -239,14 +303,22 @@ export function LibraryShell() {
           prev.map((i) => (i.id === id ? { ...i, name: newName.trim() } : i)),
         );
       }
-      toast.success("Item renamed");
+      pushUndo({ type: "rename", id, oldName: itemTarget.name, newName: newName.trim() });
+      toast.success("Item renamed (Ctrl+Z to Undo)");
     }
   };
 
-  // Desktop Keyboard Shortcuts Listener
+  // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Ctrl+Z: Undo
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        void handleUndo();
+        return;
+      }
 
       // Arrow Keys Grid Navigation
       if (e.key === "ArrowDown" || e.key === "ArrowRight") {
@@ -257,6 +329,7 @@ export function LibraryShell() {
         clearSelection();
         toggleSelect(filteredItems[nextIdx].id, false);
         setInspectedItem(filteredItems[nextIdx]);
+        lastClickedIndexRef.current = nextIdx;
         return;
       }
 
@@ -268,6 +341,7 @@ export function LibraryShell() {
         clearSelection();
         toggleSelect(filteredItems[prevIdx].id, false);
         setInspectedItem(filteredItems[prevIdx]);
+        lastClickedIndexRef.current = prevIdx;
         return;
       }
 
@@ -278,7 +352,7 @@ export function LibraryShell() {
         return;
       }
 
-      // F2: Start Inline Rename
+      // F2: Inline Rename
       if (e.key === "F2" && selectedItems.length === 1) {
         e.preventDefault();
         setInlineEditingId(selectedItems[0].id);
@@ -296,7 +370,8 @@ export function LibraryShell() {
         if (customIds.size) {
           setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
         }
-        toast.success(`Deleted ${selectedItems.length} item(s)`);
+        pushUndo({ type: "delete", items: selectedItems });
+        toast.success(`Deleted ${selectedItems.length} item(s) (Ctrl+Z to Undo)`);
         return;
       }
 
@@ -334,7 +409,13 @@ export function LibraryShell() {
           setCustomItems((prev) =>
             prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
           );
-          toast.success(`Moved ${clipboard.items.length} item(s) to current folder`);
+          pushUndo({
+            type: "move",
+            items: clipboard.items,
+            previousFolderId: clipboard.items[0]?.folderId ?? null,
+            targetFolderId: currentFolderId,
+          });
+          toast.success(`Moved ${clipboard.items.length} item(s) (Ctrl+Z to Undo)`);
           setClipboard(null);
         } else {
           const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
@@ -346,7 +427,6 @@ export function LibraryShell() {
         return;
       }
 
-      // Esc: Clear selection & Cancel inline editing
       if (e.key === "Escape") {
         clearSelection();
         setInlineEditingId(null);
@@ -356,9 +436,8 @@ export function LibraryShell() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedItems, filteredItems, clipboard, currentFolderId, toggleSelect, clearSelection, refreshMedia]);
+  }, [selectedItems, filteredItems, clipboard, currentFolderId, handleUndo, pushUndo, toggleSelect, clearSelection, refreshMedia]);
 
-  // Counts Calculation
   const categoryCounts = useMemo<Record<CategoryFilter, number>>(() => {
     const counts: Record<CategoryFilter, number> = {
       all: allLibraryItems.length,
@@ -387,7 +466,6 @@ export function LibraryShell() {
     return counts;
   }, [allLibraryItems]);
 
-  // Navigation History Handling
   const navigateToFolder = useCallback(
     (folderId: string | null) => {
       setFolder(folderId);
@@ -421,13 +499,24 @@ export function LibraryShell() {
     navigateToFolder(current?.parentId ?? null);
   }, [currentFolderId, folders, navigateToFolder]);
 
-  // Actions
+  // Click & Selection Handling (Single, Ctrl, Shift)
   const handleItemClick = useCallback(
     (e: React.MouseEvent, item: LibraryItem, index: number) => {
-      toggleSelect(item.id, e.ctrlKey || e.metaKey);
+      if (e.shiftKey && lastClickedIndexRef.current !== null) {
+        // Shift + Click Range Selection
+        const start = Math.min(lastClickedIndexRef.current, index);
+        const end = Math.max(lastClickedIndexRef.current, index);
+        clearSelection();
+        for (let i = start; i <= end; i++) {
+          toggleSelect(filteredItems[i].id, true);
+        }
+      } else {
+        toggleSelect(item.id, e.ctrlKey || e.metaKey);
+        lastClickedIndexRef.current = index;
+      }
       setInspectedItem(item);
     },
-    [toggleSelect],
+    [filteredItems, toggleSelect, clearSelection],
   );
 
   const projectItem = useCallback(async (item: LibraryItem) => {
@@ -460,7 +549,37 @@ export function LibraryShell() {
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   }, []);
 
-  // Import Handler Logic
+  // Drop Items to Target Folder Action
+  const handleDropItemsToFolder = useCallback(
+    async (itemIds: string[], targetFolderId: string | null) => {
+      const movedItems = allLibraryItems.filter((i) => itemIds.includes(i.id));
+      if (movedItems.length === 0) return;
+
+      const previousFolderId = movedItems[0].folderId;
+      const mediaIds = movedItems.filter((i) => i.mediaRecord).map((i) => i.id);
+
+      if (mediaIds.length) {
+        await moveMedia(mediaIds, targetFolderId);
+        await refreshMedia();
+      }
+
+      setCustomItems((prev) =>
+        prev.map((i) => (itemIds.includes(i.id) ? { ...i, folderId: targetFolderId } : i)),
+      );
+
+      pushUndo({
+        type: "move",
+        items: movedItems,
+        previousFolderId,
+        targetFolderId,
+      });
+
+      toast.success(`Moved ${movedItems.length} item(s) to folder. (Ctrl+Z to Undo)`);
+    },
+    [allLibraryItems, pushUndo, refreshMedia],
+  );
+
+  // Imports & Actions
   const handleImportSongBatch = (songs: Song[]) => {
     const newItems: LibraryItem[] = songs.map((s, idx) => ({
       id: `song-${s.id}-${Date.now()}-${idx}`,
@@ -472,7 +591,7 @@ export function LibraryShell() {
       songData: s,
     }));
     setCustomItems((prev) => [...newItems, ...prev]);
-    toast.success(`Imported ${songs.length} Song(s) to current folder`);
+    toast.success(`Imported ${songs.length} Song(s)`);
   };
 
   const handleImportBible = (verse: {
@@ -509,7 +628,7 @@ export function LibraryShell() {
       textData: { content },
     };
     setCustomItems((prev) => [newItem, ...prev]);
-    toast.success(`Created Text in current folder: ${title}`);
+    toast.success(`Created Text: ${title}`);
   };
 
   const handleDeleteItems = (items: LibraryItem[]) => {
@@ -521,7 +640,8 @@ export function LibraryShell() {
     if (customIds.size) {
       setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
     }
-    toast.success(`Deleted ${items.length} item(s)`);
+    pushUndo({ type: "delete", items });
+    toast.success(`Deleted ${items.length} item(s) (Ctrl+Z to Undo)`);
   };
 
   const handleDuplicateItems = (items: LibraryItem[]) => {
@@ -537,7 +657,7 @@ export function LibraryShell() {
       onContextMenu={(e) => e.preventDefault()}
       className="flex h-full w-full flex-col overflow-hidden bg-background select-none"
     >
-      {/* Top Quick Action File Explorer Toolbar */}
+      {/* Top Quick Action Toolbar */}
       <LibraryToolbar
         currentCategory={currentCategory}
         currentFolderId={currentFolderId}
@@ -571,7 +691,7 @@ export function LibraryShell() {
               const { importFiles } = await import("@/db/repo");
               await importFiles(Array.from(el.files), currentFolderId);
               await refreshMedia();
-              toast.success(`Uploaded ${el.files.length} file(s) to current folder`);
+              toast.success(`Uploaded ${el.files.length} file(s)`);
             }
           };
           el.click();
@@ -585,20 +705,13 @@ export function LibraryShell() {
         onCopyClick={() => {
           if (selectedItems.length) {
             setClipboard({ action: "copy", items: selectedItems });
-            toast.info(`Copied ${selectedItems.length} item(s)`);
+            toast.info(`Copy ${selectedItems.length} item(s)`);
           }
         }}
         onPasteClick={() => {
           if (!clipboard) return;
           if (clipboard.action === "cut") {
-            const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
-            if (mediaIds.length) {
-              moveMedia(mediaIds, currentFolderId).then(refreshMedia);
-            }
-            setCustomItems((prev) =>
-              prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
-            );
-            toast.success(`Moved ${clipboard.items.length} item(s)`);
+            handleDropItemsToFolder(clipboard.items.map((i) => i.id), currentFolderId);
             setClipboard(null);
           } else {
             const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
@@ -631,10 +744,7 @@ export function LibraryShell() {
                 deleteFolderDeep(f.id).then(refreshFolders);
               }
             }}
-            onDropItemToFolder={async (itemId, folderId) => {
-              await moveMedia([itemId], folderId);
-              await refreshMedia();
-            }}
+            onDropItemToFolder={(itemId, folderId) => handleDropItemsToFolder([itemId], folderId)}
           />
         </div>
 
@@ -672,6 +782,7 @@ export function LibraryShell() {
             onToggleFavorite={(item) => {
               if (item.mediaRecord) toggleFav(item.id);
             }}
+            onDropItemsToFolder={handleDropItemsToFolder}
           />
         </div>
 
@@ -767,14 +878,7 @@ export function LibraryShell() {
           onPaste={() => {
             if (!clipboard) return;
             if (clipboard.action === "cut") {
-              const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);
-              if (mediaIds.length) {
-                moveMedia(mediaIds, currentFolderId).then(refreshMedia);
-              }
-              setCustomItems((prev) =>
-                prev.map((i) => (clipboard.items.some((c) => c.id === i.id) ? { ...i, folderId: currentFolderId } : i)),
-              );
-              toast.success(`Moved ${clipboard.items.length} item(s)`);
+              handleDropItemsToFolder(clipboard.items.map((i) => i.id), currentFolderId);
               setClipboard(null);
             } else {
               const mediaIds = clipboard.items.filter((i) => i.mediaRecord).map((i) => i.id);

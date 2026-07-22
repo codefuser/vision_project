@@ -1,4 +1,4 @@
-﻿export function renderErrorPage(): string {
+export function renderErrorPage(): string {
   return `<!doctype html>
 <html lang="en" class="dark">
   <head>
@@ -103,6 +103,10 @@
 const KNOWN_ROUTE_PREFIXES = [
   "/",
   "/library",
+  "/file-manager",
+  "/songs",
+  "/bible",
+  "/media",
   "/history",
   "/playlists",
   "/project",
@@ -112,10 +116,18 @@ const KNOWN_ROUTE_PREFIXES = [
   "/contact",
   "/roadmap",
   "/developer-hub",
+  "/assets",
+  "/_build",
+  "/_tanstack",
+  "/favicon",
 ];
 
 export function isNotFoundRequest(pathname: string): boolean {
   if (pathname === "/") return false;
+  // Ignore static assets & file extensions
+  if (/\.(js|css|png|jpg|jpeg|gif|svg|ico|json|woff|woff2|ttf|eot)$/i.test(pathname)) {
+    return false;
+  }
   return !KNOWN_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );

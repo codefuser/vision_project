@@ -7,6 +7,7 @@ import {
   Megaphone,
   Folder,
   Star,
+  Layers,
 } from "lucide-react";
 import type { LibraryItem, ViewMode } from "./types";
 import type { FolderRecord } from "@/db/schema";
@@ -32,6 +33,7 @@ interface LibraryExplorerGridProps {
   onFolderDoubleClick: (folderId: string) => void;
   onContextMenu: (e: React.MouseEvent, item: LibraryItem | null) => void;
   onToggleFavorite: (item: LibraryItem) => void;
+  onDropItemsToFolder: (itemIds: string[], targetFolderId: string | null) => void;
 }
 
 export function LibraryExplorerGrid({
@@ -51,23 +53,27 @@ export function LibraryExplorerGrid({
   onFolderDoubleClick,
   onContextMenu,
   onToggleFavorite,
+  onDropItemsToFolder,
 }: LibraryExplorerGridProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Inline editing state for textbox
+  // Inline editing state for folder creation
   const [creatingFolderName, setCreatingFolderName] = useState("New Folder");
 
-  // Rubberband selection state
+  // Drag over target folder ID inside center grid
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
+  // Rubberband selection box state
   const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (e.target !== containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     setDragBox({
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top,
-      currentX: e.clientX - rect.left,
-      currentY: e.clientY - rect.top,
+      startX: e.clientX - rect.left + containerRef.current.scrollLeft,
+      startY: e.clientY - rect.top + containerRef.current.scrollTop,
+      currentX: e.clientX - rect.left + containerRef.current.scrollLeft,
+      currentY: e.clientY - rect.top + containerRef.current.scrollTop,
     });
   };
 
@@ -78,8 +84,8 @@ export function LibraryExplorerGrid({
       prev
         ? {
             ...prev,
-            currentX: e.clientX - rect.left,
-            currentY: e.clientY - rect.top,
+            currentX: e.clientX - rect.left + containerRef.current!.scrollLeft,
+            currentY: e.clientY - rect.top + containerRef.current!.scrollTop,
           }
         : null,
     );
@@ -87,6 +93,28 @@ export function LibraryExplorerGrid({
 
   const handleMouseUp = () => {
     setDragBox(null);
+  };
+
+  // HTML5 Drag Start Handler (Attaches drag ghost + item payload)
+  const handleDragStart = (e: React.DragEvent, item: LibraryItem) => {
+    const selectedIds = selection.has(item.id)
+      ? Array.from(selection)
+      : [item.id];
+    
+    e.dataTransfer.setData("application/json", JSON.stringify(selectedIds));
+    e.dataTransfer.setData("text/plain", item.id);
+
+    // Custom Drag Ghost Badge
+    const ghost = document.createElement("div");
+    ghost.className =
+      "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
+    ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} item(s)</span>`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 20, 20);
+
+    setTimeout(() => {
+      document.body.removeChild(ghost);
+    }, 0);
   };
 
   const gridStyle = useMemo(() => {
@@ -119,7 +147,6 @@ export function LibraryExplorerGrid({
     );
   }
 
-  // Render Grid Cards View
   return (
     <div
       ref={containerRef}
@@ -132,14 +159,15 @@ export function LibraryExplorerGrid({
       }}
       className="relative flex-1 min-w-0 overflow-y-auto p-4 select-none"
     >
+      {/* Rubberband Selection Box */}
       {dragBox && (
         <div
-          className="pointer-events-none absolute z-30 border border-primary bg-primary/20 rounded"
+          className="pointer-events-none absolute z-30 border border-primary bg-primary/20 rounded shadow-sm"
           style={{
             left: `${Math.min(dragBox.startX, dragBox.currentX)}px`,
             top: `${Math.min(dragBox.startY, dragBox.currentY)}px`,
             width: `${Math.abs(dragBox.currentX - dragBox.startX)}px`,
-            height: `${Math.abs(dragBox.currentY - dragBox.startX)}px`,
+            height: `${Math.abs(dragBox.currentY - dragBox.startY)}px`,
           }}
         />
       )}
@@ -164,9 +192,11 @@ export function LibraryExplorerGrid({
           </div>
         )}
 
-        {/* Render Subfolder Cards */}
+        {/* Render Subfolder Cards (Drop Targets) */}
         {subfolders.map((folder) => {
           const isRenaming = inlineEditingId === folder.id;
+          const isDragOver = dragOverFolderId === folder.id;
+
           return (
             <div
               key={folder.id}
@@ -179,7 +209,33 @@ export function LibraryExplorerGrid({
                 e.stopPropagation();
                 onContextMenu(e, null);
               }}
-              className="group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border border-border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:border-amber-400/60 hover:shadow-md"
+              onDragOver={(e) => {
+                e.preventDefault();
+                setDragOverFolderId(folder.id);
+              }}
+              onDragLeave={() => setDragOverFolderId(null)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragOverFolderId(null);
+                try {
+                  const dataStr = e.dataTransfer.getData("application/json");
+                  const itemIds: string[] = dataStr
+                    ? JSON.parse(dataStr)
+                    : [e.dataTransfer.getData("text/plain")];
+                  if (itemIds.length) {
+                    onDropItemsToFolder(itemIds, folder.id);
+                  }
+                } catch {
+                  const singleId = e.dataTransfer.getData("text/plain");
+                  if (singleId) onDropItemsToFolder([singleId], folder.id);
+                }
+              }}
+              className={cn(
+                "group relative flex items-center gap-3 cursor-pointer overflow-hidden rounded-xl border p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                isDragOver
+                  ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400 scale-[1.02]"
+                  : "border-border bg-card/80 hover:border-amber-400/60",
+              )}
             >
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
                 <Folder className="h-6 w-6" />
@@ -213,7 +269,6 @@ export function LibraryExplorerGrid({
           const selected = selection.has(item.id);
           const isRenaming = inlineEditingId === item.id;
 
-          // Fetch Bible verse text dynamically for active language
           const verseText =
             item.type === "bible" && item.bibleData
               ? getVerse(bibleLang, item.bibleData.book, item.bibleData.chapter, item.bibleData.verse) ||
@@ -225,7 +280,7 @@ export function LibraryExplorerGrid({
             <div
               key={item.id}
               draggable
-              onDragStart={(e) => e.dataTransfer.setData("text/plain", item.id)}
+              onDragStart={(e) => handleDragStart(e, item)}
               onClick={(e) => onItemClick(e, item, index)}
               onDoubleClick={(e) => onItemDoubleClick(e, item)}
               onContextMenu={(e) => {
@@ -242,7 +297,6 @@ export function LibraryExplorerGrid({
                 {item.mediaRecord ? (
                   <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
                 ) : item.type === "song" && item.songData ? (
-                  /* Miniature Document Preview for Songs */
                   <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-purple-950/40 via-card to-background">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
@@ -262,7 +316,6 @@ export function LibraryExplorerGrid({
                     </div>
                   </div>
                 ) : item.type === "bible" && item.bibleData ? (
-                  /* Dynamic Verse Preview Card for Bible Items */
                   <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-blue-950/40 via-card to-background">
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
