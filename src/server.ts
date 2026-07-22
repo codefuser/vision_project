@@ -12,7 +12,8 @@ import { getRouter } from "./router";
 
 const fetchHandler = createStartHandler({
   createRouter: getRouter,
-})(defaultStreamHandler);
+  handler: defaultStreamHandler,
+});
 const serverEntry: ServerEntry = {
   fetch: fetchHandler as any
 };
