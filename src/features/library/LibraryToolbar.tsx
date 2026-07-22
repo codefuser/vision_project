@@ -29,6 +29,7 @@ interface LibraryToolbarProps {
   currentFolderId: string | null;
   folders: FolderRecord[];
   search: string;
+  searchScope: "folder" | "library";
   viewMode: ViewMode;
   zoomLevel: number;
   sortField: SortField;
@@ -41,6 +42,7 @@ interface LibraryToolbarProps {
   onGoUp: () => void;
   onRefresh: () => void;
   onSearchChange: (s: string) => void;
+  onSearchScopeChange: (scope: "folder" | "library") => void;
   onCategoryChange: (cat: CategoryFilter) => void;
   onFolderChange: (id: string | null) => void;
   onViewModeChange: (mode: ViewMode) => void;
@@ -54,6 +56,7 @@ interface LibraryToolbarProps {
   onPasteClick: () => void;
   onDuplicateClick: () => void;
   onDeleteClick: () => void;
+  onDropItemsToFolder: (itemIds: string[], targetFolderId: string | null) => void;
 }
 
 export function LibraryToolbar({
@@ -61,6 +64,7 @@ export function LibraryToolbar({
   currentFolderId,
   folders,
   search,
+  searchScope,
   viewMode,
   zoomLevel,
   sortField,
@@ -73,6 +77,7 @@ export function LibraryToolbar({
   onGoUp,
   onRefresh,
   onSearchChange,
+  onSearchScopeChange,
   onCategoryChange,
   onFolderChange,
   onViewModeChange,
@@ -86,6 +91,7 @@ export function LibraryToolbar({
   onPasteClick,
   onDuplicateClick,
   onDeleteClick,
+  onDropItemsToFolder,
 }: LibraryToolbarProps) {
   return (
     <header className="flex shrink-0 flex-col border-b border-border bg-card/60 backdrop-blur select-none">
@@ -134,19 +140,31 @@ export function LibraryToolbar({
             folders={folders}
             onSelectCategory={onCategoryChange}
             onSelectFolder={onFolderChange}
+            onDropItemsToFolder={onDropItemsToFolder}
           />
         </div>
 
         {/* Search Bar */}
-        <div className="relative w-60">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => onSearchChange(e.target.value)}
-            placeholder="Search File Manager…"
-            className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+        <div className="relative flex items-center gap-1">
+          <div className="relative w-60">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => onSearchChange(e.target.value)}
+              placeholder="Search File Manager…"
+              className="h-8 w-full rounded-md border border-input bg-background pl-8 pr-3 text-xs focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+          </div>
+          <select
+            value={searchScope}
+            onChange={(e) => onSearchScopeChange(e.target.value as "folder" | "library")}
+            className="h-8 cursor-pointer rounded border border-input bg-background px-2 text-xs focus:outline-none"
+            title="Search Scope"
+          >
+            <option value="folder">Current Folder</option>
+            <option value="library">Entire Library</option>
+          </select>
         </div>
 
         {/* Quick Action Buttons */}

@@ -17,6 +17,7 @@ import {
 import type { FolderRecord } from "@/db/schema";
 import type { CategoryFilter } from "./types";
 import { cn } from "@/lib/utils";
+import { useDragAutoScroll } from "./useDragAutoScroll";
 
 interface LibraryTreeNavProps {
   currentCategory: CategoryFilter;
@@ -50,6 +51,8 @@ export function LibraryTreeNav({
 
   // Auto-expand folder on drag hover timer
   const dragHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useDragAutoScroll(scrollRef, 8, 40);
 
   const toggleExpand = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -69,10 +72,10 @@ export function LibraryTreeNav({
       // Clear previous timer
       if (dragHoverTimerRef.current) clearTimeout(dragHoverTimerRef.current);
 
-      // Set 600ms hover timer to auto-expand collapsed folder
+      // Set 500ms hover timer to auto-expand collapsed folder
       dragHoverTimerRef.current = setTimeout(() => {
         setExpandedFolders((prev) => new Set(prev).add(folderId));
-      }, 600);
+      }, 500);
     }
   };
 
@@ -198,7 +201,7 @@ export function LibraryTreeNav({
   };
 
   return (
-    <aside className="flex h-full w-full flex-col overflow-y-auto bg-card/40 p-2 border-r border-border select-none">
+    <aside ref={scrollRef} className="flex h-full w-full flex-col overflow-y-auto bg-card/40 p-2 border-r border-border select-none">
       {/* File Manager Root */}
       <button
         onClick={() => {

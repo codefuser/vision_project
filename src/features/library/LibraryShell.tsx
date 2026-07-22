@@ -48,8 +48,14 @@ export function LibraryShell() {
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
   // Rigid Resizable Panel Widths
-  const [leftWidth, setLeftWidth] = useState(240);
-  const [rightWidth, setRightWidth] = useState(320);
+  const [leftWidth, setLeftWidth] = useState(() => {
+    if (typeof window === "undefined") return 240;
+    return Number(window.localStorage.getItem("lib_left_w")) || 240;
+  });
+  const [rightWidth, setRightWidth] = useState(() => {
+    if (typeof window === "undefined") return 320;
+    return Number(window.localStorage.getItem("lib_right_w")) || 320;
+  });
 
   const isResizingLeft = useRef(false);
   const isResizingRight = useRef(false);
@@ -61,6 +67,7 @@ export function LibraryShell() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [bibleLang, setBibleLang] = useState<BibleLang>("en");
+  const [searchScope, setSearchScope] = useState<"folder" | "library">("folder");
 
   // Navigation History
   const [history, setHistory] = useState<(string | null)[]>([null]);
@@ -71,9 +78,11 @@ export function LibraryShell() {
 
   // Undo Stack (`Ctrl+Z`)
   const [undoStack, setUndoStack] = useState<UndoAction[]>([]);
+  const [redoStack, setRedoStack] = useState<UndoAction[]>([]);
 
   const pushUndo = useCallback((action: UndoAction) => {
     setUndoStack((prev) => [...prev.slice(-30), action]);
+    setRedoStack([]);
   }, []);
 
   // Inline Editing & Creation State
@@ -112,6 +121,13 @@ export function LibraryShell() {
   useEffect(() => {
     if (!loaded) void refreshAll();
   }, [loaded, refreshAll]);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("lib_left_w", String(leftWidth));
+      window.localStorage.setItem("lib_right_w", String(rightWidth));
+    } catch {}
+  }, [leftWidth, rightWidth]);
 
   // Panel Drag-to-Resize Listeners
   useEffect(() => {
@@ -167,7 +183,7 @@ export function LibraryShell() {
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
 
-    if (currentFolderId !== null) {
+    if (currentFolderId !== null && searchScope === "folder") {
       out = out.filter((item) => item.folderId === currentFolderId);
     }
 
@@ -181,7 +197,21 @@ export function LibraryShell() {
 
     const q = search.trim().toLowerCase();
     if (q) {
-      out = out.filter((i) => i.name.toLowerCase().includes(q));
+      out = out.filter((i) => {
+        if (i.name.toLowerCase().includes(q)) return true;
+        if (i.type === "song" && i.songData) {
+          return i.songData.slides.some((slide) => slide.toLowerCase().includes(q));
+        }
+        if (i.type === "bible" && i.bibleData) {
+          if (i.bibleData.text && i.bibleData.text.toLowerCase().includes(q)) return true;
+          // also search book name
+          if (i.bibleData.bookName.toLowerCase().includes(q)) return true;
+        }
+        if (i.type === "text" && i.textData) {
+          return i.textData.content.toLowerCase().includes(q);
+        }
+        return false;
+      });
     }
 
     return [...out].sort((a, b) => {
@@ -212,6 +242,7 @@ export function LibraryShell() {
 
     const lastAction = undoStack[undoStack.length - 1];
     setUndoStack((prev) => prev.slice(0, -1));
+    setRedoStack((prev) => [...prev, lastAction]);
 
     if (lastAction.type === "move") {
       const mediaIds = lastAction.items.filter((i) => i.mediaRecord).map((i) => i.id);
@@ -250,6 +281,60 @@ export function LibraryShell() {
       toast.success(`Undid Folder Creation: Removed "${lastAction.folderName}"`);
     }
   }, [undoStack, folders, refreshMedia, refreshFolders]);
+
+  // Execute Redo (`Ctrl+Y`)
+  const handleRedo = useCallback(async () => {
+    if (redoStack.length === 0) {
+      toast.info("Nothing to redo.");
+      return;
+    }
+
+    const lastAction = redoStack[redoStack.length - 1];
+    setRedoStack((prev) => prev.slice(0, -1));
+    setUndoStack((prev) => [...prev, lastAction]);
+
+    if (lastAction.type === "move") {
+      const mediaIds = lastAction.items.filter((i) => i.mediaRecord).map((i) => i.id);
+      if (mediaIds.length) {
+        await moveMedia(mediaIds, lastAction.targetFolderId);
+        await refreshMedia();
+      }
+      setCustomItems((prev) =>
+        prev.map((i) =>
+          lastAction.items.some((c) => c.id === i.id) ? { ...i, folderId: lastAction.targetFolderId } : i,
+        ),
+      );
+      toast.success(`Redid Move: Moved ${lastAction.items.length} item(s)`);
+    } else if (lastAction.type === "delete") {
+      const mediaIds = lastAction.items.filter((i) => i.mediaRecord).map((i) => i.id);
+      const customIds = new Set(lastAction.items.filter((i) => !i.mediaRecord).map((i) => i.id));
+      if (mediaIds.length) {
+        await deleteMedia(mediaIds);
+        await refreshMedia();
+      }
+      if (customIds.size) {
+        setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
+      }
+      toast.success(`Redid Delete: Removed ${lastAction.items.length} item(s)`);
+    } else if (lastAction.type === "rename") {
+      const folderTarget = folders.find((f) => f.id === lastAction.id);
+      if (folderTarget) {
+        await renameFolder(lastAction.id, lastAction.newName);
+        await refreshFolders();
+      } else {
+        await renameMedia(lastAction.id, lastAction.newName);
+        await refreshMedia();
+        setCustomItems((prev) =>
+          prev.map((i) => (i.id === lastAction.id ? { ...i, name: lastAction.newName } : i)),
+        );
+      }
+      toast.success(`Redid Rename: Renamed to "${lastAction.newName}"`);
+    } else if (lastAction.type === "createFolder") {
+      await createFolder(lastAction.folderName, currentFolderId);
+      await refreshFolders();
+      toast.success(`Redid Folder Creation: Created "${lastAction.folderName}"`);
+    }
+  }, [redoStack, folders, currentFolderId, refreshMedia, refreshFolders]);
 
   // Unique Folder Validation
   const validateUniqueFolder = useCallback(
@@ -313,35 +398,58 @@ export function LibraryShell() {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
+      // Ctrl+Y or Ctrl+Shift+Z: Redo
+      if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
+        e.preventDefault();
+        void handleRedo();
+        return;
+      }
+
       // Ctrl+Z: Undo
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
         e.preventDefault();
         void handleUndo();
         return;
       }
 
-      // Arrow Keys Grid Navigation
-      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-        e.preventDefault();
-        if (filteredItems.length === 0) return;
-        const currentIdx = filteredItems.findIndex((i) => selection.has(i.id));
-        const nextIdx = currentIdx < filteredItems.length - 1 ? currentIdx + 1 : 0;
-        clearSelection();
-        toggleSelect(filteredItems[nextIdx].id, false);
-        setInspectedItem(filteredItems[nextIdx]);
-        lastClickedIndexRef.current = nextIdx;
-        return;
-      }
+      const navigableNodes = [...currentSubfolders, ...filteredItems.filter((i) => i.type !== "folder")];
 
-      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+      // Grid Navigation
+      const getNextIdx = (key: string, currentIdx: number) => {
+        if (key === "ArrowDown" || key === "ArrowRight") return currentIdx < navigableNodes.length - 1 ? currentIdx + 1 : 0;
+        if (key === "ArrowUp" || key === "ArrowLeft") return currentIdx > 0 ? currentIdx - 1 : navigableNodes.length - 1;
+        if (key === "Home") return 0;
+        if (key === "End") return navigableNodes.length - 1;
+        if (key === "PageDown") return Math.min(navigableNodes.length - 1, currentIdx + 10);
+        if (key === "PageUp") return Math.max(0, currentIdx - 10);
+        return -1;
+      };
+
+      const currentIdx = navigableNodes.findIndex((n) => selection.has(n.id));
+      const nextIdx = getNextIdx(e.key, currentIdx === -1 ? 0 : currentIdx);
+
+      if (nextIdx !== -1 && navigableNodes.length > 0) {
         e.preventDefault();
-        if (filteredItems.length === 0) return;
-        const currentIdx = filteredItems.findIndex((i) => selection.has(i.id));
-        const prevIdx = currentIdx > 0 ? currentIdx - 1 : filteredItems.length - 1;
-        clearSelection();
-        toggleSelect(filteredItems[prevIdx].id, false);
-        setInspectedItem(filteredItems[prevIdx]);
-        lastClickedIndexRef.current = prevIdx;
+        const nextNode = navigableNodes[nextIdx];
+        const nextId = nextNode.id;
+        
+        if (!e.shiftKey && !e.ctrlKey && !e.metaKey) {
+          clearSelection();
+          toggleSelect(nextId, false);
+        } else {
+          toggleSelect(nextId, true);
+        }
+        
+        // Dispatch event for virtualized grid to scroll
+        window.dispatchEvent(new CustomEvent("library-scroll-to", { detail: { id: nextId } }));
+        
+        if ("mediaRecord" in nextNode || "songData" in nextNode || "bibleData" in nextNode || "textData" in nextNode) {
+          setInspectedItem(nextNode as LibraryItem);
+        } else {
+          setInspectedItem(null);
+        }
+        
+        lastClickedIndexRef.current = nextIdx;
         return;
       }
 
@@ -549,6 +657,50 @@ export function LibraryShell() {
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   }, []);
 
+  const handleRenameSubmit = useCallback(
+    async (id: string, newName: string) => {
+      if (!newName.trim() || !id) {
+        setInlineEditingId(null);
+        return;
+      }
+
+      const isFolder = folders.some((f) => f.id === id);
+      try {
+        if (isFolder) {
+          const old = folders.find((f) => f.id === id);
+          if (old?.name !== newName.trim()) {
+            if (!validateUniqueFolder(newName.trim(), currentFolderId, id)) return;
+            await renameFolder(id, newName.trim());
+            pushUndo({ type: "rename", id, oldName: old!.name, newName: newName.trim() });
+          }
+          await refreshFolders();
+        } else {
+          const old = customItems.find((i) => i.id === id) || allLibraryItems.find((i) => i.id === id);
+          if (old?.name !== newName.trim()) {
+            await renameMedia(id, newName.trim());
+            setCustomItems((prev) => prev.map((i) => (i.id === id ? { ...i, name: newName.trim() } : i)));
+            pushUndo({ type: "rename", id, oldName: old!.name, newName: newName.trim() });
+          }
+          await refreshMedia();
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("Failed to rename item");
+      } finally {
+        setInlineEditingId(null);
+      }
+    },
+    [folders, customItems, allLibraryItems, currentFolderId, validateUniqueFolder, refreshFolders, refreshMedia, pushUndo],
+  );
+
+  const handleSelectMultiple = useCallback((ids: string[], append: boolean) => {
+    setSelection((prev) => {
+      const next = append ? new Set(prev) : new Set<string>();
+      ids.forEach((id) => next.add(id));
+      return next;
+    });
+  }, []);
+
   // Drop Items to Target Folder Action
   const handleDropItemsToFolder = useCallback(
     async (itemIds: string[], targetFolderId: string | null) => {
@@ -663,6 +815,8 @@ export function LibraryShell() {
         currentFolderId={currentFolderId}
         folders={folders}
         search={search}
+        searchScope={searchScope}
+        onSearchScopeChange={setSearchScope}
         viewMode={viewMode}
         zoomLevel={zoomLevel}
         sortField={sortField}
@@ -723,6 +877,7 @@ export function LibraryShell() {
         }}
         onDuplicateClick={() => handleDuplicateItems(selectedItems)}
         onDeleteClick={() => handleDeleteItems(selectedItems)}
+        onDropItemsToFolder={handleDropItemsToFolder}
       />
 
       {/* Rigid 3-Pane Explorer Body */}
@@ -761,7 +916,7 @@ export function LibraryShell() {
         {/* Pane 2: Center File Explorer Grid */}
         <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           <LibraryExplorerGrid
-            items={filteredItems}
+            items={filteredItems.filter((i) => i.type !== "folder")}
             subfolders={currentSubfolders}
             selection={selection}
             viewMode={viewMode}
@@ -769,7 +924,7 @@ export function LibraryShell() {
             bibleLang={bibleLang}
             inlineEditingId={inlineEditingId}
             inlineCreatingFolder={inlineCreatingFolder}
-            onInlineRenameSubmit={handleInlineRenameSubmit}
+            onInlineRenameSubmit={handleRenameSubmit}
             onInlineCreateSubmit={handleCreateFolderSubmit}
             onInlineCancel={() => {
               setInlineEditingId(null);
@@ -783,6 +938,8 @@ export function LibraryShell() {
               if (item.mediaRecord) toggleFav(item.id);
             }}
             onDropItemsToFolder={handleDropItemsToFolder}
+            onSelectMultiple={handleSelectMultiple}
+            onTriggerRename={setInlineEditingId}
           />
         </div>
 
@@ -817,6 +974,8 @@ export function LibraryShell() {
       <footer className="flex h-6 items-center justify-between border-t border-border px-3 text-[11px] text-muted-foreground bg-muted/20 select-none">
         <div className="flex items-center gap-3">
           <span>{filteredItems.length} items</span>
+          <span>·</span>
+          <span>{currentSubfolders.length} folders</span>
           <span>·</span>
           <span>{formatBytes(totalFolderSizeBytes)}</span>
           {selection.size > 0 && <span className="ml-3 font-semibold text-foreground">{selection.size} selected</span>}

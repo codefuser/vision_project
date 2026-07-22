@@ -25,6 +25,7 @@ import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { toast } from "sonner";
+import { useDragAutoScroll } from "./useDragAutoScroll";
 
 interface LibraryPreviewPaneProps {
   item: LibraryItem | null;
@@ -51,6 +52,9 @@ export function LibraryPreviewPane({
   onDelete,
   onDuplicate,
 }: LibraryPreviewPaneProps) {
+  const scrollRef = React.useRef<HTMLElement>(null);
+  useDragAutoScroll(scrollRef, 8, 40);
+
   if (!item) {
     return (
       <aside className="flex h-full w-80 shrink-0 flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
@@ -97,7 +101,7 @@ export function LibraryPreviewPane({
   }
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-card/60 p-4 select-none">
+    <aside ref={scrollRef} className="flex h-full w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-card/60 p-4 select-none">
       {/* Inspector Title Header */}
       <div className="flex items-center justify-between pb-3 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">
@@ -116,33 +120,56 @@ export function LibraryPreviewPane({
       {/* Main High-Res Preview Box */}
       <div className="my-3 overflow-hidden rounded-xl border border-border bg-black/40 p-2 shadow-inner">
         {item.mediaRecord ? (
-          <Thumb media={item.mediaRecord} className="aspect-video w-full rounded-lg object-contain" />
+          item.mediaRecord.type === "audio" ? (
+            <div className="flex flex-col items-center justify-center aspect-video bg-gradient-to-br from-indigo-950 to-slate-900 rounded-lg p-4 shadow-inner border border-indigo-500/20">
+              <Music className="h-12 w-12 text-indigo-400 opacity-80 mb-4 drop-shadow-lg" />
+              <div className="flex items-center justify-center gap-1 h-12 w-full">
+                {[30, 50, 80, 40, 60, 90, 70, 100, 50, 40, 80, 60, 40, 70, 90, 30].map((h, i) => (
+                  <div
+                    key={i}
+                    className="w-1.5 bg-indigo-500/80 rounded-full"
+                    style={{ height: `${h}%`, opacity: 0.5 + (h / 200) }}
+                  />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <Thumb media={item.mediaRecord} className="aspect-video w-full rounded-lg object-contain bg-black/60 shadow-inner" />
+          )
         ) : item.type === "song" && item.songData ? (
-          <div className="flex flex-col gap-2 p-3 bg-purple-950/30 border border-purple-500/20 rounded-lg text-xs">
+          <div className="flex flex-col gap-2 p-3 bg-gradient-to-br from-purple-950/40 to-black/40 border border-purple-500/30 rounded-lg text-xs shadow-inner relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+              <Music className="w-24 h-24" />
+            </div>
             <span className="font-bold text-purple-300 text-sm">{item.songData.title}</span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              {item.songData.scale && <span className="uppercase font-mono">Key: {item.songData.scale}</span>}
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground z-10">
+              {item.songData.scale && <span className="uppercase font-mono font-semibold text-purple-200 bg-purple-500/20 px-1.5 py-0.5 rounded">Key: {item.songData.scale}</span>}
               <span>·</span>
-              <span>{item.songData.slides.length} Slides</span>
+              <span className="font-medium text-foreground">{item.songData.slides.length} Slides</span>
             </div>
           </div>
         ) : item.type === "bible" && item.bibleData ? (
-          <div className="flex flex-col gap-2 p-3 bg-blue-950/30 border border-blue-500/20 rounded-lg text-xs">
-            <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 p-3 bg-gradient-to-br from-blue-950/40 to-black/40 border border-blue-500/30 rounded-lg text-xs shadow-inner relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
+              <BookOpen className="w-24 h-24" />
+            </div>
+            <div className="flex items-center justify-between z-10">
               <span className="font-bold text-blue-300 text-sm">
                 {item.bibleData.bookName} {item.bibleData.chapter}:{verseRangeText}
               </span>
-              <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-200">
+              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-100 shadow-sm">
                 {bibleLang === "en" ? "KJV" : "TCV"}
               </span>
             </div>
-            <p className="mt-1 text-[11.5px] text-foreground leading-relaxed italic line-clamp-6 whitespace-pre-line">
-              "{fullPassageText}"
+            <p className="mt-1 text-[11.5px] text-foreground/90 leading-relaxed italic line-clamp-6 whitespace-pre-line z-10 relative">
+              <span className="text-blue-400 text-lg absolute -top-1 -left-2 opacity-30">"</span>
+              {fullPassageText}
+              <span className="text-blue-400 text-lg absolute -bottom-3 opacity-30 ml-1">"</span>
             </p>
           </div>
         ) : (
-          <div className="flex aspect-video items-center justify-center bg-muted/10 rounded-lg">
-            <Folder className="h-12 w-12 text-amber-400 opacity-70" />
+          <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-amber-950/20 to-black/40 border border-amber-500/20 rounded-lg shadow-inner">
+            <Folder className="h-16 w-16 text-amber-400 opacity-60 drop-shadow-md" />
           </div>
         )}
       </div>
