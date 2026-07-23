@@ -81,10 +81,28 @@ export function buildSteps(): StartupStep[] {
     {
       id: "settings",
       label: "Loading Settings…",
-      weight: 30,
+      weight: 10,
       run: async () => {
         const { useSettings } = await import("@/stores/settings.store");
         await useSettings.getState().load();
+      },
+    },
+    {
+      id: "songs",
+      label: "Loading Song Library…",
+      weight: 35,
+      run: async () => {
+        const { useSongsStore } = await import("@/lib/songs/store");
+        await useSongsStore.getState().ensureLoaded();
+      },
+    },
+    {
+      id: "bible",
+      label: "Loading Bible…",
+      weight: 25,
+      run: async () => {
+        const { loadBible } = await import("@/lib/bible/loader");
+        await Promise.all([loadBible("en"), loadBible("ta")]);
       },
     },
     {

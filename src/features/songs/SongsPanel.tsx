@@ -217,16 +217,15 @@ export function SongsPanel() {
       return;
     }
 
-    const t0 = performance.now();
-    const hits = searchSongs(q, songs, 200)
-      .filter((h) => applyFilter(h.song))
-      .slice(0, 120);
-    setSearchMs(performance.now() - t0);
-    startTransition(() => {
-      setResults(hits);
-      setActiveIdx(0);
+    void executeSearch(q, 200).then(({ hits, searchMs: ms }) => {
+      const filteredHits = hits.filter((h) => applyFilter(h.song)).slice(0, 120);
+      setSearchMs(ms);
+      startTransition(() => {
+        setResults(filteredHits);
+        setActiveIdx(0);
+      });
     });
-  }, [debouncedQuery, loaded, allSongs, recent, userSongs, favorites, filter, counts]);
+  }, [debouncedQuery, loaded, allSongs, recent, userSongs, favorites, filter, counts, executeSearch]);
 
   // (Suggestion dropdown removed — results panel is the single source of truth.)
 

@@ -40,11 +40,18 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
   useEffect(() => {
     let current = 0;
     const interval = setInterval(() => {
-      current += 1;
-      if (current <= 100) {
+      const target = targetPercentRef.current;
+
+      // Increase current by 1 step at a time up to target (or up to 100 if done)
+      if (current < target) {
+        current += 1;
+        setSmoothPercent(current);
+      } else if (progress.done && current < 100) {
+        current += 1;
         setSmoothPercent(current);
       }
-      if (current >= 100) {
+
+      if (progress.done && current >= 100) {
         clearInterval(interval);
         setComplete(true);
         setTimeout(() => setFadeOut(true), 250);
@@ -53,10 +60,10 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
           onReady();
         }, 600);
       }
-    }, 15); // Takes ~1.5s total to iterate smoothly through every number 1..100
+    }, 20); // ~20ms per step for smooth numbers
 
     return () => clearInterval(interval);
-  }, [onReady]);
+  }, [progress.done, onReady]);
 
   useEffect(() => {
     const steps = buildSteps();
