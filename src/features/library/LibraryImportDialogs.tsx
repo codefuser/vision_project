@@ -87,7 +87,8 @@ export function SongImportDialog({
   const filteredHits = useMemo(() => {
     return hits.filter((h) => {
       if (selectedCategory !== "All") {
-        if (h.song.category && !h.song.category.toLowerCase().includes(selectedCategory.toLowerCase())) {
+        const cat = (h.song as any).category;
+        if (cat && !cat.toLowerCase().includes(selectedCategory.toLowerCase())) {
           return false;
         }
       }

@@ -120,7 +120,7 @@ export function LibraryPreviewPane({
       {/* Main High-Res Preview Box */}
       <div className="my-3 overflow-hidden rounded-xl border border-border bg-black/40 p-2 shadow-inner">
         {item.mediaRecord ? (
-          item.mediaRecord.type === "audio" ? (
+          (item.mediaRecord.type as any) === "audio" ? (
             <div className="flex flex-col items-center justify-center aspect-video bg-gradient-to-br from-indigo-950 to-slate-900 rounded-lg p-4 shadow-inner border border-indigo-500/20">
               <Music className="h-12 w-12 text-indigo-400 opacity-80 mb-4 drop-shadow-lg" />
               <div className="flex items-center justify-center gap-1 h-12 w-full">
@@ -231,7 +231,13 @@ export function LibraryPreviewPane({
                   <span>Slide {idx + 1}</span>
                   <button
                     onClick={() => {
-                      projectSongSlide({ songId: item.songData!.id, slideIndex: idx });
+                      projectSongSlide({
+                        songId: item.songData!.id,
+                        slideIndex: idx,
+                        totalSlides: item.songData!.slides.length,
+                        title: item.songData!.title,
+                        text: slideText,
+                      });
                       toast.success(`Projected Slide ${idx + 1}`);
                     }}
                     className="flex h-5 items-center gap-1 rounded bg-primary/10 px-1.5 text-primary hover:bg-primary hover:text-primary-foreground transition"
@@ -260,6 +266,8 @@ export function LibraryPreviewPane({
                   book: item.bibleData.book,
                   chapter: item.bibleData.chapter,
                   verse: item.bibleData.verse,
+                  reference: `${item.bibleData.bookName} ${item.bibleData.chapter}:${item.bibleData.verse}`,
+                  text: fullPassageText,
                 });
                 toast.success(`Projecting Passage (${bibleLang.toUpperCase()})`);
               } else {

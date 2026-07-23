@@ -55,6 +55,75 @@ function addIndexToken(map: Map<string, Set<number>>, token: string, songId: num
   set.add(songId);
 }
 
+export function removeSearchIndex(songId: number) {
+  searchIndex.delete(songId);
+  // Iterating all sets to delete is slow, but fine for single item deletion
+  for (const set of tokenInvertedIndex.values()) {
+    set.delete(songId);
+  }
+  for (const set of stemInvertedIndex.values()) {
+    set.delete(songId);
+  }
+}
+
+export function updateSearchIndex(song: Song) {
+  removeSearchIndex(song.id);
+  const lines: LineEntry[] = [];
+  const titleNorm = tanglishNorm(song.title);
+  const titleStem = song.titleStem || songStem(song.title);
+  const titleLower = songLower(song.title);
+
+  for (const t of titleNorm.split(/\s+/)) addIndexToken(tokenInvertedIndex, t, song.id);
+  for (const s of titleStem.split(/\s+/)) addIndexToken(stemInvertedIndex, s, song.id);
+
+  for (let si = 0; si < song.slides.length; si++) {
+    const slideLines = song.slides[si]
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+    for (const text of slideLines) {
+      const rawTokensArray = text.split(/\s+/);
+      const normTokens: string[] = [];
+      const stemTokens: string[] = [];
+      const validRawTokens: string[] = [];
+
+      for (const raw of rawTokensArray) {
+        const norm = tanglishNorm(raw);
+        const stem = songStem(raw);
+        if (norm && stem) {
+          normTokens.push(norm);
+          stemTokens.push(stem);
+          validRawTokens.push(raw);
+          addIndexToken(tokenInvertedIndex, norm, song.id);
+          addIndexToken(stemInvertedIndex, stem, song.id);
+        }
+      }
+
+      lines.push({
+        text,
+        normalized: normTokens.join(" "),
+        normTokens,
+        stem: stemTokens.join(" "),
+        stemTokens,
+        rawTokens: validRawTokens,
+      });
+    }
+  }
+
+  searchIndex.set(song.id, {
+    firstLine: lines[0]?.text || song.title,
+    lines,
+    titleNorm,
+    titleStem,
+    titleLower,
+  });
+}
+
+export function markSearchIndexUpdated(songs: Song[]) {
+  indexedSongsId = songsId(songs);
+  setCachedSearchIndex(indexedSongsId, { searchIndex, tokenInvertedIndex, stemInvertedIndex });
+}
+
 export function buildSearchIndex(songs: Song[]) {
   searchIndex.clear();
   tokenInvertedIndex.clear();

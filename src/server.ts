@@ -10,10 +10,7 @@ type ServerEntry = {
 import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
 import { getRouter } from "./router";
 
-const fetchHandler = createStartHandler({
-  createRouter: getRouter,
-  handler: defaultStreamHandler,
-});
+const fetchHandler = createStartHandler(defaultStreamHandler);
 const serverEntry: ServerEntry = {
   fetch: fetchHandler as any
 };

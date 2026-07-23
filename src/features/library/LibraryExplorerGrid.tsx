@@ -73,6 +73,20 @@ export function LibraryExplorerGrid({
   const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
   const [containerWidth, setContainerWidth] = useState(0);
 
+  const allNodes = useMemo<UnifiedNode[]>(() => {
+    const nodes: UnifiedNode[] = [];
+    if (inlineCreatingFolder) {
+      nodes.push({ type: "creating_folder", id: "creating_folder" });
+    }
+    subfolders.forEach((folder) => {
+      nodes.push({ type: "subfolder", data: folder, id: folder.id });
+    });
+    items.forEach((item, index) => {
+      nodes.push({ type: "item", data: item, index, id: item.id });
+    });
+    return nodes;
+  }, [subfolders, items, inlineCreatingFolder]);
+
   // Measure container width for responsive virtualization
   useEffect(() => {
     if (!containerRef.current) return;
@@ -158,6 +172,19 @@ export function LibraryExplorerGrid({
   };
 
   const lastClickRef = useRef<{ id: string; time: number } | null>(null);
+
+  const handleDragStart = (e: React.DragEvent, item: LibraryItem) => {
+    const selectedIds = selection.has(item.id) ? Array.from(selection) : [item.id];
+    e.dataTransfer.setData("application/json", JSON.stringify(selectedIds));
+    e.dataTransfer.setData("text/plain", item.id);
+
+    const ghost = document.createElement("div");
+    ghost.className = "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
+    ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} item(s)</span>`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 20, 20);
+    setTimeout(() => { document.body.removeChild(ghost); }, 0);
+  };
 
   const handleItemNodeClick = (e: React.MouseEvent, node: UnifiedNode, index: number) => {
     if (node.type === "subfolder") {

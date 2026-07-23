@@ -941,7 +941,7 @@ const SongRow = memo(
 
 
             <div className="mt-1.5 space-y-0.5 border-l-2 border-primary/30 pl-2 max-w-[95%]">
-              {hit.contextLines.map((line, i) => (
+              {hit.contextLines.map((line: any, i: number) => (
                 <div
                   key={i}
                   className={cn(

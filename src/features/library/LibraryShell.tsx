@@ -632,7 +632,13 @@ export function LibraryShell() {
       await MediaAdapter.projectMedia(item.mediaRecord);
       toast.success(`Projecting ${item.name}`);
     } else if (item.songData) {
-      projectSongSlide({ songId: item.songData.id, slideIndex: 0 });
+      projectSongSlide({
+        songId: item.songData.id,
+        slideIndex: 0,
+        totalSlides: item.songData.slides.length,
+        title: item.songData.title,
+        text: item.songData.slides[0] || "",
+      });
       toast.success(`Projecting Song: ${item.name}`);
     } else if (item.bibleData) {
       await projectVerse({
@@ -640,6 +646,8 @@ export function LibraryShell() {
         book: item.bibleData.book,
         chapter: item.bibleData.chapter,
         verse: item.bibleData.verse,
+        reference: `${item.bibleData.bookName} ${item.bibleData.chapter}:${item.bibleData.verse}`,
+        text: item.bibleData.text || "",
       });
       toast.success(`Projecting Passage (${bibleLang.toUpperCase()}): ${item.name}`);
     }
@@ -694,12 +702,9 @@ export function LibraryShell() {
   );
 
   const handleSelectMultiple = useCallback((ids: string[], append: boolean) => {
-    setSelection((prev) => {
-      const next = append ? new Set(prev) : new Set<string>();
-      ids.forEach((id) => next.add(id));
-      return next;
-    });
-  }, []);
+    if (!append) clearSelection();
+    ids.forEach((id) => toggleSelect(id, true));
+  }, [clearSelection, toggleSelect]);
 
   // Drop Items to Target Folder Action
   const handleDropItemsToFolder = useCallback(
