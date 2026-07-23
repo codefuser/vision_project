@@ -36,41 +36,27 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
     return unsub;
   }, []);
 
-  // Smooth 60 FPS requestAnimationFrame lerp loop based on real work progress
+  // Smooth continuous step loop going strictly 1, 2, 3... 100 without skipping numbers
   useEffect(() => {
-    const updateProgressLoop = () => {
-      const diff = targetPercentRef.current - currentPercentRef.current;
-      if (Math.abs(diff) > 0.1) {
-        currentPercentRef.current += diff * 0.15; // Smooth continuous lerp
-        setSmoothPercent(Math.round(currentPercentRef.current));
-      } else {
-        currentPercentRef.current = targetPercentRef.current;
-        setSmoothPercent(targetPercentRef.current);
+    let current = 0;
+    const interval = setInterval(() => {
+      current += 1;
+      if (current <= 100) {
+        setSmoothPercent(current);
       }
-      animationFrameRef.current = requestAnimationFrame(updateProgressLoop);
-    };
+      if (current >= 100) {
+        clearInterval(interval);
+        setComplete(true);
+        setTimeout(() => setFadeOut(true), 250);
+        setTimeout(() => {
+          setShowApp(true);
+          onReady();
+        }, 600);
+      }
+    }, 15); // Takes ~1.5s total to iterate smoothly through every number 1..100
 
-    animationFrameRef.current = requestAnimationFrame(updateProgressLoop);
-    return () => {
-      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (progress.done) {
-      targetPercentRef.current = 100;
-      setComplete(true);
-      const t1 = setTimeout(() => setFadeOut(true), 250);
-      const t2 = setTimeout(() => {
-        setShowApp(true);
-        onReady();
-      }, 600);
-      return () => {
-        clearTimeout(t1);
-        clearTimeout(t2);
-      };
-    }
-  }, [progress.done, onReady]);
+    return () => clearInterval(interval);
+  }, [onReady]);
 
   useEffect(() => {
     const steps = buildSteps();
@@ -170,7 +156,7 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
         </div>
 
         <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.15)" }}>
-          Offline-first · Local cache ready
+          Online-first · Cloud Database Ready
         </div>
       </div>
     </div>

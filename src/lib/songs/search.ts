@@ -194,6 +194,36 @@ export function buildSearchIndex(songs: Song[]) {
 const queryCache = new Map<string, SongHit[]>();
 const MAX_CACHE = 100;
 
+import { supabase } from "../supabase";
+import { buildSong } from "./loader";
+
+export async function searchSongsOnline(query: string, limit = 120): Promise<SongHit[]> {
+  const q = query.trim();
+  try {
+    let req = supabase.from("songs").select("*");
+    if (q) {
+      req = req.or(`title.ilike.%${q}%,content.ilike.%${q}%`);
+    }
+    const { data, error } = await req.limit(limit);
+    if (error || !data) return [];
+    
+    return data.map((raw: any) => {
+      const song = buildSong(raw);
+      const fl = song.slides[0]?.split("\n")[0] || song.title;
+      return {
+        song,
+        score: 1,
+        firstLine: fl,
+        matchedLine: fl,
+        contextLines: [{ text: fl, isMatch: true }],
+        highlightTokens: [q],
+      };
+    });
+  } catch {
+    return [];
+  }
+}
+
 export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[] {
   const q = query.trim();
   if (!q) return [];

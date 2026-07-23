@@ -12,20 +12,8 @@ export function preloadAllData(): Promise<void> {
 }
 
 async function doPreload(): Promise<void> {
-  // Pre-load Songs and both Bibles (EN + Tamil) into memory during application startup
-  await Promise.allSettled([
-    loadSongs(),
-    loadBible("en"),
-    loadBible("ta"),
-  ]);
-
-  // Pre-build search index for Songs
-  const [{ getSongs }, { buildSearchIndex }] = await Promise.all([
-    import("@/lib/songs/loader"),
-    import("@/lib/songs/search"),
-  ]);
-  const songs = getSongs();
-  if (songs) buildSearchIndex(songs);
+  // Online-first mode: No heavy bulk downloads during app startup!
+  return Promise.resolve();
 }
 
 let backgroundPreloaded = false;
