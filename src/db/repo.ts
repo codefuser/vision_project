@@ -138,11 +138,6 @@ export async function importFiles(
       onProgress?.({ done, total: files.length, current: file.name });
       const mime = detectMime(file);
       const type = classifyMime(mime);
-      if (!type) {
-        skipped.push({ name: file.name, reason: "Unsupported format" });
-        done++;
-        continue;
-      }
       const blobId = uid();
       let thumbBlobId: string | null = null;
       let width: number | undefined;

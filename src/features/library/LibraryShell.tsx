@@ -97,7 +97,38 @@ export function LibraryShell() {
   const [inspectedItem, setInspectedItem] = useState<LibraryItem | null>(null);
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: LibraryItem | null } | null>(null);
 
-  // Dialog States
+  // Persistent File Input Ref & Upload Handler
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFilesSelected = useCallback(
+    async (files: FileList | File[] | null) => {
+      if (!files || files.length === 0) return;
+      const arr = Array.from(files);
+      const toastId = toast.loading(`Uploading ${arr.length} file(s)…`);
+      try {
+        const { importFiles } = await import("@/db/repo");
+        const res = await importFiles(arr, currentFolderId);
+        await refreshMedia();
+        toast.dismiss(toastId);
+        if (res.imported.length > 0) {
+          toast.success(`Successfully uploaded ${res.imported.length} file(s)`);
+        }
+        if (res.skipped.length > 0) {
+          toast.warning(`Skipped ${res.skipped.length} unsupported file(s)`);
+        }
+      } catch (err) {
+        toast.dismiss(toastId);
+        toast.error("Failed to upload files");
+        console.error(err);
+      }
+    },
+    [currentFolderId, refreshMedia],
+  );
+
+  const triggerFileUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
   const [showQuickLook, setShowQuickLook] = useState(false);
   const [showSongImport, setShowSongImport] = useState(false);
   const [showBibleImport, setShowBibleImport] = useState(false);
@@ -850,20 +881,7 @@ export function LibraryShell() {
         onSortChange={setSortField}
         onToggleSortOrder={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
         onNewFolder={() => setInlineCreatingFolder(true)}
-        onUploadClick={() => {
-          const el = document.createElement("input");
-          el.type = "file";
-          el.multiple = true;
-          el.onchange = async () => {
-            if (el.files && el.files.length) {
-              const { importFiles } = await import("@/db/repo");
-              await importFiles(Array.from(el.files), currentFolderId);
-              await refreshMedia();
-              toast.success(`Uploaded ${el.files.length} file(s)`);
-            }
-          };
-          el.click();
-        }}
+        onUploadClick={triggerFileUpload}
         onCutClick={() => {
           if (selectedItems.length) {
             setClipboard({ action: "cut", items: selectedItems });
@@ -954,6 +972,7 @@ export function LibraryShell() {
             onDropItemsToFolder={handleDropItemsToFolder}
             onSelectMultiple={handleSelectMultiple}
             onTriggerRename={setInlineEditingId}
+            onUploadClick={triggerFileUpload}
           />
         </div>
 
@@ -1004,25 +1023,24 @@ export function LibraryShell() {
         </div>
       </footer>
 
+      {/* Hidden File Input for Native File Dialog */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          handleFilesSelected(e.target.files);
+          e.target.value = "";
+        }}
+      />
+
       {/* Floating Action Button */}
       <FloatingActionButton
         onNewFolder={() => setInlineCreatingFolder(true)}
         onImportSong={() => setShowSongImport(true)}
         onImportBible={() => setShowBibleImport(true)}
-        onImportMedia={() => {
-          const el = document.createElement("input");
-          el.type = "file";
-          el.multiple = true;
-          el.onchange = async () => {
-            if (el.files && el.files.length) {
-              const { importFiles } = await import("@/db/repo");
-              await importFiles(Array.from(el.files), currentFolderId);
-              await refreshMedia();
-              toast.success(`Uploaded ${el.files.length} file(s)`);
-            }
-          };
-          el.click();
-        }}
+        onImportMedia={triggerFileUpload}
         onCreateText={() => setShowTextImport(true)}
       />
 
