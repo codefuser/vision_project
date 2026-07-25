@@ -1,10 +1,10 @@
 import React from "react";
-import { LibraryShell } from "./LibraryShell";
+import { FileManagerLayout } from "./FileManagerLayout";
 
 /**
- * Modern Church Content Library Page.
- * Styled after Windows File Explorer, macOS Finder, and VS Code Explorer.
+ * Standalone & Embedded Church Content Library Page.
+ * Driven by unified FileManagerLayout engine.
  */
 export function LibraryPage() {
-  return <LibraryShell />;
+  return <FileManagerLayout />;
 }

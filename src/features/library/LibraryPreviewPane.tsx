@@ -65,7 +65,7 @@ export function LibraryPreviewPane({
 
   if (!item) {
     return (
-      <aside className="flex h-full w-80 shrink-0 flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
+      <aside className="flex h-full w-full flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
         <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
         <p className="font-medium text-foreground">No item selected</p>
         <p className="mt-1 text-[11px] opacity-70">
@@ -126,7 +126,7 @@ export function LibraryPreviewPane({
   const aspectRatio = item.width && item.height ? (item.width / item.height).toFixed(2) : null;
 
   return (
-    <aside className="flex h-full w-80 shrink-0 flex-col overflow-hidden border-l border-border bg-card/60 select-none">
+    <aside className="flex h-full w-full flex-col overflow-hidden border-l border-border bg-card/60 select-none">
       {/* Header with Title and Close Button */}
       <div className="flex items-center justify-between p-3 pb-2 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">

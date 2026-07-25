@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useLibrary } from "@/stores/library.store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
+import { useFileManagerLayoutStore } from "@/stores/file-manager-layout.store";
 import { createFolder, renameFolder, deleteFolderDeep, moveMedia, duplicateMedia, deleteMedia, renameMedia } from "@/db/repo";
 import type { FolderRecord } from "@/db/schema";
 import { LibraryToolbar } from "./LibraryToolbar";
@@ -48,15 +49,11 @@ export function LibraryShell() {
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
-  // Rigid Resizable Panel Widths (Left: 280px-520px, Right: 320px-650px)
-  const [leftWidth, setLeftWidth] = useState(() => {
-    if (typeof window === "undefined") return 360;
-    return Number(window.localStorage.getItem("lib_left_w")) || 360;
-  });
-  const [rightWidth, setRightWidth] = useState(() => {
-    if (typeof window === "undefined") return 420;
-    return Number(window.localStorage.getItem("lib_right_w")) || 420;
-  });
+  // Synced Resizable Panel Widths (Left: 280px-520px, Right: 320px-650px)
+  const leftWidth = useFileManagerLayoutStore((s) => s.leftWidth);
+  const rightWidth = useFileManagerLayoutStore((s) => s.rightWidth);
+  const setLeftWidth = useFileManagerLayoutStore((s) => s.setLeftWidth);
+  const setRightWidth = useFileManagerLayoutStore((s) => s.setRightWidth);
 
   const isResizingLeft = useRef(false);
   const isResizingRight = useRef(false);
@@ -155,36 +152,90 @@ export function LibraryShell() {
     if (!loaded) void refreshAll();
   }, [loaded, refreshAll]);
 
-  useEffect(() => {
-    try {
-      window.localStorage.setItem("lib_left_w", String(leftWidth));
-      window.localStorage.setItem("lib_right_w", String(rightWidth));
-    } catch {}
-  }, [leftWidth, rightWidth]);
+  // Synced Pointer Capture Drag-to-Resize Handlers (Delta-based, immune to container offset)
+  const handleLeftPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const handleEl = e.currentTarget;
+      try {
+        handleEl.setPointerCapture(e.pointerId);
+      } catch {}
 
-  // Panel Drag-to-Resize Listeners
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
-      if (isResizingLeft.current) {
-        setLeftWidth(Math.max(280, Math.min(520, e.clientX)));
-      } else if (isResizingRight.current) {
-        setRightWidth(Math.max(320, Math.min(650, window.innerWidth - e.clientX)));
-      }
-    };
+      const startX = e.clientX;
+      const startWidth = useFileManagerLayoutStore.getState().leftWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
 
-    const handleMouseUp = () => {
-      isResizingLeft.current = false;
-      isResizingRight.current = false;
-      document.body.style.cursor = "default";
-    };
+      let rafId: number | null = null;
 
-    window.addEventListener("mousemove", handleMouseMove);
-    window.addEventListener("mouseup", handleMouseUp);
-    return () => {
-      window.removeEventListener("mousemove", handleMouseMove);
-      window.removeEventListener("mouseup", handleMouseUp);
-    };
-  }, []);
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          const deltaX = moveEvent.clientX - startX;
+          setLeftWidth(startWidth + deltaX);
+        });
+      };
+
+      const handlePointerUp = (upEvent: PointerEvent) => {
+        if (rafId) cancelAnimationFrame(rafId);
+        try {
+          handleEl.releasePointerCapture(upEvent.pointerId);
+        } catch {}
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "";
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerUp);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
+    },
+    [setLeftWidth],
+  );
+
+  const handleRightPointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      e.preventDefault();
+      const handleEl = e.currentTarget;
+      try {
+        handleEl.setPointerCapture(e.pointerId);
+      } catch {}
+
+      const startX = e.clientX;
+      const startWidth = useFileManagerLayoutStore.getState().rightWidth;
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+
+      let rafId: number | null = null;
+
+      const handlePointerMove = (moveEvent: PointerEvent) => {
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+          const deltaX = startX - moveEvent.clientX; // Dragging left increases right width
+          setRightWidth(startWidth + deltaX);
+        });
+      };
+
+      const handlePointerUp = (upEvent: PointerEvent) => {
+        if (rafId) cancelAnimationFrame(rafId);
+        try {
+          handleEl.releasePointerCapture(upEvent.pointerId);
+        } catch {}
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "";
+        window.removeEventListener("pointermove", handlePointerMove);
+        window.removeEventListener("pointerup", handlePointerUp);
+        window.removeEventListener("pointercancel", handlePointerUp);
+      };
+
+      window.addEventListener("pointermove", handlePointerMove);
+      window.addEventListener("pointerup", handlePointerUp);
+      window.addEventListener("pointercancel", handlePointerUp);
+    },
+    [setRightWidth],
+  );
 
   // Transform MediaRecords + CustomItems into unified LibraryItem array
   const allLibraryItems = useMemo<LibraryItem[]>(() => {
@@ -937,11 +988,8 @@ export function LibraryShell() {
 
         {/* Left Resize Splitter Handle */}
         <div
-          onMouseDown={() => {
-            isResizingLeft.current = true;
-            document.body.style.cursor = "col-resize";
-          }}
-          className="w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          onPointerDown={handleLeftPointerDown}
+          className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
           title="Drag to resize left tree panel"
         />
 
@@ -987,11 +1035,8 @@ export function LibraryShell() {
 
         {/* Right Resize Splitter Handle */}
         <div
-          onMouseDown={() => {
-            isResizingRight.current = true;
-            document.body.style.cursor = "col-resize";
-          }}
-          className="w-1 shrink-0 cursor-col-resize hover:bg-primary/50 transition bg-border/40 select-none"
+          onPointerDown={handleRightPointerDown}
+          className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
           title="Drag to resize right inspector panel"
         />
 
