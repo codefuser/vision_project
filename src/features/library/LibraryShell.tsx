@@ -271,8 +271,10 @@ export function LibraryShell() {
   }, [media, customItems, favSet]);
 
   const currentSubfolders = useMemo(() => {
+    // Hide folders when a category filter (images, songs, videos, etc.) is active
+    if (currentCategory !== "all") return [];
     return folders.filter((f) => f.parentId === currentFolderId);
-  }, [folders, currentFolderId]);
+  }, [folders, currentFolderId, currentCategory]);
 
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
@@ -790,6 +792,18 @@ export function LibraryShell() {
     setContextMenu({ x: e.clientX, y: e.clientY, item });
   }, []);
 
+  const handleShowInFolder = useCallback(
+    (item: LibraryItem) => {
+      setCurrentCategory("all");
+      setFolder(item.folderId);
+      clearSelection();
+      toggleSelect(item.id, true);
+      setInspectedItem(item);
+      toast.success(`Show in Folder: Navigated to location for "${item.name}"`);
+    },
+    [setFolder, clearSelection, toggleSelect],
+  );
+
   const handleRenameSubmit = useCallback(
     async (id: string, newName: string) => {
       if (!newName.trim() || !id) {
@@ -1191,6 +1205,7 @@ export function LibraryShell() {
           onPreview={setInspectedItem}
           onProject={projectItem}
           onRename={(item) => setInlineEditingId(item.id)}
+          onShowInFolder={handleShowInFolder}
           onDuplicate={handleDuplicateItems}
           onMove={() => {}}
           onCopy={(items) => {

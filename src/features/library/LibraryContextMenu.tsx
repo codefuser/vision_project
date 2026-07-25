@@ -37,6 +37,7 @@ interface LibraryContextMenuProps {
   onDelete: (items: LibraryItem[]) => void;
   onToggleFavorite: (item: LibraryItem) => void;
   onShowProperties: (item: LibraryItem) => void;
+  onShowInFolder?: (item: LibraryItem) => void;
   onNewFolder?: () => void;
   onRefresh?: () => void;
   onSelectAll?: () => void;
@@ -60,6 +61,7 @@ export function LibraryContextMenu({
   onDelete,
   onToggleFavorite,
   onShowProperties,
+  onShowInFolder,
   onNewFolder,
   onRefresh,
   onSelectAll,
@@ -374,6 +376,19 @@ export function LibraryContextMenu({
         <Star className="h-3.5 w-3.5 text-amber-400" />
         <span>{targetItem.isFavorite ? "Unfavorite" : "Add to Favorites"}</span>
       </button>
+
+      {onShowInFolder && (
+        <button
+          onClick={() => {
+            onShowInFolder(targetItem);
+            onClose();
+          }}
+          className="flex w-full cursor-pointer items-center gap-2 rounded px-2 py-1.5 hover:bg-accent font-medium text-amber-400"
+        >
+          <FolderOpen className="h-3.5 w-3.5" />
+          <span>Show in Folder</span>
+        </button>
+      )}
 
       <div className="my-1 h-px bg-border/60" />
 

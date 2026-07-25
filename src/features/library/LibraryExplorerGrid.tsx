@@ -734,8 +734,10 @@ export function LibraryExplorerGrid({
                       onContextMenu(e, item);
                     }}
                     className={cn(
-                      "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card/80 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none",
-                      selected ? "border-primary bg-primary/10 ring-2 ring-primary" : "border-border hover:border-primary/50"
+                      "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-[#111827]/90 shadow-sm transition hover:-translate-y-0.5 hover:shadow-lg select-none",
+                      selected
+                        ? "border-blue-500 bg-blue-600/15 ring-2 ring-blue-500/40 shadow-blue-500/20"
+                        : "border-[#2D3348] hover:border-blue-500/60"
                     )}
                     title={item.name}
                   >
