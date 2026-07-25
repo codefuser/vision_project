@@ -412,33 +412,46 @@ export function LibraryPreviewPane({
         )}
       </div>
 
-      {/* Footer Action Buttons */}
-      <div className="p-3 border-t border-border bg-muted/20 flex items-center justify-between gap-1 text-xs">
+      {/* Sticky Footer Action Buttons */}
+      <div className="shrink-0 p-3 border-t border-border bg-card/90 backdrop-blur flex items-center justify-between gap-1 text-xs">
         {onRename && (
           <button
             onClick={() => onRename(item)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-1.5 text-foreground hover:bg-accent font-medium transition"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
+            title="Rename item (F2)"
           >
             <Pencil className="h-3.5 w-3.5" />
-            Rename
+            <span>Rename</span>
           </button>
         )}
+        <button
+          onClick={() => setActiveTab("properties")}
+          className={cn(
+            "flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border py-1.5 font-medium transition",
+            activeTab === "properties" ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:bg-accent"
+          )}
+          title="Inspect file properties"
+        >
+          <Info className="h-3.5 w-3.5" />
+          <span>Props</span>
+        </button>
         {onDuplicate && (
           <button
             onClick={() => onDuplicate([item])}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-1.5 text-foreground hover:bg-accent font-medium transition"
+            className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
+            title="Duplicate item"
           >
             <Copy className="h-3.5 w-3.5" />
-            Duplicate
+            <span>Duplicate</span>
           </button>
         )}
         {onDelete && (
           <button
             onClick={() => onDelete([item])}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
-            title="Delete Item"
+            className="flex h-8 w-8 cursor-pointer shrink-0 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500 transition"
+            title="Delete item"
           >
-            <Trash2 className="h-3.5 w-3.5" />
+            <Trash2 className="h-4 w-4" />
           </button>
         )}
       </div>

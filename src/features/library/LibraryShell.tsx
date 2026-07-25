@@ -48,14 +48,14 @@ export function LibraryShell() {
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
-  // Rigid Resizable Panel Widths
+  // Rigid Resizable Panel Widths (Left: 280px-520px, Right: 320px-650px)
   const [leftWidth, setLeftWidth] = useState(() => {
-    if (typeof window === "undefined") return 240;
-    return Number(window.localStorage.getItem("lib_left_w")) || 240;
+    if (typeof window === "undefined") return 360;
+    return Number(window.localStorage.getItem("lib_left_w")) || 360;
   });
   const [rightWidth, setRightWidth] = useState(() => {
-    if (typeof window === "undefined") return 320;
-    return Number(window.localStorage.getItem("lib_right_w")) || 320;
+    if (typeof window === "undefined") return 420;
+    return Number(window.localStorage.getItem("lib_right_w")) || 420;
   });
 
   const isResizingLeft = useRef(false);
@@ -166,9 +166,9 @@ export function LibraryShell() {
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (isResizingLeft.current) {
-        setLeftWidth(Math.max(160, Math.min(450, e.clientX)));
+        setLeftWidth(Math.max(280, Math.min(520, e.clientX)));
       } else if (isResizingRight.current) {
-        setRightWidth(Math.max(220, Math.min(550, window.innerWidth - e.clientX)));
+        setRightWidth(Math.max(320, Math.min(650, window.innerWidth - e.clientX)));
       }
     };
 
@@ -946,7 +946,7 @@ export function LibraryShell() {
         />
 
         {/* Pane 2: Center File Explorer Grid */}
-        <div className="flex-1 min-w-0 h-full overflow-hidden flex flex-col">
+        <div className="relative flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           <LibraryExplorerGrid
             items={filteredItems.filter((i) => i.type !== "folder")}
             subfolders={currentSubfolders}
@@ -973,6 +973,15 @@ export function LibraryShell() {
             onSelectMultiple={handleSelectMultiple}
             onTriggerRename={setInlineEditingId}
             onUploadClick={triggerFileUpload}
+          />
+
+          {/* Floating Action Button inside Center Pane */}
+          <FloatingActionButton
+            onNewFolder={() => setInlineCreatingFolder(true)}
+            onImportSong={() => setShowSongImport(true)}
+            onImportBible={() => setShowBibleImport(true)}
+            onImportMedia={triggerFileUpload}
+            onCreateText={() => setShowTextImport(true)}
           />
         </div>
 
@@ -1035,14 +1044,7 @@ export function LibraryShell() {
         }}
       />
 
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        onNewFolder={() => setInlineCreatingFolder(true)}
-        onImportSong={() => setShowSongImport(true)}
-        onImportBible={() => setShowBibleImport(true)}
-        onImportMedia={triggerFileUpload}
-        onCreateText={() => setShowTextImport(true)}
-      />
+
 
       {/* Right Click Context Menu */}
       {contextMenu && (

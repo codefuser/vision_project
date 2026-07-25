@@ -13,6 +13,8 @@ import {
   ArrowUpDown,
   FileText,
   Plus,
+  Play,
+  Film,
 } from "lucide-react";
 import type { LibraryItem, ViewMode } from "./types";
 import type { FolderRecord } from "@/db/schema";
@@ -79,7 +81,7 @@ export function LibraryExplorerGrid({
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
 
-  // Initialize with a reasonable width so itemsPerRow is > 1 on initial render
+  // Initial width estimate fallback so itemsPerRow is > 1 on initial render
   const [containerWidth, setContainerWidth] = useState(() => {
     if (typeof window !== "undefined") return Math.max(600, window.innerWidth - 560);
     return 800;
@@ -151,15 +153,15 @@ export function LibraryExplorerGrid({
     );
   };
 
-  const gap = 14;
+  const gap = 16;
   let baseWidth = 220;
-  if (viewMode === "large-icons") baseWidth = 240;
-  else if (viewMode === "medium-icons" || viewMode === "grid") baseWidth = 160;
-  else if (viewMode === "small-icons") baseWidth = 120;
-  else if (viewMode === "gallery") baseWidth = 220;
+  if (viewMode === "large-icons") baseWidth = 250;
+  else if (viewMode === "medium-icons" || viewMode === "grid") baseWidth = 180;
+  else if (viewMode === "small-icons") baseWidth = 130;
+  else if (viewMode === "gallery") baseWidth = 240;
   else if (viewMode === "list" || viewMode === "details") baseWidth = Math.max(300, containerWidth - gap * 2);
 
-  const itemWidth = Math.max(100, Math.floor(baseWidth * zoomLevel));
+  const itemWidth = Math.max(110, Math.floor(baseWidth * zoomLevel));
   const effectiveContainerW = Math.max(400, containerWidth);
   const itemsPerRow = viewMode === "list" || viewMode === "details" ? 1 : Math.max(1, Math.floor((effectiveContainerW + gap) / (itemWidth + gap)));
   const rowCount = Math.ceil(allNodes.length / itemsPerRow);
@@ -180,7 +182,7 @@ export function LibraryExplorerGrid({
           const rowIndex = Math.floor(idx / itemsPerRow);
           const colIndex = idx % itemsPerRow;
 
-          const rowH = viewMode === "small-icons" ? 44 : viewMode === "list" || viewMode === "details" ? 40 : itemWidth * 0.75 + 50;
+          const rowH = viewMode === "small-icons" ? 44 : viewMode === "list" || viewMode === "details" ? 40 : itemWidth * 0.625 + 75;
           const top = rowIndex * (rowH + gap);
           const left = colIndex * (itemWidth + gap) + 16;
           const bottom = top + rowH;
@@ -236,7 +238,7 @@ export function LibraryExplorerGrid({
     estimateSize: (index) => {
       if (viewMode === "list" || viewMode === "details") return 40 + gap;
       if (viewMode === "small-icons") return 44 + gap;
-      return itemWidth * 0.75 + 50 + gap;
+      return itemWidth * 0.625 + 75 + gap;
     },
     overscan: 5,
   });
@@ -265,8 +267,8 @@ export function LibraryExplorerGrid({
         }}
         className="flex h-full flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground select-none"
       >
-        <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-muted/40 border border-border/80 shadow-inner">
-          <Folder className="h-10 w-10 text-muted-foreground/40" />
+        <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-3xl bg-muted/40 border border-border/80 shadow-inner">
+          <Folder className="h-12 w-12 text-muted-foreground/40" />
         </div>
         <h3 className="text-base font-bold text-foreground">This Folder is Empty</h3>
         <p className="mt-1 text-xs max-w-sm text-muted-foreground opacity-80">
@@ -306,7 +308,7 @@ export function LibraryExplorerGrid({
       className="relative flex-1 min-w-0 overflow-y-auto p-4 select-none outline-none"
       tabIndex={0}
     >
-      {/* Selection Box */}
+      {/* Selection Marquee Box */}
       {dragBox && (
         <div
           className="pointer-events-none absolute z-30 border border-primary bg-primary/20 rounded shadow-sm"
@@ -409,6 +411,7 @@ export function LibraryExplorerGrid({
                           "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card/80 px-2.5 shadow-sm transition hover:border-amber-400/60 select-none",
                           isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400" : "border-border"
                         )}
+                        title={folder.name}
                       >
                         <Folder className="h-4 w-4 shrink-0 text-amber-400" />
                         <span className="truncate text-xs font-semibold text-foreground group-hover:text-amber-400">
@@ -437,6 +440,7 @@ export function LibraryExplorerGrid({
                           "group flex h-10 cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 shadow-sm transition hover:border-amber-400/60 select-none",
                           isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400" : "border-border"
                         )}
+                        title={folder.name}
                       >
                         <Folder className="h-5 w-5 shrink-0 text-amber-400" />
                         <div className="min-w-0 flex-1">
@@ -500,9 +504,10 @@ export function LibraryExplorerGrid({
                         "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card/80 p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none",
                         isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400 scale-[1.02]" : "border-border hover:border-amber-400/60"
                       )}
+                      title={folder.name}
                     >
                       {/* Folder Graphic / 2x2 Quadrant Box */}
-                      <div className="relative mb-2 flex h-24 w-full items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 overflow-hidden">
+                      <div className="relative mb-2.5 flex aspect-[16/10] w-full items-center justify-center rounded-lg bg-amber-400/10 text-amber-400 overflow-hidden border border-amber-400/20 shadow-inner">
                         {quadItems.length > 0 ? (
                           <div className="grid h-full w-full grid-cols-2 gap-1 p-1 bg-black/40">
                             {quadItems.map((qItem, idx) => (
@@ -525,6 +530,9 @@ export function LibraryExplorerGrid({
                         ) : (
                           <Folder className="h-10 w-10 opacity-90" />
                         )}
+                        <span className="absolute top-1.5 left-1.5 rounded bg-amber-500/80 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-black backdrop-blur">
+                          FOLDER
+                        </span>
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -542,11 +550,11 @@ export function LibraryExplorerGrid({
                           />
                         ) : (
                           <>
-                            <p className="truncate text-xs font-semibold text-foreground group-hover:text-amber-400">
+                            <p className="line-clamp-2 text-xs font-semibold text-foreground group-hover:text-amber-400 leading-snug">
                               {folder.name}
                             </p>
-                            <span className="text-[10px] text-muted-foreground block">
-                              {quadItems.length} child items
+                            <span className="text-[10px] text-muted-foreground block mt-0.5">
+                              {quadItems.length} child item(s)
                             </span>
                           </>
                         )}
@@ -577,6 +585,7 @@ export function LibraryExplorerGrid({
                         "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card px-2.5 text-xs shadow-sm transition",
                         selected ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border hover:border-primary/50"
                       )}
+                      title={item.name}
                     >
                       <div className="h-5 w-5 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center">
                         {item.mediaRecord ? (
@@ -610,6 +619,7 @@ export function LibraryExplorerGrid({
                         "group relative flex items-center h-10 cursor-pointer overflow-hidden rounded-lg border bg-card px-3 text-xs shadow-sm transition",
                         selected ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border hover:border-primary/50"
                       )}
+                      title={item.name}
                     >
                       <div className="h-6 w-6 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center mr-3">
                         {item.mediaRecord ? (
@@ -652,7 +662,7 @@ export function LibraryExplorerGrid({
                   );
                 }
 
-                // Grid / Large / Medium / Gallery Card
+                // Grid / Large / Medium / Gallery Card (16:10 aspect ratio thumbnail)
                 return (
                   <div
                     key={item.id}
@@ -665,38 +675,56 @@ export function LibraryExplorerGrid({
                       onContextMenu(e, item);
                     }}
                     className={cn(
-                      "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card/80 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                      "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card/80 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md select-none",
                       selected ? "border-primary bg-primary/10 ring-2 ring-primary" : "border-border hover:border-primary/50"
                     )}
+                    title={item.name}
                   >
-                    {/* Visual Thumbnail Box */}
-                    <div className="relative h-28 w-full overflow-hidden rounded-t-xl bg-black/40 flex items-center justify-center">
+                    {/* Visual 16:10 Thumbnail Box */}
+                    <div className="relative aspect-[16/10] w-full overflow-hidden rounded-t-xl bg-black/50 flex items-center justify-center">
                       {item.mediaRecord ? (
                         <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition group-hover:scale-105 duration-200" />
                       ) : item.type === "song" ? (
-                        <div className="flex flex-col items-center justify-center p-2 text-center text-purple-400">
-                          <Music className="h-7 w-7 mb-1 opacity-90" />
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-purple-400 bg-purple-500/10 h-full w-full">
+                          <Music className="h-8 w-8 mb-1 opacity-90" />
                           <span className="text-[10px] font-bold text-purple-300">
                             {item.songData?.slides.length || 0} Slides
                           </span>
                         </div>
                       ) : item.type === "bible" ? (
-                        <div className="flex flex-col items-center justify-center p-2 text-center text-blue-400">
-                          <BookOpen className="h-7 w-7 mb-1 opacity-90" />
-                          <span className="text-[10px] font-bold text-blue-300">Passage</span>
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-amber-400 bg-amber-500/10 h-full w-full">
+                          <BookOpen className="h-8 w-8 mb-1 opacity-90" />
+                          <span className="text-[10px] font-bold text-amber-300">Passage</span>
                         </div>
                       ) : (
-                        <div className="flex flex-col items-center justify-center p-2 text-center text-amber-400">
-                          <Megaphone className="h-7 w-7 mb-1 opacity-90" />
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-blue-400 bg-blue-500/10 h-full w-full">
+                          <Megaphone className="h-8 w-8 mb-1 opacity-90" />
                         </div>
                       )}
 
-                      <span className="absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur">
+                      {/* Type Badge */}
+                      <span
+                        className={cn(
+                          "absolute top-1.5 left-1.5 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur shadow-sm",
+                          item.type === "song" ? "bg-purple-600/80" : item.type === "bible" ? "bg-amber-600/80" : item.type === "video" ? "bg-purple-600/80" : "bg-black/70"
+                        )}
+                      >
                         {item.type}
                       </span>
+
+                      {/* Duration / Resolution overlay badge */}
+                      {item.durationMs ? (
+                        <span className="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-mono font-medium text-white backdrop-blur">
+                          {formatDuration(item.durationMs)}
+                        </span>
+                      ) : item.width && item.height ? (
+                        <span className="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-[9px] font-mono font-medium text-white backdrop-blur">
+                          {item.width}×{item.height}
+                        </span>
+                      ) : null}
                     </div>
 
-                    {/* Footer Info */}
+                    {/* Card Footer Info */}
                     <div className="p-2.5">
                       {isRenaming ? (
                         <input
@@ -711,9 +739,20 @@ export function LibraryExplorerGrid({
                           className="w-full rounded border border-primary bg-background px-1 text-xs text-foreground focus:outline-none"
                         />
                       ) : (
-                        <p className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
-                          {item.name}
-                        </p>
+                        <>
+                          <p className="line-clamp-2 text-xs font-semibold text-foreground group-hover:text-primary leading-snug">
+                            {item.name}
+                          </p>
+                          <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                            <span>{item.size ? formatBytes(item.size) : item.type}</span>
+                            {item.songData && (
+                              <span className="text-purple-400 font-medium">Song</span>
+                            )}
+                            {item.bibleData && (
+                              <span className="text-amber-400 font-medium">{bibleLang.toUpperCase()}</span>
+                            )}
+                          </div>
+                        </>
                       )}
                     </div>
                   </div>

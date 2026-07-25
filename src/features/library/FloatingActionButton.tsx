@@ -40,7 +40,7 @@ export function FloatingActionButton({
   }, []);
 
   return (
-    <div ref={menuRef} className="fixed bottom-6 right-6 z-40 flex flex-col items-end">
+    <div ref={menuRef} className="absolute bottom-6 right-6 z-30 flex flex-col items-end">
       {/* Expanded Actions Dropup Menu */}
       {isOpen && (
         <div className="mb-2 flex flex-col gap-1 rounded-xl border border-border bg-popover/95 p-1.5 shadow-2xl backdrop-blur select-none animate-in fade-in slide-in-from-bottom-2 duration-150 text-xs">
