@@ -75,7 +75,7 @@ export function LibraryShell() {
   const [sortField, setSortField] = useState<SortField>("name");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [bibleLang, setBibleLang] = useState<BibleLang>("en");
-  const [searchScope, setSearchScope] = useState<"folder" | "library">("folder");
+  const [searchScope, setSearchScope] = useState<"folder" | "library" | "selected">("folder");
 
   // Navigation History
   const [history, setHistory] = useState<(string | null)[]>([null]);

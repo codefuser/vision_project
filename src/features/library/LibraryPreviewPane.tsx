@@ -68,12 +68,28 @@ export function LibraryPreviewPane({
 
   if (!item) {
     return (
-      <aside className="flex h-full w-full flex-col items-center justify-center border-l border-border bg-card/30 p-4 text-center text-xs text-muted-foreground select-none">
-        <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
-        <p className="font-medium text-foreground">No item selected</p>
-        <p className="mt-1 text-[11px] opacity-70">
-          Select any file or folder to inspect metadata, view properties & project content.
-        </p>
+      <aside className="flex h-full w-full flex-col overflow-hidden border-l border-border bg-card/60 select-none">
+        {/* Header with Title and Collapse Button */}
+        <div className="flex items-center justify-between p-3 pb-2 border-b border-border/60">
+          <div className="flex items-center gap-2 min-w-0">
+            <Info className="h-4 w-4 text-muted-foreground" />
+            <span className="truncate text-xs font-bold text-foreground">Details Inspector</span>
+          </div>
+          <button
+            onClick={onClose}
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+            title="Collapse Details Inspector (Ctrl+])"
+          >
+            <PanelRightClose className="h-3.5 w-3.5" />
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+          <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
+          <p className="font-medium text-foreground">No item selected</p>
+          <p className="mt-1 text-[11px] opacity-70">
+            Select any file or folder to inspect metadata, view properties & project content.
+          </p>
+        </div>
       </aside>
     );
   }
