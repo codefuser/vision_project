@@ -1,4 +1,3 @@
 {
-  "version": 2,
-  "buildCommand": "vite build && nitro build --preset vercel"
+  "framework": "tanstack-start"
 }
