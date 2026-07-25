@@ -18,7 +18,7 @@ import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
-import { GlobalFavoritesDock } from "@/components/GlobalFavoritesDock";
+import { GlobalFavoritesPopover } from "@/components/GlobalFavoritesPopover";
 import { AppStartupProvider } from "@/components/AppStartupProvider";
 import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 import { useWorkspace } from "@/features/workspace/workspace.store";
@@ -180,15 +180,16 @@ export function AppShell({ children }: { children: ReactNode }) {
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <AppStartupProvider>
-          {/* Integrated top bar — projector + theme controls. Compact, anchored, not floating. */}
-          <header className="flex h-10 shrink-0 items-center justify-end gap-1 border-b border-border bg-background px-3">
+          {/* Integrated top bar — projector + favorites + theme controls. Compact, anchored, not floating. */}
+          <header className="flex h-10 shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-3 select-none">
             <ProjectorToggleButton
               projectorOpen={projectorOpen}
               onToggle={projectorOpen ? closeProjector : openProjector}
             />
+            <GlobalFavoritesPopover />
             <button
               onClick={cycleTheme}
-              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
               aria-label="Toggle theme"
               title={`Theme: ${settings.theme}`}
             >
@@ -204,7 +205,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main className="flex-1 overflow-hidden">{children}</main>
         </AppStartupProvider>
       </div>
-      <GlobalFavoritesDock />
     </div></StartupScreen>
   );
 }

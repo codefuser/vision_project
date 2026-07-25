@@ -662,7 +662,66 @@ export function LibraryExplorerGrid({
                   );
                 }
 
-                // Grid / Large / Medium / Gallery Card (16:10 aspect ratio thumbnail)
+                // Gallery View Mode: Full-bleed edge-to-edge media preview with hover title
+                if (viewMode === "gallery") {
+                  return (
+                    <div
+                      key={item.id}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, item)}
+                      onClick={(e) => handleItemNodeClick(e, node, index)}
+                      onDoubleClick={(e) => onItemDoubleClick(e, item)}
+                      onContextMenu={(e) => {
+                        e.preventDefault();
+                        onContextMenu(e, item);
+                      }}
+                      className={cn(
+                        "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-black shadow-md transition hover:-translate-y-0.5 hover:shadow-xl select-none aspect-[4/3]",
+                        selected ? "border-primary ring-2 ring-primary" : "border-[#2D3348] hover:border-blue-400"
+                      )}
+                      title={item.name}
+                    >
+                      <div className="relative h-full w-full overflow-hidden flex items-center justify-center bg-black/60">
+                        {item.mediaRecord ? (
+                          <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition group-hover:scale-105 duration-300" />
+                        ) : item.type === "song" ? (
+                          <div className="flex flex-col items-center justify-center p-3 text-center text-purple-400 bg-purple-950/40 h-full w-full">
+                            <Music className="h-10 w-10 mb-2 opacity-90" />
+                            <span className="text-xs font-bold text-purple-300">{item.name}</span>
+                          </div>
+                        ) : item.type === "bible" ? (
+                          <div className="flex flex-col items-center justify-center p-3 text-center text-amber-400 bg-amber-950/40 h-full w-full">
+                            <BookOpen className="h-10 w-10 mb-2 opacity-90" />
+                            <span className="text-xs font-bold text-amber-300">{item.name}</span>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center p-3 text-center text-blue-400 bg-blue-950/40 h-full w-full">
+                            <Megaphone className="h-10 w-10 mb-2 opacity-90" />
+                            <span className="text-xs font-bold text-blue-300">{item.name}</span>
+                          </div>
+                        )}
+
+                        {/* Top Left Badge */}
+                        <span
+                          className={cn(
+                            "absolute top-2 left-2 rounded px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur shadow-sm",
+                            item.type === "song" ? "bg-purple-600/80" : item.type === "bible" ? "bg-amber-600/80" : item.type === "video" ? "bg-purple-600/80" : "bg-black/70"
+                          )}
+                        >
+                          {item.type}
+                        </span>
+
+                        {/* Hover Overlay Title Block */}
+                        <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex flex-col justify-end">
+                          <p className="line-clamp-2 text-xs font-bold text-white leading-snug">{item.name}</p>
+                          <p className="text-[10px] text-slate-300 mt-0.5">{item.size ? formatBytes(item.size) : item.type}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // Grid / Large / Medium Card (Standard Desktop File Card with Footer Info)
                 return (
                   <div
                     key={item.id}
