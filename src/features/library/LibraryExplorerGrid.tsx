@@ -8,6 +8,11 @@ import {
   Megaphone,
   Folder,
   Star,
+  Upload,
+  FolderPlus,
+  ArrowUpDown,
+  FileText,
+  Plus,
 } from "lucide-react";
 import type { LibraryItem, ViewMode } from "./types";
 import type { FolderRecord } from "@/db/schema";
@@ -87,7 +92,20 @@ export function LibraryExplorerGrid({
     return nodes;
   }, [subfolders, items, inlineCreatingFolder]);
 
-  // Measure container width for responsive virtualization
+  // Map items to folder for 2x2 folder quadrant preview
+  const folderChildItemsMap = useMemo(() => {
+    const map = new Map<string, LibraryItem[]>();
+    for (const item of items) {
+      if (item.folderId) {
+        const list = map.get(item.folderId) || [];
+        if (list.length < 4) list.push(item);
+        map.set(item.folderId, list);
+      }
+    }
+    return map;
+  }, [items]);
+
+  // Measure container width for responsive layout calculation
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
@@ -118,17 +136,19 @@ export function LibraryExplorerGrid({
             currentX: e.clientX - rect.left + containerRef.current!.scrollLeft,
             currentY: e.clientY - rect.top + containerRef.current!.scrollTop,
           }
-        : null,
+        : null
     );
   };
 
   const gap = 16;
-  let baseWidth = 220;
-  if (viewMode === "large-icons") baseWidth = 280;
-  if (viewMode === "small-icons") baseWidth = 150;
-  if (viewMode === "list" || viewMode === "details") baseWidth = Math.max(300, containerWidth - gap * 2); // full width list mode
+  let baseWidth = 200;
+  if (viewMode === "large-icons") baseWidth = 240;
+  else if (viewMode === "medium-icons" || viewMode === "grid") baseWidth = 160;
+  else if (viewMode === "small-icons") baseWidth = 110;
+  else if (viewMode === "gallery") baseWidth = 220;
+  else if (viewMode === "list" || viewMode === "details") baseWidth = Math.max(300, containerWidth - gap * 2);
 
-  const itemWidth = Math.max(130, Math.floor(baseWidth * zoomLevel));
+  const itemWidth = Math.max(90, Math.floor(baseWidth * zoomLevel));
   const itemsPerRow = Math.max(1, Math.floor((containerWidth + gap) / (itemWidth + gap)));
   const rowCount = Math.ceil(allNodes.length / itemsPerRow);
 
@@ -138,33 +158,25 @@ export function LibraryExplorerGrid({
       const startY = Math.min(dragBox.startY, dragBox.currentY);
       const endX = Math.max(dragBox.startX, dragBox.currentX);
       const endY = Math.max(dragBox.startY, dragBox.currentY);
-      
-      const isDragSignificant = Math.abs(dragBox.currentX - dragBox.startX) > 5 || Math.abs(dragBox.currentY - dragBox.startY) > 5;
-      
+
+      const isDragSignificant =
+        Math.abs(dragBox.currentX - dragBox.startX) > 5 || Math.abs(dragBox.currentY - dragBox.startY) > 5;
+
       if (isDragSignificant) {
         const idsToSelect: string[] = [];
-        
         allNodes.forEach((node, idx) => {
           const rowIndex = Math.floor(idx / itemsPerRow);
           const colIndex = idx % itemsPerRow;
-          
-          let top = 0;
-          if (viewMode === "list" || viewMode === "details") {
-            top = rowIndex * (48 + gap);
-          } else {
-            top = rowIndex * (itemWidth * 0.625 + 64 + gap); // folder is different height but this is an approximation for grid
-          }
-          
+
+          const top = rowIndex * (viewMode === "list" || viewMode === "details" ? 48 + gap : itemWidth * 0.75 + 64 + gap);
           const left = colIndex * (itemWidth + gap) + 16;
-          const bottom = top + (viewMode === "list" ? 48 : (itemWidth * 0.625 + 64));
+          const bottom = top + (viewMode === "list" ? 48 : itemWidth * 0.75 + 64);
           const right = left + itemWidth;
-          
+
           if (left < endX && right > startX && top < endY && bottom > startY) {
-            if (node.type === "item") idsToSelect.push(node.data.id);
-            else if (node.type === "subfolder") idsToSelect.push(node.data.id);
+            idsToSelect.push(node.id);
           }
         });
-        
         onSelectMultiple(idsToSelect, e.shiftKey || e.ctrlKey || e.metaKey);
       }
     }
@@ -179,21 +191,21 @@ export function LibraryExplorerGrid({
     e.dataTransfer.setData("text/plain", item.id);
 
     const ghost = document.createElement("div");
-    ghost.className = "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
+    ghost.className =
+      "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
     ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} item(s)</span>`;
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 20, 20);
-    setTimeout(() => { document.body.removeChild(ghost); }, 0);
+    setTimeout(() => {
+      document.body.removeChild(ghost);
+    }, 0);
   };
 
   const handleItemNodeClick = (e: React.MouseEvent, node: UnifiedNode, index: number) => {
-    if (node.type === "subfolder") {
-      // For subfolders, selection click logic could go here if implemented, but we just want to track slow double click
-    } else if (node.type === "item") {
+    if (node.type === "item") {
       onItemClick(e, node.data, index);
     }
-    
-    // Slow double click inline rename
+
     const now = Date.now();
     if (lastClickRef.current?.id === node.id) {
       const diff = now - lastClickRef.current.time;
@@ -204,19 +216,13 @@ export function LibraryExplorerGrid({
     lastClickRef.current = { id: node.id, time: now };
   };
 
-  // Setup virtualizer
+  // Virtualizer setup
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => containerRef.current,
     estimateSize: (index) => {
-      const firstNode = allNodes[index * itemsPerRow];
-      if (firstNode?.type === "subfolder" || firstNode?.type === "creating_folder") {
-        return 64 + gap; // folder height + gap
-      }
-      if (viewMode === "list" || viewMode === "details") {
-        return 48 + gap; // List mode item height
-      }
-      return itemWidth * 0.625 + 64 + gap; // card thumbnail + footer + gap
+      if (viewMode === "list" || viewMode === "details") return 44 + gap;
+      return itemWidth * 0.75 + 64 + gap;
     },
     overscan: 5,
   });
@@ -224,7 +230,7 @@ export function LibraryExplorerGrid({
   useEffect(() => {
     const handleScrollTo = (e: Event) => {
       const id = (e as CustomEvent).detail.id;
-      const idx = allNodes.findIndex((n) => 'id' in n && n.id === id);
+      const idx = allNodes.findIndex((n) => n.id === id);
       if (idx !== -1) {
         const rowIndex = Math.floor(idx / itemsPerRow);
         rowVirtualizer.scrollToIndex(rowIndex, { align: "auto" });
@@ -245,9 +251,35 @@ export function LibraryExplorerGrid({
         }}
         className="flex h-full flex-1 flex-col items-center justify-center p-8 text-center text-muted-foreground select-none"
       >
-        <Folder className="mb-2 h-12 w-12 text-muted-foreground/30" />
-        <p className="text-sm font-medium text-foreground">This folder is empty</p>
-        <p className="mt-1 text-xs opacity-70">Upload media or import songs and Bible verses to add content.</p>
+        <div className="relative mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-muted/40 border border-border/80 shadow-inner">
+          <Folder className="h-12 w-12 text-muted-foreground/40" />
+        </div>
+        <h3 className="text-base font-bold text-foreground">This Folder is Empty</h3>
+        <p className="mt-1 text-xs max-w-sm text-muted-foreground opacity-80">
+          Drag and drop media files directly into this area, or use the shortcuts below to add content.
+        </p>
+
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+          <button
+            onClick={() => {
+              const el = document.createElement("input");
+              el.type = "file";
+              el.multiple = true;
+              el.click();
+            }}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-semibold text-primary-foreground shadow-md transition hover:bg-primary/90 active:scale-95"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            Upload Files
+          </button>
+          <button
+            onClick={() => onInlineCreateSubmit("New Folder")}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-2 text-xs font-semibold text-foreground shadow-sm transition hover:bg-accent active:scale-95"
+          >
+            <FolderPlus className="h-3.5 w-3.5 text-amber-400" />
+            New Folder
+          </button>
+        </div>
       </div>
     );
   }
@@ -263,9 +295,9 @@ export function LibraryExplorerGrid({
         if (e.target === containerRef.current) onContextMenu(e, null);
       }}
       className="relative flex-1 min-w-0 overflow-y-auto p-4 select-none outline-none"
-      tabIndex={0} // for keyboard nav
+      tabIndex={0}
     >
-      {/* Rubberband Selection Box */}
+      {/* Selection Box */}
       {dragBox && (
         <div
           className="pointer-events-none absolute z-30 border border-primary bg-primary/20 rounded shadow-sm"
@@ -276,6 +308,17 @@ export function LibraryExplorerGrid({
             height: `${Math.abs(dragBox.currentY - dragBox.startY)}px`,
           }}
         />
+      )}
+
+      {/* Details Table Header */}
+      {viewMode === "details" && (
+        <div className="sticky top-0 z-20 mb-2 flex h-8 items-center border-b border-border bg-card/90 px-3 text-[11px] font-bold text-muted-foreground backdrop-blur">
+          <div className="w-10"></div>
+          <div className="flex-1 font-bold">Name</div>
+          <div className="w-24">Type</div>
+          <div className="w-24">Size</div>
+          <div className="w-32">Date Created</div>
+        </div>
       )}
 
       {/* Virtualized Container */}
@@ -299,8 +342,12 @@ export function LibraryExplorerGrid({
                 width: "100%",
                 height: `${virtualRow.size - gap}px`,
                 transform: `translateY(${virtualRow.start}px)`,
-                display: "grid",
-                gridTemplateColumns: `repeat(${itemsPerRow}, minmax(0, 1fr))`,
+                display: viewMode === "details" || viewMode === "list" ? "flex" : "grid",
+                flexDirection: viewMode === "details" || viewMode === "list" ? "column" : undefined,
+                gridTemplateColumns:
+                  viewMode !== "details" && viewMode !== "list"
+                    ? `repeat(${itemsPerRow}, minmax(0, 1fr))`
+                    : undefined,
                 gap: `${gap}px`,
               }}
             >
@@ -332,6 +379,7 @@ export function LibraryExplorerGrid({
                   const folder = node.data;
                   const isRenaming = inlineEditingId === folder.id;
                   const isDragOver = dragOverFolderId === folder.id;
+                  const quadItems = folderChildItemsMap.get(folder.id) || [];
 
                   return (
                     <div
@@ -366,15 +414,44 @@ export function LibraryExplorerGrid({
                         }
                       }}
                       className={cn(
-                        "group relative flex h-16 items-center gap-3 cursor-pointer overflow-hidden rounded-xl border p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
-                        isDragOver
-                          ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400 scale-[1.02]"
-                          : "border-border bg-card/80 hover:border-amber-400/60",
+                        "group relative flex cursor-pointer overflow-hidden rounded-xl border transition hover:-translate-y-0.5 hover:shadow-md select-none",
+                        viewMode === "list" || viewMode === "details"
+                          ? "h-11 items-center gap-3 px-3 bg-card border-border hover:border-amber-400/60"
+                          : "flex-col p-3 border-border bg-card/80 hover:border-amber-400/60",
+                        isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400 scale-[1.02]" : ""
                       )}
                     >
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-400/10 text-amber-400">
-                        <Folder className="h-6 w-6" />
+                      {/* 2x2 Quad Preview or Single Folder Icon */}
+                      <div
+                        className={cn(
+                          "relative flex shrink-0 items-center justify-center overflow-hidden rounded-lg bg-amber-400/10 text-amber-400",
+                          viewMode === "list" || viewMode === "details" ? "h-7 w-7" : "aspect-video w-full mb-2"
+                        )}
+                      >
+                        {quadItems.length > 0 && viewMode !== "list" && viewMode !== "details" ? (
+                          <div className="grid h-full w-full grid-cols-2 gap-0.5 p-1 bg-black/40 rounded-lg">
+                            {quadItems.map((qItem, idx) => (
+                              <div key={idx} className="relative overflow-hidden rounded bg-muted flex items-center justify-center">
+                                {qItem.mediaRecord ? (
+                                  <Thumb media={qItem.mediaRecord} className="h-full w-full object-cover" />
+                                ) : qItem.type === "song" ? (
+                                  <Music className="h-3 w-3 text-purple-400" />
+                                ) : qItem.type === "bible" ? (
+                                  <BookOpen className="h-3 w-3 text-blue-400" />
+                                ) : (
+                                  <Megaphone className="h-3 w-3 text-amber-400" />
+                                )}
+                              </div>
+                            ))}
+                            {Array.from({ length: Math.max(0, 4 - quadItems.length) }).map((_, idx) => (
+                              <div key={`empty-${idx}`} className="rounded bg-muted/20" />
+                            ))}
+                          </div>
+                        ) : (
+                          <Folder className="h-6 w-6" />
+                        )}
                       </div>
+
                       <div className="min-w-0 flex-1">
                         {isRenaming ? (
                           <input
@@ -390,8 +467,12 @@ export function LibraryExplorerGrid({
                           />
                         ) : (
                           <>
-                            <p className="truncate text-xs font-semibold text-foreground">{folder.name}</p>
-                            <span className="text-[10px] text-muted-foreground">Folder</span>
+                            <p className="truncate text-xs font-semibold text-foreground group-hover:text-amber-400">
+                              {folder.name}
+                            </p>
+                            <span className="text-[10px] text-muted-foreground block">
+                              {quadItems.length} child items
+                            </span>
                           </>
                         )}
                       </div>
@@ -399,18 +480,11 @@ export function LibraryExplorerGrid({
                   );
                 }
 
-                // File Item
+                // File Items
                 const item = node.data;
                 const index = node.index;
                 const selected = selection.has(item.id);
                 const isRenaming = inlineEditingId === item.id;
-
-                const verseText =
-                  item.type === "bible" && item.bibleData
-                    ? getVerse(bibleLang, item.bibleData.book, item.bibleData.chapter, item.bibleData.verse) ||
-                      item.bibleData.text ||
-                      "Verse text not found."
-                    : "";
 
                 if (viewMode === "list" || viewMode === "details") {
                   return (
@@ -425,18 +499,23 @@ export function LibraryExplorerGrid({
                         onContextMenu(e, item);
                       }}
                       className={cn(
-                        "group relative flex items-center h-12 cursor-pointer overflow-hidden rounded-lg border bg-card shadow-sm transition",
-                        selected ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border hover:border-primary/50",
+                        "group relative flex items-center h-11 cursor-pointer overflow-hidden rounded-lg border bg-card px-3 text-xs shadow-sm transition",
+                        selected ? "border-primary bg-primary/10 ring-1 ring-primary" : "border-border hover:border-primary/50"
                       )}
                     >
-                      <div className="flex items-center gap-3 px-3 min-w-0 flex-1">
-                        <div className="h-8 w-8 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center">
-                           {item.mediaRecord ? (
-                             <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
-                           ) : item.type === "song" ? <Music className="h-4 w-4 text-purple-400" /> :
-                             item.type === "bible" ? <BookOpen className="h-4 w-4 text-blue-400" /> :
-                             <Megaphone className="h-4 w-4 text-amber-400" />}
-                        </div>
+                      <div className="h-7 w-7 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center mr-3">
+                        {item.mediaRecord ? (
+                          <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
+                        ) : item.type === "song" ? (
+                          <Music className="h-3.5 w-3.5 text-purple-400" />
+                        ) : item.type === "bible" ? (
+                          <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+                        ) : (
+                          <Megaphone className="h-3.5 w-3.5 text-amber-400" />
+                        )}
+                      </div>
+
+                      <div className="flex-1 truncate font-medium text-foreground">
                         {isRenaming ? (
                           <input
                             type="text"
@@ -447,24 +526,25 @@ export function LibraryExplorerGrid({
                               if (e.key === "Escape") onInlineCancel();
                             }}
                             onBlur={(e) => onInlineRenameSubmit(item.id, e.target.value)}
-                            className="w-64 rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
+                            className="w-full rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
                           />
                         ) : (
-                          <p className="truncate text-xs font-semibold text-foreground flex-1">{item.name}</p>
-                        )}
-                        {viewMode === "details" && (
-                          <>
-                            <span className="w-24 shrink-0 text-[10px] text-muted-foreground capitalize">{item.type}</span>
-                            <span className="w-24 shrink-0 text-[10px] text-muted-foreground text-right tabular-nums">
-                               {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : ""}
-                            </span>
-                          </>
+                          item.name
                         )}
                       </div>
+
+                      {viewMode === "details" && (
+                        <>
+                          <div className="w-24 uppercase text-[10px] font-bold text-muted-foreground">{item.type}</div>
+                          <div className="w-24 text-[11px] text-muted-foreground">{item.size ? formatBytes(item.size) : "-"}</div>
+                          <div className="w-32 text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</div>
+                        </>
+                      )}
                     </div>
-                  )
+                  );
                 }
 
+                // Grid / Icon / Gallery Card
                 return (
                   <div
                     key={item.id}
@@ -477,86 +557,39 @@ export function LibraryExplorerGrid({
                       onContextMenu(e, item);
                     }}
                     className={cn(
-                      "group relative flex flex-col h-full cursor-pointer overflow-hidden rounded-xl border bg-card shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
-                      selected ? "border-primary ring-2 ring-primary bg-primary/5" : "border-border hover:border-primary/50",
+                      "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card/80 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md",
+                      selected ? "border-primary bg-primary/10 ring-2 ring-primary" : "border-border hover:border-primary/50"
                     )}
                   >
-                    {/* Thumbnail / Document Preview Card Area */}
-                    <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/40 border-b border-border/40 shrink-0">
+                    {/* Visual Thumbnail Box */}
+                    <div className="relative aspect-video w-full overflow-hidden rounded-t-xl bg-black/40 flex items-center justify-center">
                       {item.mediaRecord ? (
-                        <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
-                      ) : item.type === "song" && item.songData ? (
-                        <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-purple-950/40 via-card to-background">
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-purple-400 uppercase tracking-wider">
-                              <Music className="h-3 w-3" /> Song
-                            </span>
-                            <span className="rounded bg-purple-500/20 px-1.5 py-0.5 text-[9px] font-semibold text-purple-300">
-                              {item.songData.slides.length} slides
-                            </span>
-                          </div>
-
-                          <div className="my-1 space-y-1 text-[10.5px] leading-tight text-foreground/80 line-clamp-3">
-                            {item.songData.slides[0]?.split("\n").slice(0, 4).map((line, i) => (
-                              <p key={i} className="truncate italic">
-                                {line}
-                              </p>
-                            ))}
-                          </div>
-                        </div>
-                      ) : item.type === "bible" && item.bibleData ? (
-                        <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-blue-950/40 via-card to-background">
-                          <div className="flex items-center justify-between">
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-400 uppercase tracking-wider">
-                              <BookOpen className="h-3 w-3" /> Bible
-                            </span>
-                            <span className="text-[9px] font-semibold uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300">
-                              {bibleLang === "en" ? "EN" : "TA"}
-                            </span>
-                          </div>
-
-                          <div className="my-1 flex flex-col justify-center">
-                            <p className="text-[11px] font-bold text-primary truncate">
-                              {item.bibleData.bookName} {item.bibleData.chapter}:{item.bibleData.verse}
-                            </p>
-                            <p className="mt-0.5 text-[10.5px] text-foreground/85 line-clamp-3 italic leading-tight">
-                              "{verseText}"
-                            </p>
-                          </div>
-                        </div>
-                      ) : item.type === "text" ? (
-                        <div className="flex h-full w-full flex-col justify-between p-2.5 bg-gradient-to-br from-amber-950/40 via-card to-background">
-                          <span className="flex items-center gap-1 text-[10px] font-bold text-amber-400 uppercase tracking-wider">
-                            <Megaphone className="h-3 w-3" /> Alert
+                        <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition group-hover:scale-105 duration-200" />
+                      ) : item.type === "song" ? (
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-purple-400">
+                          <Music className="h-8 w-8 mb-1 opacity-90" />
+                          <span className="text-[10px] font-bold text-purple-300">
+                            {item.songData?.slides.length || 0} Slides
                           </span>
-                          <p className="text-[11px] text-foreground/80 line-clamp-3 leading-tight">
-                            {item.textData?.content}
-                          </p>
+                        </div>
+                      ) : item.type === "bible" ? (
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-blue-400">
+                          <BookOpen className="h-8 w-8 mb-1 opacity-90" />
+                          <span className="text-[10px] font-bold text-blue-300">Passage</span>
                         </div>
                       ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <Folder className="h-10 w-10 text-amber-400" />
+                        <div className="flex flex-col items-center justify-center p-2 text-center text-amber-400">
+                          <Megaphone className="h-8 w-8 mb-1 opacity-90" />
                         </div>
                       )}
 
-                      {/* Favorite Star Button */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onToggleFavorite(item);
-                        }}
-                        className={cn(
-                          "absolute top-1.5 right-1.5 flex h-6 w-6 cursor-pointer items-center justify-center rounded bg-black/60 backdrop-blur text-amber-400 transition",
-                          item.isFavorite ? "opacity-100" : "opacity-0 group-hover:opacity-100",
-                        )}
-                        title="Favorite"
-                      >
-                        <Star className={cn("h-3.5 w-3.5", item.isFavorite && "fill-current")} />
-                      </button>
+                      <span className="absolute top-1.5 left-1.5 rounded bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white backdrop-blur">
+                        {item.type}
+                      </span>
                     </div>
 
-                    {/* Card Label Footer */}
-                    <div className="px-3 py-2 flex flex-col justify-center flex-1">
+                    {/* Footer Info */}
+                    <div className="p-2.5">
                       {isRenaming ? (
                         <input
                           type="text"
@@ -567,20 +600,12 @@ export function LibraryExplorerGrid({
                             if (e.key === "Escape") onInlineCancel();
                           }}
                           onBlur={(e) => onInlineRenameSubmit(item.id, e.target.value)}
-                          className="w-full rounded border border-primary bg-background px-1.5 py-0.5 text-xs text-foreground focus:outline-none"
+                          className="w-full rounded border border-primary bg-background px-1 text-xs text-foreground focus:outline-none"
                         />
                       ) : (
-                        <>
-                          <p className="truncate text-xs font-semibold text-foreground" title={item.name}>
-                            {item.name}
-                          </p>
-                          <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span className="capitalize">{item.type}</span>
-                            <span className="tabular-nums">
-                              {item.size ? formatBytes(item.size) : item.durationMs ? formatDuration(item.durationMs) : ""}
-                            </span>
-                          </div>
-                        </>
+                        <p className="truncate text-xs font-semibold text-foreground group-hover:text-primary">
+                          {item.name}
+                        </p>
                       )}
                     </div>
                   </div>

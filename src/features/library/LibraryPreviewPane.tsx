@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Play,
   X,
@@ -16,6 +16,12 @@ import {
   Layers,
   FolderInput,
   Star,
+  Clock,
+  FileText,
+  Sliders,
+  Activity,
+  Tag,
+  Check,
 } from "lucide-react";
 import type { LibraryItem } from "./types";
 import type { FolderRecord } from "@/db/schema";
@@ -25,7 +31,7 @@ import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { toast } from "sonner";
-import { useDragAutoScroll } from "./useDragAutoScroll";
+import { cn } from "@/lib/utils";
 
 interface LibraryPreviewPaneProps {
   item: LibraryItem | null;
@@ -40,6 +46,8 @@ interface LibraryPreviewPaneProps {
   onDuplicate?: (items: LibraryItem[]) => void;
 }
 
+type TabType = "preview" | "properties" | "metadata" | "history";
+
 export function LibraryPreviewPane({
   item,
   folders,
@@ -52,8 +60,8 @@ export function LibraryPreviewPane({
   onDelete,
   onDuplicate,
 }: LibraryPreviewPaneProps) {
-  const scrollRef = React.useRef<HTMLElement>(null);
-  useDragAutoScroll(scrollRef, 8, 40);
+  const [activeTab, setActiveTab] = useState<TabType>("preview");
+  const [userRating, setUserRating] = useState<number>(item?.rating || 0);
 
   if (!item) {
     return (
@@ -61,13 +69,13 @@ export function LibraryPreviewPane({
         <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
         <p className="font-medium text-foreground">No item selected</p>
         <p className="mt-1 text-[11px] opacity-70">
-          Select any file or folder to inspect metadata & preview content.
+          Select any file or folder to inspect metadata, view properties & project content.
         </p>
       </aside>
     );
   }
 
-  // Calculate Testament & Verse Range Text for Bible items
+  // Calculate Bible details
   let isOldTestament = true;
   let verseRangeText = "";
   let fullPassageText = "";
@@ -86,7 +94,7 @@ export function LibraryPreviewPane({
     fullPassageText = lines.join("\n\n") || item.bibleData.text || "Verse text unavailable.";
   }
 
-  // Calculate folder stats if item is a folder
+  // Calculate Folder stats
   let subfolderCount = 0;
   let folderItemCount = 0;
   let folderParentName = "Home Root";
@@ -100,10 +108,27 @@ export function LibraryPreviewPane({
     }
   }
 
+  // Folder Path construction
+  const getFolderPath = (folderId: string | null): string => {
+    if (!folderId) return "/ (Root)";
+    const chain: string[] = [];
+    let curr: string | null = folderId;
+    while (curr) {
+      const found = folders.find((f) => f.id === curr);
+      if (!found) break;
+      chain.unshift(found.name);
+      curr = found.parentId;
+    }
+    return "/" + chain.join("/");
+  };
+
+  const folderPathStr = getFolderPath(item.folderId);
+  const aspectRatio = item.width && item.height ? (item.width / item.height).toFixed(2) : null;
+
   return (
-    <aside ref={scrollRef} className="flex h-full w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-card/60 p-4 select-none">
-      {/* Inspector Title Header */}
-      <div className="flex items-center justify-between pb-3 border-b border-border/60">
+    <aside className="flex h-full w-80 shrink-0 flex-col overflow-hidden border-l border-border bg-card/60 select-none">
+      {/* Header with Title and Close Button */}
+      <div className="flex items-center justify-between p-3 pb-2 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">
           <TypeIcon type={item.type} />
           <span className="truncate text-xs font-bold text-foreground">{item.name}</span>
@@ -117,280 +142,305 @@ export function LibraryPreviewPane({
         </button>
       </div>
 
-      {/* Main High-Res Preview Box */}
-      <div className="my-3 overflow-hidden rounded-xl border border-border bg-black/40 p-2 shadow-inner">
-        {item.mediaRecord ? (
-          (item.mediaRecord.type as any) === "audio" ? (
-            <div className="flex flex-col items-center justify-center aspect-video bg-gradient-to-br from-indigo-950 to-slate-900 rounded-lg p-4 shadow-inner border border-indigo-500/20">
-              <Music className="h-12 w-12 text-indigo-400 opacity-80 mb-4 drop-shadow-lg" />
-              <div className="flex items-center justify-center gap-1 h-12 w-full">
-                {[30, 50, 80, 40, 60, 90, 70, 100, 50, 40, 80, 60, 40, 70, 90, 30].map((h, i) => (
-                  <div
-                    key={i}
-                    className="w-1.5 bg-indigo-500/80 rounded-full"
-                    style={{ height: `${h}%`, opacity: 0.5 + (h / 200) }}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : (
-            <Thumb media={item.mediaRecord} className="aspect-video w-full rounded-lg object-contain bg-black/60 shadow-inner" />
-          )
-        ) : item.type === "song" && item.songData ? (
-          <div className="flex flex-col gap-2 p-3 bg-gradient-to-br from-purple-950/40 to-black/40 border border-purple-500/30 rounded-lg text-xs shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-              <Music className="w-24 h-24" />
-            </div>
-            <span className="font-bold text-purple-300 text-sm">{item.songData.title}</span>
-            <div className="flex items-center gap-2 text-[10px] text-muted-foreground z-10">
-              {item.songData.scale && <span className="uppercase font-mono font-semibold text-purple-200 bg-purple-500/20 px-1.5 py-0.5 rounded">Key: {item.songData.scale}</span>}
-              <span>·</span>
-              <span className="font-medium text-foreground">{item.songData.slides.length} Slides</span>
-            </div>
-          </div>
-        ) : item.type === "bible" && item.bibleData ? (
-          <div className="flex flex-col gap-2 p-3 bg-gradient-to-br from-blue-950/40 to-black/40 border border-blue-500/30 rounded-lg text-xs shadow-inner relative overflow-hidden">
-            <div className="absolute top-0 right-0 p-4 opacity-5 pointer-events-none">
-              <BookOpen className="w-24 h-24" />
-            </div>
-            <div className="flex items-center justify-between z-10">
-              <span className="font-bold text-blue-300 text-sm">
-                {item.bibleData.bookName} {item.bibleData.chapter}:{verseRangeText}
-              </span>
-              <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-500/30 text-blue-100 shadow-sm">
-                {bibleLang === "en" ? "KJV" : "TCV"}
-              </span>
-            </div>
-            <p className="mt-1 text-[11.5px] text-foreground/90 leading-relaxed italic line-clamp-6 whitespace-pre-line z-10 relative">
-              <span className="text-blue-400 text-lg absolute -top-1 -left-2 opacity-30">"</span>
-              {fullPassageText}
-              <span className="text-blue-400 text-lg absolute -bottom-3 opacity-30 ml-1">"</span>
-            </p>
-          </div>
-        ) : (
-          <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-amber-950/20 to-black/40 border border-amber-500/20 rounded-lg shadow-inner">
-            <Folder className="h-16 w-16 text-amber-400 opacity-60 drop-shadow-md" />
-          </div>
-        )}
+      {/* Inspector Tabs */}
+      <div className="flex items-center border-b border-border bg-muted/20 px-2 text-[11px] font-medium text-muted-foreground">
+        <button
+          onClick={() => setActiveTab("preview")}
+          className={cn(
+            "flex-1 py-2 text-center transition border-b-2 font-semibold",
+            activeTab === "preview"
+              ? "border-primary text-primary bg-accent/40"
+              : "border-transparent hover:text-foreground"
+          )}
+        >
+          Preview
+        </button>
+        <button
+          onClick={() => setActiveTab("properties")}
+          className={cn(
+            "flex-1 py-2 text-center transition border-b-2 font-semibold",
+            activeTab === "properties"
+              ? "border-primary text-primary bg-accent/40"
+              : "border-transparent hover:text-foreground"
+          )}
+        >
+          Props
+        </button>
+        <button
+          onClick={() => setActiveTab("metadata")}
+          className={cn(
+            "flex-1 py-2 text-center transition border-b-2 font-semibold",
+            activeTab === "metadata"
+              ? "border-primary text-primary bg-accent/40"
+              : "border-transparent hover:text-foreground"
+          )}
+        >
+          Meta
+        </button>
+        <button
+          onClick={() => setActiveTab("history")}
+          className={cn(
+            "flex-1 py-2 text-center transition border-b-2 font-semibold",
+            activeTab === "history"
+              ? "border-primary text-primary bg-accent/40"
+              : "border-transparent hover:text-foreground"
+          )}
+        >
+          History
+        </button>
       </div>
 
-      {/* Bible Language Switcher & Copy Trigger */}
-      {item.type === "bible" && item.bibleData && (
-        <div className="mb-3 flex flex-col gap-2 rounded-lg border border-border bg-card p-2.5 text-xs">
-          <div className="flex items-center justify-between">
-            <span className="flex items-center gap-1.5 font-medium text-muted-foreground">
-              <Languages className="h-3.5 w-3.5 text-primary" />
-              <span>Language:</span>
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onBibleLangChange("en")}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
-                  bibleLang === "en" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                English
-              </button>
-              <button
-                onClick={() => onBibleLangChange("ta")}
-                className={`px-2 py-0.5 rounded text-[11px] font-semibold transition ${
-                  bibleLang === "ta" ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                Tamil
-              </button>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              void navigator.clipboard.writeText(`${item.name}\n${fullPassageText}`);
-              toast.success("Verse copied to clipboard");
-            }}
-            className="flex w-full items-center justify-center gap-1.5 rounded bg-muted/40 py-1 text-[11px] font-medium hover:bg-accent"
-          >
-            <Copy className="h-3 w-3 text-muted-foreground" />
-            <span>Copy Verse Text</span>
-          </button>
-        </div>
-      )}
-
-      {/* Slide Cards Preview for Songs */}
-      {item.type === "song" && item.songData && (
-        <div className="my-2 flex flex-col gap-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-            Song Slides ({item.songData.slides.length})
-          </span>
-          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-            {item.songData.slides.map((slideText, idx) => (
-              <div
-                key={idx}
-                className="group relative flex flex-col justify-between rounded-lg border border-border/60 bg-card p-2.5 shadow-sm transition hover:border-primary/60"
-              >
-                <div className="flex items-center justify-between text-[10px] font-semibold text-muted-foreground mb-1">
-                  <span>Slide {idx + 1}</span>
-                  <button
-                    onClick={() => {
-                      projectSongSlide({
-                        songId: item.songData!.id,
-                        slideIndex: idx,
-                        totalSlides: item.songData!.slides.length,
-                        title: item.songData!.title,
-                        text: slideText,
-                      });
-                      toast.success(`Projected Slide ${idx + 1}`);
-                    }}
-                    className="flex h-5 items-center gap-1 rounded bg-primary/10 px-1.5 text-primary hover:bg-primary hover:text-primary-foreground transition"
-                  >
-                    <Play className="h-2.5 w-2.5 fill-current" />
-                    <span>Project</span>
-                  </button>
+      {/* Tab Contents */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+        {activeTab === "preview" && (
+          <div className="space-y-4">
+            {/* Visual Thumbnail Box */}
+            <div className="relative aspect-video w-full overflow-hidden rounded-xl border border-border/80 bg-muted/40 shadow-inner flex items-center justify-center">
+              {item.mediaRecord ? (
+                <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
+              ) : item.type === "song" ? (
+                <div className="flex flex-col items-center justify-center gap-1.5 p-4 text-center text-primary">
+                  <Music className="h-10 w-10 opacity-80" />
+                  <span className="text-xs font-bold">{item.name}</span>
+                  <span className="text-[10px] text-muted-foreground">
+                    {item.songData?.slides.length || 0} Slides
+                  </span>
                 </div>
-                <p className="whitespace-pre-line text-xs text-foreground/90 leading-tight">
-                  {slideText}
+              ) : item.type === "bible" ? (
+                <div className="flex flex-col items-center justify-center gap-1 p-4 text-center text-amber-400">
+                  <BookOpen className="h-10 w-10 opacity-80" />
+                  <span className="text-xs font-bold">{item.name}</span>
+                  <span className="text-[10px] text-amber-300/80">
+                    {isOldTestament ? "Old Testament" : "New Testament"}
+                  </span>
+                </div>
+              ) : item.type === "text" ? (
+                <div className="flex flex-col items-center justify-center gap-1 p-4 text-center text-blue-400">
+                  <Megaphone className="h-10 w-10 opacity-80" />
+                  <span className="text-xs font-bold">{item.name}</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-1 text-amber-400">
+                  <Folder className="h-10 w-10 opacity-80" />
+                  <span className="text-xs font-bold">{item.name}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Quick Action Button */}
+            <button
+              onClick={() => onProject(item)}
+              className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-emerald-600 py-2.5 text-xs font-bold text-white hover:bg-emerald-500 transition shadow-md active:scale-95"
+            >
+              <Play className="h-4 w-4 fill-current" />
+              Project Live
+            </button>
+
+            {/* Content Snippet */}
+            {item.songData && (
+              <div className="rounded-xl border border-border bg-muted/20 p-3 space-y-2">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  Slide Preview (1 of {item.songData.slides.length})
+                </span>
+                <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap font-medium">
+                  {item.songData.slides[0] || "No slide content"}
                 </p>
               </div>
-            ))}
-          </div>
-        </div>
-      )}
+            )}
 
-      {/* Type-Specific Action Buttons */}
-      <div className="my-2 flex flex-col gap-2">
-        {item.type !== "song" && item.type !== "folder" && (
-          <button
-            onClick={() => {
-              if (item.type === "bible" && item.bibleData) {
-                void projectVerse({
-                  translation: bibleLang === "en" ? "KJV" : ("TCV" as any),
-                  book: item.bibleData.book,
-                  chapter: item.bibleData.chapter,
-                  verse: item.bibleData.verse,
-                  reference: `${item.bibleData.bookName} ${item.bibleData.chapter}:${item.bibleData.verse}`,
-                  text: fullPassageText,
-                });
-                toast.success(`Projecting Passage (${bibleLang.toUpperCase()})`);
-              } else {
-                onProject(item);
-              }
-            }}
-            className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-bold text-primary-foreground shadow transition hover:bg-primary/90"
-          >
-            <Play className="h-3.5 w-3.5 fill-current" />
-            <span>Project to Screen</span>
-          </button>
+            {item.type === "bible" && item.bibleData && (
+              <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">
+                    Passage Snippet
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => onBibleLangChange("en")}
+                      className={cn(
+                        "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                        bibleLang === "en" ? "bg-amber-500 text-black" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      EN
+                    </button>
+                    <button
+                      onClick={() => onBibleLangChange("ta")}
+                      className={cn(
+                        "px-1.5 py-0.5 rounded text-[10px] font-bold",
+                        bibleLang === "ta" ? "bg-amber-500 text-black" : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      TA
+                    </button>
+                  </div>
+                </div>
+                <p className="text-xs leading-relaxed text-foreground whitespace-pre-wrap font-serif">
+                  {fullPassageText}
+                </p>
+              </div>
+            )}
+          </div>
         )}
 
-        <div className="grid grid-cols-2 gap-1.5">
-          {onRename && (
-            <button
-              onClick={() => onRename(item)}
-              className="flex items-center justify-center gap-1.5 rounded-md border border-border bg-card py-1.5 text-xs font-medium hover:bg-accent"
-            >
-              <Pencil className="h-3 w-3 text-muted-foreground" />
-              <span>Rename</span>
-            </button>
-          )}
-          {onDuplicate && item.type !== "folder" && (
-            <button
-              onClick={() => onDuplicate([item])}
-              className="flex items-center justify-center gap-1.5 rounded-md border border-border bg-card py-1.5 text-xs font-medium hover:bg-accent"
-            >
-              <Layers className="h-3 w-3 text-muted-foreground" />
-              <span>Duplicate</span>
-            </button>
-          )}
-          {onDelete && (
-            <button
-              onClick={() => onDelete([item])}
-              className="flex items-center justify-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/20 col-span-2"
-            >
-              <Trash2 className="h-3 w-3" />
-              <span>Delete File</span>
-            </button>
-          )}
-        </div>
+        {activeTab === "properties" && (
+          <div className="space-y-3 text-xs">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-2">
+              <div className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Type</span>
+                <span className="font-semibold text-foreground uppercase">{item.type}</span>
+              </div>
+              {item.mime && (
+                <div className="flex justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground font-medium">MIME</span>
+                  <span className="font-mono text-[11px] text-foreground">{item.mime}</span>
+                </div>
+              )}
+              {item.size ? (
+                <div className="flex justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground font-medium">File Size</span>
+                  <span className="font-semibold text-foreground">{formatBytes(item.size)}</span>
+                </div>
+              ) : null}
+              {item.width && item.height ? (
+                <>
+                  <div className="flex justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground font-medium">Resolution</span>
+                    <span className="font-semibold text-foreground">
+                      {item.width} × {item.height}
+                    </span>
+                  </div>
+                  <div className="flex justify-between py-1 border-b border-border/40">
+                    <span className="text-muted-foreground font-medium">Aspect Ratio</span>
+                    <span className="font-semibold text-foreground">{aspectRatio}:1</span>
+                  </div>
+                </>
+              ) : null}
+              {item.durationMs ? (
+                <div className="flex justify-between py-1 border-b border-border/40">
+                  <span className="text-muted-foreground font-medium">Duration</span>
+                  <span className="font-semibold text-foreground">{formatDuration(item.durationMs)}</span>
+                </div>
+              ) : null}
+              <div className="flex justify-between py-1">
+                <span className="text-muted-foreground font-medium">Folder Path</span>
+                <span className="font-mono text-[10px] text-primary truncate max-w-[140px]" title={folderPathStr}>
+                  {folderPathStr}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "metadata" && (
+          <div className="space-y-3 text-xs">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-2.5">
+              <div className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Created Date</span>
+                <span className="font-medium text-foreground">
+                  {new Date(item.createdAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Modified Date</span>
+                <span className="font-medium text-foreground">
+                  {new Date(item.updatedAt).toLocaleDateString()}
+                </span>
+              </div>
+              <div className="flex justify-between py-1 border-b border-border/40">
+                <span className="text-muted-foreground font-medium">Projection Count</span>
+                <span className="font-bold text-emerald-400">
+                  {item.projectionCount || 0} times
+                </span>
+              </div>
+
+              {/* Star Rating Control */}
+              <div className="pt-2">
+                <span className="text-muted-foreground font-medium block mb-1.5">Asset Rating</span>
+                <div className="flex items-center gap-1">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      onClick={() => {
+                        setUserRating(star);
+                        item.rating = star;
+                        toast.success(`Set rating to ${star} stars`);
+                      }}
+                      className="cursor-pointer transition hover:scale-110"
+                    >
+                      <Star
+                        className={cn(
+                          "h-4 w-4",
+                          star <= (userRating || item.rating || 0)
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-muted-foreground/30"
+                        )}
+                      />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "history" && (
+          <div className="space-y-3 text-xs">
+            <div className="rounded-xl border border-border bg-card p-3 space-y-3">
+              <div className="flex items-center gap-2 text-muted-foreground font-semibold border-b border-border/40 pb-2">
+                <Clock className="h-3.5 w-3.5" />
+                <span>Activity & History Log</span>
+              </div>
+              <div className="space-y-2 text-[11px]">
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 mt-1" />
+                  <div>
+                    <p className="text-foreground font-medium">Item Imported</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(item.createdAt).toLocaleString()}</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 text-muted-foreground">
+                  <span className="h-1.5 w-1.5 rounded-full bg-blue-400 mt-1" />
+                  <div>
+                    <p className="text-foreground font-medium">Last Metadata Sync</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(item.updatedAt).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Comprehensive Type-Specific Metadata Section */}
-      <div className="mt-3 flex flex-col gap-2 text-xs border-t border-border/60 pt-3">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-          Metadata & Properties
-        </span>
-
-        <div className="flex items-center justify-between border-b border-border/40 py-1">
-          <span className="text-muted-foreground">Type</span>
-          <span className="font-semibold capitalize text-foreground">{item.type}</span>
-        </div>
-
-        {/* Folder Metadata */}
-        {item.folderRecord && (
-          <>
-            <div className="flex items-center justify-between border-b border-border/40 py-1">
-              <span className="text-muted-foreground">Parent Location</span>
-              <span className="font-medium text-foreground">{folderParentName}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-border/40 py-1">
-              <span className="text-muted-foreground">Subfolders</span>
-              <span className="font-medium text-foreground">{subfolderCount}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-border/40 py-1">
-              <span className="text-muted-foreground">Contained Files</span>
-              <span className="font-medium text-foreground">{folderItemCount}</span>
-            </div>
-          </>
+      {/* Footer Action Buttons */}
+      <div className="p-3 border-t border-border bg-muted/20 flex items-center justify-between gap-1 text-xs">
+        {onRename && (
+          <button
+            onClick={() => onRename(item)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-1.5 text-foreground hover:bg-accent font-medium transition"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+            Rename
+          </button>
         )}
-
-        {/* Bible Verse Metadata */}
-        {item.bibleData && (
-          <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">Testament</span>
-            <span className="font-medium text-foreground">{isOldTestament ? "Old Testament" : "New Testament"}</span>
-          </div>
+        {onDuplicate && (
+          <button
+            onClick={() => onDuplicate([item])}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-1.5 text-foreground hover:bg-accent font-medium transition"
+          >
+            <Copy className="h-3.5 w-3.5" />
+            Duplicate
+          </button>
         )}
-
-        {/* Song Metadata */}
-        {item.songData && (
-          <>
-            <div className="flex items-center justify-between border-b border-border/40 py-1">
-              <span className="text-muted-foreground">Scale / Key</span>
-              <span className="font-medium uppercase text-foreground">{item.songData.scale || "N/A"}</span>
-            </div>
-            <div className="flex items-center justify-between border-b border-border/40 py-1">
-              <span className="text-muted-foreground">Slides Count</span>
-              <span className="font-medium text-foreground">{item.songData.slides.length}</span>
-            </div>
-          </>
+        {onDelete && (
+          <button
+            onClick={() => onDelete([item])}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/10 transition"
+            title="Delete Item"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
         )}
-
-        {/* Media Metadata */}
-        {item.size !== undefined && (
-          <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">File Size</span>
-            <span className="font-medium tabular-nums text-foreground">{formatBytes(item.size)}</span>
-          </div>
-        )}
-
-        {item.durationMs !== undefined && (
-          <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">Duration</span>
-            <span className="font-medium tabular-nums text-foreground">{formatDuration(item.durationMs)}</span>
-          </div>
-        )}
-
-        {item.width && item.height ? (
-          <div className="flex items-center justify-between border-b border-border/40 py-1">
-            <span className="text-muted-foreground">Resolution</span>
-            <span className="font-medium tabular-nums text-foreground">{item.width} × {item.height}</span>
-          </div>
-        ) : null}
-
-        <div className="flex items-center justify-between border-b border-border/40 py-1">
-          <span className="text-muted-foreground">Created</span>
-          <span className="font-medium text-muted-foreground tabular-nums">
-            {new Date(item.createdAt).toLocaleDateString()}
-          </span>
-        </div>
       </div>
     </aside>
   );
@@ -399,16 +449,19 @@ export function LibraryPreviewPane({
 function TypeIcon({ type }: { type: string }) {
   switch (type) {
     case "song":
-      return <Music className="h-4 w-4 text-purple-400" />;
+      return <Music className="h-4 w-4 text-primary shrink-0" />;
     case "bible":
-      return <BookOpen className="h-4 w-4 text-blue-400" />;
+      return <BookOpen className="h-4 w-4 text-amber-400 shrink-0" />;
     case "image":
-      return <ImageIcon className="h-4 w-4 text-green-400" />;
+      return <ImageIcon className="h-4 w-4 text-emerald-400 shrink-0" />;
     case "video":
-      return <VideoIcon className="h-4 w-4 text-rose-400" />;
+      return <VideoIcon className="h-4 w-4 text-purple-400 shrink-0" />;
     case "text":
-      return <Megaphone className="h-4 w-4 text-amber-400" />;
+    case "announcement":
+      return <Megaphone className="h-4 w-4 text-blue-400 shrink-0" />;
+    case "folder":
+      return <Folder className="h-4 w-4 text-amber-500 shrink-0" />;
     default:
-      return <Folder className="h-4 w-4 text-amber-400" />;
+      return <Info className="h-4 w-4 text-muted-foreground shrink-0" />;
   }
 }

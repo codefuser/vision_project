@@ -19,7 +19,8 @@ export type ViewMode =
   | "small-icons"
   | "list"
   | "details"
-  | "grid";
+  | "grid"
+  | "gallery";
 
 export type CategoryFilter =
   | "all"
@@ -52,6 +53,11 @@ export interface LibraryItem {
   height?: number;
   blobId?: string;
   thumbBlobId?: string | null;
+  // DAM Extended Metadata
+  rating?: number; // 1-5 stars
+  lastProjectedAt?: number;
+  projectionCount?: number;
+  tags?: string[];
   // Payload objects
   songData?: Song;
   bibleData?: {

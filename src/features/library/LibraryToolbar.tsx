@@ -266,49 +266,88 @@ export function LibraryToolbar({
             <button
               onClick={() => onViewModeChange("large-icons")}
               className={cn(
-                "flex h-6 w-6 cursor-pointer items-center justify-center rounded transition",
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
                 viewMode === "large-icons" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
-              title="Large Icons"
+              title="Large Icons Mode"
             >
               <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Large</span>
             </button>
             <button
-              onClick={() => onViewModeChange("grid")}
+              onClick={() => onViewModeChange("medium-icons")}
               className={cn(
-                "flex h-6 w-6 cursor-pointer items-center justify-center rounded transition",
-                viewMode === "grid" || viewMode === "medium-icons" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
+                viewMode === "medium-icons" || viewMode === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
-              title="Medium Grid"
+              title="Medium Icons Mode"
             >
               <Grid className="h-3.5 w-3.5" />
+              <span>Medium</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange("small-icons")}
+              className={cn(
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
+                viewMode === "small-icons" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Small Desktop Icons Mode"
+            >
+              <Grid className="h-3 w-3 opacity-70" />
+              <span>Small</span>
             </button>
             <button
               onClick={() => onViewModeChange("list")}
               className={cn(
-                "flex h-6 w-6 cursor-pointer items-center justify-center rounded transition",
-                viewMode === "list" || viewMode === "details" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
+                viewMode === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
               )}
-              title="Details List"
+              title="List View"
             >
               <List className="h-3.5 w-3.5" />
+              <span>List</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange("details")}
+              className={cn(
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
+                viewMode === "details" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Details Table View"
+            >
+              <List className="h-3.5 w-3.5 font-bold" />
+              <span>Details</span>
+            </button>
+            <button
+              onClick={() => onViewModeChange("gallery")}
+              className={cn(
+                "flex h-6 px-1.5 cursor-pointer items-center justify-center rounded text-[10px] font-semibold transition gap-1",
+                viewMode === "gallery" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Gallery Masonry View"
+            >
+              <LayoutGrid className="h-3.5 w-3.5" />
+              <span>Gallery</span>
             </button>
           </div>
 
-          {/* Zoom Slider */}
-          <div className="flex items-center gap-1 border-l border-border/60 pl-2">
+          {/* Continuous Zoom Slider */}
+          <div className="flex items-center gap-1.5 border-l border-border/60 pl-2">
             <ZoomOut className="h-3 w-3 text-muted-foreground" />
             <input
               type="range"
-              min="0.7"
-              max="1.5"
-              step="0.1"
+              min="0.5"
+              max="2.0"
+              step="0.05"
               value={zoomLevel}
               onChange={(e) => onZoomChange(parseFloat(e.target.value))}
-              className="h-1 w-16 cursor-pointer accent-primary"
+              className="h-1 w-20 cursor-pointer accent-primary"
               title={`Zoom: ${Math.round(zoomLevel * 100)}%`}
             />
             <ZoomIn className="h-3 w-3 text-muted-foreground" />
+            <span className="text-[10px] font-mono text-muted-foreground w-8 text-right">
+              {Math.round(zoomLevel * 100)}%
+            </span>
           </div>
         </div>
       </div>

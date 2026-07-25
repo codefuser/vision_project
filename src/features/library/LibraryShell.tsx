@@ -10,6 +10,7 @@ import { LibraryPreviewPane } from "./LibraryPreviewPane";
 import { LibraryContextMenu } from "./LibraryContextMenu";
 import { SongImportDialog, BibleImportDialog, TextImportDialog } from "./LibraryImportDialogs";
 import { FloatingActionButton } from "./FloatingActionButton";
+import { QuickLookModal } from "./QuickLookModal";
 import type { LibraryItem, CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
 import type { Song } from "@/lib/songs/loader";
 import type { BibleLang } from "@/lib/bible/loader";
@@ -97,6 +98,7 @@ export function LibraryShell() {
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; item: LibraryItem | null } | null>(null);
 
   // Dialog States
+  const [showQuickLook, setShowQuickLook] = useState(false);
   const [showSongImport, setShowSongImport] = useState(false);
   const [showBibleImport, setShowBibleImport] = useState(false);
   const [showTextImport, setShowTextImport] = useState(false);
@@ -397,6 +399,13 @@ export function LibraryShell() {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+
+      // Space: Toggle Quick Look Modal
+      if (e.key === " " && (selectedItems.length > 0 || inspectedItem)) {
+        e.preventDefault();
+        setShowQuickLook((prev) => !prev);
+        return;
+      }
 
       // Ctrl+Y or Ctrl+Shift+Z: Redo
       if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === "y" || (e.shiftKey && e.key.toLowerCase() === "z"))) {
@@ -1078,6 +1087,14 @@ export function LibraryShell() {
         open={showTextImport}
         onClose={() => setShowTextImport(false)}
         onImport={handleCreateText}
+      />
+      {/* macOS Quick Look Spacebar Preview Modal */}
+      <QuickLookModal
+        item={selectedItems[0] || inspectedItem}
+        open={showQuickLook}
+        bibleLang={bibleLang}
+        onClose={() => setShowQuickLook(false)}
+        onProject={projectItem}
       />
     </div>
   );
