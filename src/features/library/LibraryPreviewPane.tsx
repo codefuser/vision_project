@@ -20,8 +20,11 @@ import {
   FileText,
   Sliders,
   Activity,
-  Tag,
   Check,
+  Share2,
+  Bookmark,
+  Sparkles,
+  PanelRightClose,
 } from "lucide-react";
 import type { LibraryItem } from "./types";
 import type { FolderRecord } from "@/db/schema";
@@ -135,10 +138,10 @@ export function LibraryPreviewPane({
         </div>
         <button
           onClick={onClose}
-          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-          title="Close Inspector"
+          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          title="Collapse Details Inspector (Ctrl+])"
         >
-          <X className="h-3.5 w-3.5" />
+          <PanelRightClose className="h-3.5 w-3.5" />
         </button>
       </div>
 

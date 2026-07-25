@@ -13,6 +13,8 @@ import {
   Plus,
   Pencil,
   Trash2,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import type { FolderRecord } from "@/db/schema";
 import type { CategoryFilter } from "./types";
@@ -25,6 +27,8 @@ interface LibraryTreeNavProps {
   folders: FolderRecord[];
   categoryCounts: Record<CategoryFilter, number>;
   folderCounts: Record<string, number>;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
   onSelectCategory: (cat: CategoryFilter) => void;
   onSelectFolder: (folderId: string | null) => void;
   onCreateFolder: (parentId?: string | null) => void;
@@ -39,6 +43,8 @@ export function LibraryTreeNav({
   folders,
   categoryCounts,
   folderCounts,
+  isCollapsed,
+  onToggleCollapse,
   onSelectCategory,
   onSelectFolder,
   onCreateFolder,
@@ -200,41 +206,155 @@ export function LibraryTreeNav({
     );
   };
 
+  if (isCollapsed) {
+    return (
+      <aside className="flex h-full w-12 shrink-0 flex-col items-center py-2 bg-card/40 border-r border-border select-none gap-2">
+        <button
+          onClick={onToggleCollapse}
+          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          title="Expand Folder Tree (Ctrl+B)"
+        >
+          <PanelLeftOpen className="h-4 w-4" />
+        </button>
+
+        <div className="w-6 h-px bg-border/60 my-1" />
+
+        <button
+          onClick={() => {
+            onSelectCategory("all");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "all" && currentFolderId === null
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-foreground hover:bg-accent"
+          )}
+          title={`All Files (${categoryCounts.all})`}
+        >
+          <Home className="h-4 w-4" />
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("songs");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "songs" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+          )}
+          title={`Songs (${categoryCounts.songs})`}
+        >
+          <Music className="h-4 w-4 text-purple-400" />
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("bible");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "bible" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+          )}
+          title={`Bible Verses (${categoryCounts.bible})`}
+        >
+          <BookOpen className="h-4 w-4 text-blue-400" />
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("images");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "images" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+          )}
+          title={`Images (${categoryCounts.images})`}
+        >
+          <ImageIcon className="h-4 w-4 text-green-400" />
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("videos");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "videos" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+          )}
+          title={`Videos (${categoryCounts.videos})`}
+        >
+          <VideoIcon className="h-4 w-4 text-rose-400" />
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("announcements");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+            currentCategory === "announcements" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+          )}
+          title={`Text (${categoryCounts.announcements})`}
+        >
+          <Megaphone className="h-4 w-4 text-amber-400" />
+        </button>
+      </aside>
+    );
+  }
+
   return (
     <aside ref={scrollRef} className="flex h-full w-full flex-col overflow-y-auto bg-card/40 p-2 border-r border-border select-none">
-      {/* File Manager Root */}
-      <button
-        onClick={() => {
-          onSelectCategory("all");
-          onSelectFolder(null);
-        }}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragOverFolderId("root");
-        }}
-        onDragLeave={() => setDragOverFolderId(null)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragOverFolderId(null);
-          const itemId = e.dataTransfer.getData("text/plain");
-          if (itemId) onDropItemToFolder(itemId, null);
-        }}
-        className={cn(
-          "flex h-8 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition mb-2 font-semibold shrink-0",
-          dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
-          currentCategory === "all" && currentFolderId === null
-            ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-foreground hover:bg-accent",
+      {/* Header with Collapse Button */}
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <button
+          onClick={() => {
+            onSelectCategory("all");
+            onSelectFolder(null);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverFolderId("root");
+          }}
+          onDragLeave={() => setDragOverFolderId(null)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolderId(null);
+            const itemId = e.dataTransfer.getData("text/plain");
+            if (itemId) onDropItemToFolder(itemId, null);
+          }}
+          className={cn(
+            "flex h-8 flex-1 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition font-semibold mr-1",
+            dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
+            currentCategory === "all" && currentFolderId === null
+              ? "bg-primary text-primary-foreground shadow-sm"
+              : "text-foreground hover:bg-accent",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Home className="h-4 w-4 text-primary" />
+            <span>File Manager</span>
+          </div>
+          <span className="text-[10px] tabular-nums font-mono opacity-80">
+            {categoryCounts.all}
+          </span>
+        </button>
+
+        {onToggleCollapse && (
+          <button
+            onClick={onToggleCollapse}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
+            title="Collapse Folder Tree (Ctrl+B)"
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </button>
         )}
-      >
-        <div className="flex items-center gap-2">
-          <Home className="h-4 w-4 text-primary" />
-          <span>File Manager</span>
-        </div>
-        <span className="text-[10px] tabular-nums font-mono opacity-80">
-          {categoryCounts.all}
-        </span>
-      </button>
+      </div>
 
       {/* Categories */}
       <div className="mb-3 flex flex-col border-t border-border/50 pt-2 shrink-0">

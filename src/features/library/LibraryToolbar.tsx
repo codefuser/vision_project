@@ -18,6 +18,9 @@ import {
   Clipboard,
   Trash2,
   Layers,
+  PanelLeft,
+  PanelRight,
+  Zap,
 } from "lucide-react";
 import { LibraryBreadcrumb } from "./LibraryBreadcrumb";
 import type { CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
@@ -37,6 +40,12 @@ interface LibraryToolbarProps {
   selectedCount: number;
   canGoBack: boolean;
   canGoForward: boolean;
+  isLeftCollapsed?: boolean;
+  isRightCollapsed?: boolean;
+  autoProjectEnabled?: boolean;
+  onToggleLeftCollapsed?: () => void;
+  onToggleRightCollapsed?: () => void;
+  onToggleAutoProject?: () => void;
   onGoBack: () => void;
   onGoForward: () => void;
   onGoUp: () => void;
@@ -72,6 +81,12 @@ export function LibraryToolbar({
   selectedCount,
   canGoBack,
   canGoForward,
+  isLeftCollapsed,
+  isRightCollapsed,
+  autoProjectEnabled,
+  onToggleLeftCollapsed,
+  onToggleRightCollapsed,
+  onToggleAutoProject,
   onGoBack,
   onGoForward,
   onGoUp,
@@ -236,6 +251,55 @@ export function LibraryToolbar({
             <Trash2 className="h-3.5 w-3.5" />
             <span>Delete</span>
           </button>
+
+          <div className="h-4 w-px bg-border/60 mx-1" />
+
+          {/* Auto-Project Mode Toggle Button */}
+          {onToggleAutoProject && (
+            <button
+              onClick={onToggleAutoProject}
+              className={cn(
+                "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md text-xs font-bold transition shadow-sm border",
+                autoProjectEnabled
+                  ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                  : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+              )}
+              title="Single-click on any item immediately projects it live"
+            >
+              <Zap className={cn("h-3.5 w-3.5", autoProjectEnabled ? "fill-emerald-400 text-emerald-400" : "")} />
+              <span>Auto-Project: {autoProjectEnabled ? "ON" : "OFF"}</span>
+            </button>
+          )}
+
+          {/* Panel Toggle Buttons */}
+          <div className="flex items-center rounded-md border border-border bg-card p-0.5">
+            {onToggleLeftCollapsed && (
+              <button
+                onClick={onToggleLeftCollapsed}
+                className={cn(
+                  "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
+                  !isLeftCollapsed ? "bg-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Toggle Folder Tree (Ctrl+B)"
+              >
+                <PanelLeft className="h-3.5 w-3.5" />
+                <span className="hidden xl:inline text-[10px]">Tree</span>
+              </button>
+            )}
+            {onToggleRightCollapsed && (
+              <button
+                onClick={onToggleRightCollapsed}
+                className={cn(
+                  "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
+                  !isRightCollapsed ? "bg-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                )}
+                title="Toggle Details Inspector (Ctrl+])"
+              >
+                <PanelRight className="h-3.5 w-3.5" />
+                <span className="hidden xl:inline text-[10px]">Details</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Sort & View Controls */}

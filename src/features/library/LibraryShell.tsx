@@ -20,6 +20,8 @@ import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { formatBytes } from "@/lib/files";
 import { toast } from "sonner";
+import { PanelRightOpen } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Undo Stack Action Types
 type UndoAction =
@@ -49,11 +51,19 @@ export function LibraryShell() {
   const toggleFav = useMediaFavorites((s) => s.toggle);
   const favSet = useMemo(() => new Set(favIds), [favIds]);
 
-  // Synced Resizable Panel Widths (Left: 280px-520px, Right: 320px-650px)
+  // Synced Resizable Panel Widths & Collapsible Panel States
   const leftWidth = useFileManagerLayoutStore((s) => s.leftWidth);
   const rightWidth = useFileManagerLayoutStore((s) => s.rightWidth);
   const setLeftWidth = useFileManagerLayoutStore((s) => s.setLeftWidth);
   const setRightWidth = useFileManagerLayoutStore((s) => s.setRightWidth);
+
+  const isLeftCollapsed = useFileManagerLayoutStore((s) => s.isLeftCollapsed);
+  const isRightCollapsed = useFileManagerLayoutStore((s) => s.isRightCollapsed);
+  const autoProjectEnabled = useFileManagerLayoutStore((s) => s.autoProjectEnabled);
+  const toggleLeftCollapsed = useFileManagerLayoutStore((s) => s.toggleLeftCollapsed);
+  const toggleRightCollapsed = useFileManagerLayoutStore((s) => s.toggleRightCollapsed);
+  const setRightCollapsed = useFileManagerLayoutStore((s) => s.setRightCollapsed);
+  const toggleAutoProject = useFileManagerLayoutStore((s) => s.toggleAutoProject);
 
   const isResizingLeft = useRef(false);
   const isResizingRight = useRef(false);
@@ -496,6 +506,20 @@ export function LibraryShell() {
         return;
       }
 
+      // Ctrl+B: Toggle Folder Tree Panel
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        toggleLeftCollapsed();
+        return;
+      }
+
+      // Ctrl+]: Toggle Details Inspector Panel
+      if ((e.ctrlKey || e.metaKey) && e.key === "]") {
+        e.preventDefault();
+        toggleRightCollapsed();
+        return;
+      }
+
       // Ctrl+Z: Undo
       if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "z") {
         e.preventDefault();
@@ -698,26 +722,6 @@ export function LibraryShell() {
     navigateToFolder(current?.parentId ?? null);
   }, [currentFolderId, folders, navigateToFolder]);
 
-  // Click & Selection Handling (Single, Ctrl, Shift)
-  const handleItemClick = useCallback(
-    (e: React.MouseEvent, item: LibraryItem, index: number) => {
-      if (e.shiftKey && lastClickedIndexRef.current !== null) {
-        // Shift + Click Range Selection
-        const start = Math.min(lastClickedIndexRef.current, index);
-        const end = Math.max(lastClickedIndexRef.current, index);
-        clearSelection();
-        for (let i = start; i <= end; i++) {
-          toggleSelect(filteredItems[i].id, true);
-        }
-      } else {
-        toggleSelect(item.id, e.ctrlKey || e.metaKey);
-        lastClickedIndexRef.current = index;
-      }
-      setInspectedItem(item);
-    },
-    [filteredItems, toggleSelect, clearSelection],
-  );
-
   const projectItem = useCallback(async (item: LibraryItem) => {
     if (item.mediaRecord) {
       await MediaAdapter.projectMedia(item.mediaRecord);
@@ -743,6 +747,36 @@ export function LibraryShell() {
       toast.success(`Projecting Passage (${bibleLang.toUpperCase()}): ${item.name}`);
     }
   }, [bibleLang]);
+
+  // Click & Selection Handling (Single, Ctrl, Shift)
+  const handleItemClick = useCallback(
+    (e: React.MouseEvent, item: LibraryItem, index: number) => {
+      if (e.shiftKey && lastClickedIndexRef.current !== null) {
+        // Shift + Click Range Selection
+        const start = Math.min(lastClickedIndexRef.current, index);
+        const end = Math.max(lastClickedIndexRef.current, index);
+        clearSelection();
+        for (let i = start; i <= end; i++) {
+          toggleSelect(filteredItems[i].id, true);
+        }
+      } else {
+        toggleSelect(item.id, e.ctrlKey || e.metaKey);
+        lastClickedIndexRef.current = index;
+      }
+      setInspectedItem(item);
+
+      // Auto-slide open right details panel if collapsed
+      if (useFileManagerLayoutStore.getState().isRightCollapsed) {
+        useFileManagerLayoutStore.getState().setRightCollapsed(false);
+      }
+
+      // Auto Project on click if Auto-Project Mode is Enabled
+      if (useFileManagerLayoutStore.getState().autoProjectEnabled) {
+        void projectItem(item);
+      }
+    },
+    [filteredItems, toggleSelect, clearSelection, projectItem],
+  );
 
   const handleItemDoubleClick = useCallback(
     (e: React.MouseEvent, item: LibraryItem) => {
@@ -920,6 +954,12 @@ export function LibraryShell() {
         selectedCount={selectedItems.length}
         canGoBack={historyIdx > 0}
         canGoForward={historyIdx < history.length - 1}
+        isLeftCollapsed={isLeftCollapsed}
+        isRightCollapsed={isRightCollapsed}
+        autoProjectEnabled={autoProjectEnabled}
+        onToggleLeftCollapsed={toggleLeftCollapsed}
+        onToggleRightCollapsed={toggleRightCollapsed}
+        onToggleAutoProject={toggleAutoProject}
         onGoBack={goBack}
         onGoForward={goForward}
         onGoUp={goUp}
@@ -966,13 +1006,18 @@ export function LibraryShell() {
       {/* Rigid 3-Pane Explorer Body */}
       <div className="flex flex-1 overflow-hidden">
         {/* Pane 1: Left Navigation Sidebar */}
-        <div style={{ width: `${leftWidth}px` }} className="h-full shrink-0 overflow-hidden border-r border-border">
+        <div
+          style={{ width: isLeftCollapsed ? "48px" : `${leftWidth}px` }}
+          className="h-full shrink-0 overflow-hidden border-r border-border transition-all duration-200 ease-in-out"
+        >
           <LibraryTreeNav
             currentCategory={currentCategory}
             currentFolderId={currentFolderId}
             folders={folders}
             categoryCounts={categoryCounts}
             folderCounts={folderCounts}
+            isCollapsed={isLeftCollapsed}
+            onToggleCollapse={toggleLeftCollapsed}
             onSelectCategory={setCurrentCategory}
             onSelectFolder={navigateToFolder}
             onCreateFolder={() => setInlineCreatingFolder(true)}
@@ -986,12 +1031,14 @@ export function LibraryShell() {
           />
         </div>
 
-        {/* Left Resize Splitter Handle */}
-        <div
-          onPointerDown={handleLeftPointerDown}
-          className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
-          title="Drag to resize left tree panel"
-        />
+        {/* Left Resize Splitter Handle (only active when expanded) */}
+        {!isLeftCollapsed && (
+          <div
+            onPointerDown={handleLeftPointerDown}
+            className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
+            title="Drag to resize folder tree panel"
+          />
+        )}
 
         {/* Pane 2: Center File Explorer Grid */}
         <div className="relative flex-1 min-w-0 h-full overflow-hidden flex flex-col">
@@ -1023,6 +1070,17 @@ export function LibraryShell() {
             onUploadClick={triggerFileUpload}
           />
 
+          {/* Collapsed Inspector Edge Handle Button */}
+          {isRightCollapsed && (
+            <button
+              onClick={toggleRightCollapsed}
+              className="absolute top-1/2 right-0 z-30 flex h-10 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-border bg-card/90 shadow-md hover:bg-accent text-muted-foreground hover:text-foreground backdrop-blur transition"
+              title="Expand Details Inspector (Ctrl+])"
+            >
+              <PanelRightOpen className="h-3.5 w-3.5" />
+            </button>
+          )}
+
           {/* Floating Action Button inside Center Pane */}
           <FloatingActionButton
             onNewFolder={() => setInlineCreatingFolder(true)}
@@ -1033,22 +1091,27 @@ export function LibraryShell() {
           />
         </div>
 
-        {/* Right Resize Splitter Handle */}
-        <div
-          onPointerDown={handleRightPointerDown}
-          className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
-          title="Drag to resize right inspector panel"
-        />
+        {/* Right Resize Splitter Handle (only active when expanded) */}
+        {!isRightCollapsed && (
+          <div
+            onPointerDown={handleRightPointerDown}
+            className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
+            title="Drag to resize right inspector panel"
+          />
+        )}
 
         {/* Pane 3: Right Docked Inspector / Live Preview Pane */}
-        <div style={{ width: `${rightWidth}px` }} className="h-full shrink-0 overflow-hidden border-l border-border">
+        <div
+          style={{ width: isRightCollapsed ? "0px" : `${rightWidth}px` }}
+          className="h-full shrink-0 overflow-hidden border-l border-border transition-all duration-200 ease-in-out"
+        >
           <LibraryPreviewPane
             item={inspectedItem}
             folders={folders}
             allMedia={allLibraryItems}
             bibleLang={bibleLang}
             onBibleLangChange={setBibleLang}
-            onClose={() => setInspectedItem(null)}
+            onClose={toggleRightCollapsed}
             onProject={projectItem}
             onRename={(i) => setInlineEditingId(i.id)}
             onDelete={handleDeleteItems}
@@ -1068,12 +1131,37 @@ export function LibraryShell() {
           {selection.size > 0 && <span className="ml-3 font-semibold text-foreground">{selection.size} selected</span>}
         </div>
         <div className="flex items-center gap-3">
+          <button
+            onClick={toggleLeftCollapsed}
+            className="hover:text-foreground cursor-pointer transition"
+            title="Toggle Tree Panel (Ctrl+B)"
+          >
+            Tree: <span className="font-semibold">{isLeftCollapsed ? "Collapsed" : "Expanded"}</span>
+          </button>
+          <span>·</span>
+          <button
+            onClick={toggleRightCollapsed}
+            className="hover:text-foreground cursor-pointer transition"
+            title="Toggle Details Inspector (Ctrl+])"
+          >
+            Details: <span className="font-semibold">{isRightCollapsed ? "Collapsed" : "Expanded"}</span>
+          </button>
+          <span>·</span>
+          <button
+            onClick={toggleAutoProject}
+            className={cn(
+              "cursor-pointer font-semibold transition px-1.5 py-0.5 rounded text-[10px]",
+              autoProjectEnabled ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"
+            )}
+            title="Single-click on any item immediately projects it live"
+          >
+            Auto-Project: {autoProjectEnabled ? "ON" : "OFF"}
+          </button>
+          <span>·</span>
           <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-            Local Cache Synced
+            Synced
           </span>
-          <span>·</span>
-          <span>Digital Asset Manager (DAM)</span>
         </div>
       </footer>
 
