@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import { useLibrary } from "@/stores/library.store";
 import { useMediaFavorites } from "@/stores/media-favorites.store";
 import { useFileManagerLayoutStore } from "@/stores/file-manager-layout.store";
-import { createFolder, renameFolder, deleteFolderDeep, moveMedia, duplicateMedia, deleteMedia, renameMedia } from "@/db/repo";
+import { createFolder, renameFolder, moveFolder, deleteFolderDeep, moveMedia, duplicateMedia, deleteMedia, renameMedia } from "@/db/repo";
 import type { FolderRecord } from "@/db/schema";
 import { LibraryToolbar } from "./LibraryToolbar";
 import { LibraryTreeNav } from "./LibraryTreeNav";
@@ -279,7 +279,7 @@ export function LibraryShell() {
   const filteredItems = useMemo(() => {
     let out = allLibraryItems;
 
-    if (currentFolderId !== null && searchScope === "folder") {
+    if (currentCategory === "all" || searchScope === "folder") {
       out = out.filter((item) => item.folderId === currentFolderId);
     }
 
@@ -845,34 +845,76 @@ export function LibraryShell() {
     ids.forEach((id) => toggleSelect(id, true));
   }, [clearSelection, toggleSelect]);
 
-  // Drop Items to Target Folder Action
+  // Drop Items/Folders to Target Folder Action (True Single-Location Move)
   const handleDropItemsToFolder = useCallback(
     async (itemIds: string[], targetFolderId: string | null) => {
-      const movedItems = allLibraryItems.filter((i) => itemIds.includes(i.id));
-      if (movedItems.length === 0) return;
+      if (!itemIds.length) return;
 
-      const previousFolderId = movedItems[0].folderId;
-      const mediaIds = movedItems.filter((i) => i.mediaRecord).map((i) => i.id);
+      // Separate itemIds into folderIds vs file itemIds
+      const targetFolderIds = folders.filter((f) => itemIds.includes(f.id)).map((f) => f.id);
+      const targetItemIds = itemIds.filter((id) => !targetFolderIds.includes(id));
 
-      if (mediaIds.length) {
-        await moveMedia(mediaIds, targetFolderId);
-        await refreshMedia();
+      let movedFolderCount = 0;
+
+      // 1. Process Folder Moves (Folder Nesting)
+      for (const folderId of targetFolderIds) {
+        if (folderId === targetFolderId) continue;
+
+        // Cycle check: folder into itself or its child
+        let isCycle = false;
+        let curr = targetFolderId;
+        while (curr) {
+          if (curr === folderId) {
+            isCycle = true;
+            break;
+          }
+          const parentFolder = folders.find((f) => f.id === curr);
+          curr = parentFolder?.parentId ?? null;
+        }
+
+        if (isCycle) {
+          toast.error("Cannot move a folder into itself or its subfolder.");
+          continue;
+        }
+
+        await moveFolder(folderId, targetFolderId);
+        movedFolderCount++;
       }
 
-      setCustomItems((prev) =>
-        prev.map((i) => (itemIds.includes(i.id) ? { ...i, folderId: targetFolderId } : i)),
-      );
+      if (movedFolderCount > 0) {
+        await refreshFolders();
+      }
 
-      pushUndo({
-        type: "move",
-        items: movedItems,
-        previousFolderId,
-        targetFolderId,
-      });
+      // 2. Process File Item Moves
+      const movedItems = allLibraryItems.filter((i) => targetItemIds.includes(i.id));
+      if (movedItems.length > 0) {
+        const previousFolderId = movedItems[0].folderId;
+        const mediaIds = movedItems.filter((i) => i.mediaRecord).map((i) => i.id);
 
-      toast.success(`Moved ${movedItems.length} item(s) to folder. (Ctrl+Z to Undo)`);
+        if (mediaIds.length) {
+          await moveMedia(mediaIds, targetFolderId);
+          await refreshMedia();
+        }
+
+        setCustomItems((prev) =>
+          prev.map((i) => (targetItemIds.includes(i.id) ? { ...i, folderId: targetFolderId } : i)),
+        );
+
+        pushUndo({
+          type: "move",
+          items: movedItems,
+          previousFolderId,
+          targetFolderId,
+        });
+      }
+
+      const totalMoved = movedFolderCount + movedItems.length;
+      if (totalMoved > 0) {
+        clearSelection();
+        toast.success(`Moved ${totalMoved} item(s) to destination folder.`);
+      }
     },
-    [allLibraryItems, pushUndo, refreshMedia],
+    [folders, allLibraryItems, pushUndo, refreshFolders, refreshMedia, clearSelection],
   );
 
   // Imports & Actions
@@ -1041,7 +1083,7 @@ export function LibraryShell() {
                 deleteFolderDeep(f.id).then(refreshFolders);
               }
             }}
-            onDropItemToFolder={(itemId, folderId) => handleDropItemsToFolder([itemId], folderId)}
+            onDropItemsToFolder={handleDropItemsToFolder}
           />
         </div>
 
@@ -1058,6 +1100,7 @@ export function LibraryShell() {
         <div className="relative flex-1 min-w-0 h-full overflow-hidden flex flex-col">
           <LibraryExplorerGrid
             items={filteredItems.filter((i) => i.type !== "folder")}
+            allLibraryItems={allLibraryItems}
             subfolders={currentSubfolders}
             selection={selection}
             viewMode={viewMode}

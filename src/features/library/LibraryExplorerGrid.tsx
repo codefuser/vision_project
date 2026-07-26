@@ -27,6 +27,7 @@ import { useDragAutoScroll } from "./useDragAutoScroll";
 
 interface LibraryExplorerGridProps {
   items: LibraryItem[];
+  allLibraryItems?: LibraryItem[];
   subfolders: FolderRecord[];
   selection: Set<string>;
   viewMode: ViewMode;
@@ -55,6 +56,7 @@ type UnifiedNode =
 
 export function LibraryExplorerGrid({
   items,
+  allLibraryItems,
   subfolders,
   selection,
   viewMode,
@@ -105,7 +107,8 @@ export function LibraryExplorerGrid({
   // Map items to folder for 2x2 folder quadrant preview
   const folderChildItemsMap = useMemo(() => {
     const map = new Map<string, LibraryItem[]>();
-    for (const item of items) {
+    const itemList = allLibraryItems || items;
+    for (const item of itemList) {
       if (item.folderId) {
         const list = map.get(item.folderId) || [];
         if (list.length < 4) list.push(item);
@@ -113,7 +116,24 @@ export function LibraryExplorerGrid({
       }
     }
     return map;
-  }, [items]);
+  }, [allLibraryItems, items]);
+
+  // Calculate actual total items inside each folder
+  const folderChildCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const itemList = allLibraryItems || items;
+    for (const item of itemList) {
+      if (item.folderId) {
+        map.set(item.folderId, (map.get(item.folderId) || 0) + 1);
+      }
+    }
+    for (const sub of subfolders) {
+      if (sub.parentId) {
+        map.set(sub.parentId, (map.get(sub.parentId) || 0) + 1);
+      }
+    }
+    return map;
+  }, [allLibraryItems, items, subfolders]);
 
   // Measure container width for responsive virtualization
   useEffect(() => {
@@ -210,6 +230,22 @@ export function LibraryExplorerGrid({
     ghost.className =
       "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
     ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} item(s)</span>`;
+    document.body.appendChild(ghost);
+    e.dataTransfer.setDragImage(ghost, 20, 20);
+    setTimeout(() => {
+      document.body.removeChild(ghost);
+    }, 0);
+  };
+
+  const handleDragFolderStart = (e: React.DragEvent, folderId: string) => {
+    const selectedIds = selection.has(folderId) ? Array.from(selection) : [folderId];
+    e.dataTransfer.setData("application/json", JSON.stringify(selectedIds));
+    e.dataTransfer.setData("text/plain", folderId);
+
+    const ghost = document.createElement("div");
+    ghost.className =
+      "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-black shadow-2xl font-bold text-xs border border-amber-300 backdrop-blur";
+    ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} folder(s)</span>`;
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 20, 20);
     setTimeout(() => {
@@ -398,6 +434,8 @@ export function LibraryExplorerGrid({
                     return (
                       <div
                         key={folder.id}
+                        draggable
+                        onDragStart={(e) => handleDragFolderStart(e, folder.id)}
                         onClick={(e) => handleItemNodeClick(e, node, 0)}
                         onDoubleClick={(e) => {
                           e.stopPropagation();
@@ -427,6 +465,8 @@ export function LibraryExplorerGrid({
                     return (
                       <div
                         key={folder.id}
+                        draggable
+                        onDragStart={(e) => handleDragFolderStart(e, folder.id)}
                         onClick={(e) => handleItemNodeClick(e, node, 0)}
                         onDoubleClick={(e) => {
                           e.stopPropagation();
@@ -463,7 +503,7 @@ export function LibraryExplorerGrid({
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-muted-foreground">{quadItems.length} items</span>
+                        <span className="text-[10px] text-muted-foreground">{folderChildCountMap.get(folder.id) || 0} items</span>
                       </div>
                     );
                   }
@@ -472,6 +512,8 @@ export function LibraryExplorerGrid({
                   return (
                     <div
                       key={folder.id}
+                      draggable
+                      onDragStart={(e) => handleDragFolderStart(e, folder.id)}
                       onClick={(e) => handleItemNodeClick(e, node, 0)}
                       onDoubleClick={(e) => {
                         e.stopPropagation();
@@ -560,7 +602,7 @@ export function LibraryExplorerGrid({
                               {folder.name}
                             </p>
                             <span className="text-[10px] text-muted-foreground font-mono block mt-1">
-                              {quadItems.length} item(s)
+                              {folderChildCountMap.get(folder.id) || 0} item(s)
                             </span>
                           </>
                         )}

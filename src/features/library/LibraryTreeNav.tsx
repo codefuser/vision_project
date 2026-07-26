@@ -34,7 +34,7 @@ interface LibraryTreeNavProps {
   onCreateFolder: (parentId?: string | null) => void;
   onRenameFolder: (folder: FolderRecord) => void;
   onDeleteFolder: (folder: FolderRecord) => void;
-  onDropItemToFolder: (itemId: string, targetFolderId: string | null) => void;
+  onDropItemsToFolder: (itemIds: string[], targetFolderId: string | null) => void;
 }
 
 export function LibraryTreeNav({
@@ -50,7 +50,7 @@ export function LibraryTreeNav({
   onCreateFolder,
   onRenameFolder,
   onDeleteFolder,
-  onDropItemToFolder,
+  onDropItemsToFolder,
 }: LibraryTreeNavProps) {
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
@@ -115,6 +115,12 @@ export function LibraryTreeNav({
     return (
       <div key={folder.id} className="flex flex-col">
         <div
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.setData("application/json", JSON.stringify([folder.id]));
+            e.dataTransfer.setData("text/plain", folder.id);
+          }}
           onClick={() => {
             onSelectFolder(folder.id);
             onSelectCategory("all");
@@ -124,8 +130,18 @@ export function LibraryTreeNav({
           onDrop={(e) => {
             e.preventDefault();
             handleDragLeaveNode();
+            try {
+              const raw = e.dataTransfer.getData("application/json");
+              if (raw) {
+                const ids = JSON.parse(raw);
+                if (Array.isArray(ids) && ids.length) {
+                  onDropItemsToFolder(ids, folder.id);
+                  return;
+                }
+              }
+            } catch {}
             const itemId = e.dataTransfer.getData("text/plain");
-            if (itemId) onDropItemToFolder(itemId, folder.id);
+            if (itemId) onDropItemsToFolder([itemId], folder.id);
           }}
           style={{ paddingLeft: `${depth * 14 + 10}px` }}
           className={cn(
@@ -325,8 +341,18 @@ export function LibraryTreeNav({
           onDrop={(e) => {
             e.preventDefault();
             setDragOverFolderId(null);
+            try {
+              const raw = e.dataTransfer.getData("application/json");
+              if (raw) {
+                const ids = JSON.parse(raw);
+                if (Array.isArray(ids) && ids.length) {
+                  onDropItemsToFolder(ids, null);
+                  return;
+                }
+              }
+            } catch {}
             const itemId = e.dataTransfer.getData("text/plain");
-            if (itemId) onDropItemToFolder(itemId, null);
+            if (itemId) onDropItemsToFolder([itemId], null);
           }}
           className={cn(
             "flex h-8 flex-1 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition font-semibold mr-1",
