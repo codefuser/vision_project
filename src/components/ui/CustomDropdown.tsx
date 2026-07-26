@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useLayoutEffect } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 export interface DropdownOption<T extends string = string> {
   value: T;
@@ -152,22 +153,25 @@ export function CustomDropdown<T extends string = string>({
     </div>
   ) : null;
 
+  const buttonEl = (
+    <button
+      ref={buttonRef}
+      type="button"
+      onClick={() => setIsOpen(!isOpen)}
+      className={cn(
+        "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-blue-500/50 transition shadow-sm select-none shrink-0",
+        className
+      )}
+    >
+      {triggerIcon || selectedOpt?.icon}
+      <span>{triggerLabel || selectedOpt?.label || value}</span>
+      <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
+    </button>
+  );
+
   return (
     <div className="inline-block text-left shrink-0">
-      <button
-        ref={buttonRef}
-        type="button"
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-blue-500/50 transition shadow-sm select-none shrink-0",
-          className
-        )}
-        title={title}
-      >
-        {triggerIcon || selectedOpt?.icon}
-        <span>{triggerLabel || selectedOpt?.label || value}</span>
-        <ChevronDown className="h-3 w-3 text-muted-foreground ml-0.5" />
-      </button>
+      {title ? <ShortcutTooltip label={title}>{buttonEl}</ShortcutTooltip> : buttonEl}
 
       {typeof document !== "undefined" && menuContent && createPortal(menuContent, document.body)}
     </div>

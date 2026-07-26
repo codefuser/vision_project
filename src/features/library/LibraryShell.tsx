@@ -489,6 +489,39 @@ export function LibraryShell() {
     }
   };
 
+  const navigateToFolder = useCallback(
+    (folderId: string | null) => {
+      setFolder(folderId);
+      const nextHistory = history.slice(0, historyIdx + 1);
+      nextHistory.push(folderId);
+      setHistory(nextHistory);
+      setHistoryIdx(nextHistory.length - 1);
+    },
+    [history, historyIdx, setFolder],
+  );
+
+  const goBack = useCallback(() => {
+    if (historyIdx > 0) {
+      const prevIdx = historyIdx - 1;
+      setHistoryIdx(prevIdx);
+      setFolder(history[prevIdx]);
+    }
+  }, [history, historyIdx, setFolder]);
+
+  const goForward = useCallback(() => {
+    if (historyIdx < history.length - 1) {
+      const nextIdx = historyIdx + 1;
+      setHistoryIdx(nextIdx);
+      setFolder(history[nextIdx]);
+    }
+  }, [history, historyIdx, setFolder]);
+
+  const goUp = useCallback(() => {
+    if (!currentFolderId) return;
+    const current = folders.find((f) => f.id === currentFolderId);
+    navigateToFolder(current?.parentId ?? null);
+  }, [currentFolderId, folders, navigateToFolder]);
+
   // Keyboard Shortcuts Listener
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -519,6 +552,47 @@ export function LibraryShell() {
       if ((e.ctrlKey || e.metaKey) && e.key === "]") {
         e.preventDefault();
         toggleRightCollapsed();
+        return;
+      }
+
+      // Alt+Left: Back Navigation
+      if (e.altKey && e.key === "ArrowLeft") {
+        if (historyIdx > 0) {
+          e.preventDefault();
+          goBack();
+        }
+        return;
+      }
+
+      // Alt+Right: Forward Navigation
+      if (e.altKey && e.key === "ArrowRight") {
+        if (historyIdx < history.length - 1) {
+          e.preventDefault();
+          goForward();
+        }
+        return;
+      }
+
+      // Alt+Up: Up One Folder Level
+      if (e.altKey && e.key === "ArrowUp") {
+        if (currentFolderId !== null) {
+          e.preventDefault();
+          goUp();
+        }
+        return;
+      }
+
+      // Ctrl+Shift+N: New Folder
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "n") {
+        e.preventDefault();
+        setInlineCreatingFolder(true);
+        return;
+      }
+
+      // Ctrl+I: Upload / Import
+      if ((e.ctrlKey || e.metaKey) && !e.shiftKey && e.key.toLowerCase() === "i") {
+        e.preventDefault();
+        fileInputRef.current?.click();
         return;
       }
 
@@ -691,38 +765,7 @@ export function LibraryShell() {
     return counts;
   }, [allLibraryItems]);
 
-  const navigateToFolder = useCallback(
-    (folderId: string | null) => {
-      setFolder(folderId);
-      const nextHistory = history.slice(0, historyIdx + 1);
-      nextHistory.push(folderId);
-      setHistory(nextHistory);
-      setHistoryIdx(nextHistory.length - 1);
-    },
-    [history, historyIdx, setFolder],
-  );
 
-  const goBack = useCallback(() => {
-    if (historyIdx > 0) {
-      const prevIdx = historyIdx - 1;
-      setHistoryIdx(prevIdx);
-      setFolder(history[prevIdx]);
-    }
-  }, [history, historyIdx, setFolder]);
-
-  const goForward = useCallback(() => {
-    if (historyIdx < history.length - 1) {
-      const nextIdx = historyIdx + 1;
-      setHistoryIdx(nextIdx);
-      setFolder(history[nextIdx]);
-    }
-  }, [history, historyIdx, setFolder]);
-
-  const goUp = useCallback(() => {
-    if (!currentFolderId) return;
-    const current = folders.find((f) => f.id === currentFolderId);
-    navigateToFolder(current?.parentId ?? null);
-  }, [currentFolderId, folders, navigateToFolder]);
 
   const projectItem = useCallback(async (item: LibraryItem) => {
     if (item.mediaRecord) {

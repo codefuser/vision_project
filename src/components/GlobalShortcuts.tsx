@@ -292,6 +292,114 @@ export function GlobalShortcuts() {
   });
 
   // ─────────────────────────────────────────────────────────────────────
+  // MEDIA LIBRARY SHORTCUTS
+  // ─────────────────────────────────────────────────────────────────────
+  useShortcut({
+    id: "library.back",
+    label: "Library Back Navigation",
+    category: "navigation",
+    description: "Navigate back in folder history",
+    keys: ["Alt+Left"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.forward",
+    label: "Library Forward Navigation",
+    category: "navigation",
+    description: "Navigate forward in folder history",
+    keys: ["Alt+Right"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.up",
+    label: "Up One Folder",
+    category: "navigation",
+    description: "Go up one folder level",
+    keys: ["Alt+Up"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.new-folder",
+    label: "New Folder",
+    category: "general",
+    description: "Create a new folder in current directory",
+    keys: ["Ctrl+Shift+N"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.upload",
+    label: "Upload Files",
+    category: "general",
+    description: "Open upload dialog to import files",
+    keys: ["Ctrl+I"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.select-all",
+    label: "Select All",
+    category: "general",
+    description: "Select all items in current folder",
+    keys: ["Ctrl+A"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.copy",
+    label: "Copy Selected",
+    category: "general",
+    description: "Copy selected items to clipboard",
+    keys: ["Ctrl+C"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.cut",
+    label: "Cut Selected",
+    category: "general",
+    description: "Cut selected items to move",
+    keys: ["Ctrl+X"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.paste",
+    label: "Paste Items",
+    category: "general",
+    description: "Paste items from clipboard",
+    keys: ["Ctrl+V"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.delete",
+    label: "Delete Selected",
+    category: "general",
+    description: "Delete selected files or folders",
+    keys: ["Delete"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.rename",
+    label: "Rename Selected",
+    category: "general",
+    description: "Rename selected file or folder",
+    keys: ["F2"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.toggle-tree",
+    label: "Toggle Folder Tree",
+    category: "window",
+    description: "Collapse or expand left folder tree panel",
+    keys: ["Ctrl+B"],
+    handler: () => false,
+  });
+  useShortcut({
+    id: "library.toggle-details",
+    label: "Toggle Details Inspector",
+    category: "window",
+    description: "Collapse or expand right details inspector panel",
+    keys: ["Ctrl+]"],
+    handler: () => false,
+  });
+
+  // ─────────────────────────────────────────────────────────────────────
   // WINDOW / LAYOUT
   // ─────────────────────────────────────────────────────────────────────
   useShortcut({

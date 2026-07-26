@@ -24,6 +24,7 @@ import { Thumb } from "@/components/Thumb";
 import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { cn } from "@/lib/utils";
 import { useDragAutoScroll } from "./useDragAutoScroll";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 interface LibraryExplorerGridProps {
   items: LibraryItem[];
@@ -817,17 +818,18 @@ export function LibraryExplorerGrid({
                     {/* Quick Hover Action Buttons (Top Right when NOT selected) */}
                     {!selected && (
                       <div className="absolute top-2 right-2 z-10 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onToggleFavorite(item);
-                          }}
-                          className="h-6 w-6 rounded-md bg-black/70 hover:bg-amber-500 text-white hover:text-black flex items-center justify-center backdrop-blur transition shadow cursor-pointer"
-                          title={item.isFavorite ? "Unfavorite" : "Favorite"}
-                        >
-                          <Star className={cn("h-3.5 w-3.5", item.isFavorite ? "fill-amber-400 text-amber-400" : "")} />
-                        </button>
+                        <ShortcutTooltip label={item.isFavorite ? "Unfavorite" : "Favorite"}>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onToggleFavorite(item);
+                            }}
+                            className="h-6 w-6 rounded-md bg-black/70 hover:bg-amber-500 text-white hover:text-black flex items-center justify-center backdrop-blur transition shadow cursor-pointer"
+                          >
+                            <Star className={cn("h-3.5 w-3.5", item.isFavorite ? "fill-amber-400 text-amber-400" : "")} />
+                          </button>
+                        </ShortcutTooltip>
                       </div>
                     )}
 

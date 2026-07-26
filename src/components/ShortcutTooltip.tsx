@@ -17,8 +17,8 @@ import { useShortcutFor } from "@/lib/shortcuts/use-shortcut-for";
 import { formatCombo } from "@/lib/shortcuts/manager";
 
 interface ShortcutTooltipProps {
-  /** Shortcut registry ID, e.g. "projector.toggle" */
-  id: string;
+  /** Optional shortcut registry ID, e.g. "projector.toggle" */
+  id?: string;
   /** Human label shown as the main tooltip text */
   label: string;
   /** Optional extra description shown below the label */
@@ -26,7 +26,7 @@ interface ShortcutTooltipProps {
   children: ReactNode;
   side?: "top" | "right" | "bottom" | "left";
   align?: "start" | "center" | "end";
-  /** Delay before tooltip appears (ms). Default 600. */
+  /** Delay before tooltip appears (ms). Default 300. */
   delayDuration?: number;
   /** If true, tooltip is not rendered (for programmatic disable). */
   disabled?: boolean;
@@ -39,10 +39,10 @@ export function ShortcutTooltip({
   children,
   side = "bottom",
   align = "center",
-  delayDuration = 600,
+  delayDuration = 300,
   disabled = false,
 }: ShortcutTooltipProps) {
-  const def = useShortcutFor(id);
+  const def = useShortcutFor(id ?? "");
 
   if (disabled) return <>{children}</>;
 

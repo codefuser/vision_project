@@ -35,6 +35,7 @@ import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 interface LibraryPreviewPaneProps {
   item: LibraryItem | null;
@@ -75,13 +76,14 @@ export function LibraryPreviewPane({
             <Info className="h-4 w-4 text-muted-foreground" />
             <span className="truncate text-xs font-bold text-foreground">Details Inspector</span>
           </div>
-          <button
-            onClick={onClose}
-            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
-            title="Collapse Details Inspector (Ctrl+])"
-          >
-            <PanelRightClose className="h-3.5 w-3.5" />
-          </button>
+          <ShortcutTooltip id="library.toggle-details" label="Collapse Details Inspector">
+            <button
+              onClick={onClose}
+              className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+            >
+              <PanelRightClose className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
         </div>
         <div className="flex flex-1 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
           <Info className="mb-2 h-8 w-8 text-muted-foreground/40" />
@@ -146,19 +148,20 @@ export function LibraryPreviewPane({
 
   return (
     <aside className="flex h-full w-full flex-col overflow-hidden border-l border-border bg-card/60 select-none">
-      {/* Header with Title and Close Button */}
+      {/* Header with Title and Collapse Button */}
       <div className="flex items-center justify-between p-3 pb-2 border-b border-border/60">
         <div className="flex items-center gap-2 min-w-0">
           <TypeIcon type={item.type} />
           <span className="truncate text-xs font-bold text-foreground">{item.name}</span>
         </div>
-        <button
-          onClick={onClose}
-          className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
-          title="Collapse Details Inspector (Ctrl+])"
-        >
-          <PanelRightClose className="h-3.5 w-3.5" />
-        </button>
+        <ShortcutTooltip id="library.toggle-details" label="Collapse Details Inspector">
+          <button
+            onClick={onClose}
+            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          >
+            <PanelRightClose className="h-3.5 w-3.5" />
+          </button>
+        </ShortcutTooltip>
       </div>
 
       {/* Inspector Tabs */}
@@ -434,44 +437,48 @@ export function LibraryPreviewPane({
       {/* Sticky Footer Action Buttons */}
       <div className="shrink-0 p-3 border-t border-border bg-card/90 backdrop-blur flex items-center justify-between gap-1 text-xs">
         {onRename && (
-          <button
-            onClick={() => onRename(item)}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
-            title="Rename item (F2)"
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            <span>Rename</span>
-          </button>
+          <ShortcutTooltip id="library.rename" label="Rename item">
+            <button
+              onClick={() => onRename(item)}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              <span>Rename</span>
+            </button>
+          </ShortcutTooltip>
         )}
-        <button
-          onClick={() => setActiveTab("properties")}
-          className={cn(
-            "flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border py-1.5 font-medium transition",
-            activeTab === "properties" ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:bg-accent"
-          )}
-          title="Inspect file properties"
-        >
-          <Info className="h-3.5 w-3.5" />
-          <span>Props</span>
-        </button>
-        {onDuplicate && (
+        <ShortcutTooltip label="Inspect file properties">
           <button
-            onClick={() => onDuplicate([item])}
-            className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
-            title="Duplicate item"
+            onClick={() => setActiveTab("properties")}
+            className={cn(
+              "flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border py-1.5 font-medium transition",
+              activeTab === "properties" ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:bg-accent"
+            )}
           >
-            <Copy className="h-3.5 w-3.5" />
-            <span>Duplicate</span>
+            <Info className="h-3.5 w-3.5" />
+            <span>Props</span>
           </button>
+        </ShortcutTooltip>
+        {onDuplicate && (
+          <ShortcutTooltip label="Duplicate item">
+            <button
+              onClick={() => onDuplicate([item])}
+              className="flex flex-1 cursor-pointer items-center justify-center gap-1 rounded-lg border border-border py-1.5 font-medium text-foreground hover:bg-accent transition"
+            >
+              <Copy className="h-3.5 w-3.5" />
+              <span>Duplicate</span>
+            </button>
+          </ShortcutTooltip>
         )}
         {onDelete && (
-          <button
-            onClick={() => onDelete([item])}
-            className="flex h-8 w-8 cursor-pointer shrink-0 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500 transition"
-            title="Delete item"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          <ShortcutTooltip id="library.delete" label="Delete item">
+            <button
+              onClick={() => onDelete([item])}
+              className="flex h-8 w-8 cursor-pointer shrink-0 items-center justify-center rounded-lg border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500 transition"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </ShortcutTooltip>
         )}
       </div>
     </aside>

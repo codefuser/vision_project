@@ -20,6 +20,7 @@ import type { FolderRecord } from "@/db/schema";
 import type { CategoryFilter } from "./types";
 import { cn } from "@/lib/utils";
 import { useDragAutoScroll } from "./useDragAutoScroll";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 interface LibraryTreeNavProps {
   currentCategory: CategoryFilter;
@@ -189,26 +190,29 @@ export function LibraryTreeNav({
               {count}
             </span>
             <div className="hidden group-hover:flex items-center gap-0.5">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRenameFolder(folder);
-                }}
-                className="h-4 w-4 flex items-center justify-center rounded hover:bg-background/80"
-                title="Rename (F2)"
-              >
-                <Pencil className="h-2.5 w-2.5" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteFolder(folder);
-                }}
-                className="h-4 w-4 flex items-center justify-center rounded hover:bg-destructive/20 text-destructive"
-                title="Delete"
-              >
-                <Trash2 className="h-2.5 w-2.5" />
-              </button>
+              <ShortcutTooltip id="library.rename" label="Rename">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRenameFolder(folder);
+                  }}
+                  className="h-4 w-4 flex items-center justify-center rounded hover:bg-background/80"
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
+              </ShortcutTooltip>
+
+              <ShortcutTooltip id="library.delete" label="Delete Folder">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFolder(folder);
+                  }}
+                  className="h-4 w-4 flex items-center justify-center rounded hover:bg-destructive/20 text-destructive"
+                >
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              </ShortcutTooltip>
             </div>
           </div>
         </div>
@@ -372,13 +376,14 @@ export function LibraryTreeNav({
         </button>
 
         {onToggleCollapse && (
-          <button
-            onClick={onToggleCollapse}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
-            title="Collapse Folder Tree (Ctrl+B)"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
+          <ShortcutTooltip id="library.toggle-tree" label="Collapse Folder Tree">
+            <button
+              onClick={onToggleCollapse}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          </ShortcutTooltip>
         )}
       </div>
 

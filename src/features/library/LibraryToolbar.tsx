@@ -39,6 +39,7 @@ import type { CategoryFilter, SortField, SortOrder, ViewMode } from "./types";
 import type { FolderRecord } from "@/db/schema";
 import { cn } from "@/lib/utils";
 import { CustomDropdown, type DropdownOption } from "@/components/ui/CustomDropdown";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 const ZOOM_PRESETS = [50, 75, 90, 100, 110, 125, 150, 175, 200];
 
@@ -318,37 +319,44 @@ export function LibraryToolbar({
       <div className="flex h-10 items-center justify-between gap-2 border-b border-[#2D3348]/60 px-3 overflow-x-auto no-scrollbar">
         {/* Left Navigation Buttons & Breadcrumb */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
-          <button
-            onClick={onGoBack}
-            disabled={!canGoBack}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Back (Alt+Left)"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onGoForward}
-            disabled={!canGoForward}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Forward (Alt+Right)"
-          >
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onGoUp}
-            disabled={!currentFolderId}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Up One Folder"
-          >
-            <ArrowUp className="h-3.5 w-3.5" />
-          </button>
-          <button
-            onClick={onRefresh}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
-            title="Refresh Library"
-          >
-            <RotateCw className="h-3.5 w-3.5" />
-          </button>
+          <ShortcutTooltip id="library.back" label="Back">
+            <button
+              onClick={onGoBack}
+              disabled={!canGoBack}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.forward" label="Forward">
+            <button
+              onClick={onGoForward}
+              disabled={!canGoForward}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.up" label="Up One Folder">
+            <button
+              onClick={onGoUp}
+              disabled={!currentFolderId}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <ArrowUp className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.refresh" label="Refresh Library">
+            <button
+              onClick={onRefresh}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
 
           <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
 
@@ -390,23 +398,25 @@ export function LibraryToolbar({
           <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
 
           {/* New Folder & Upload Buttons in Row 1 */}
-          <button
-            onClick={onNewFolder}
-            className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-amber-400/50 transition shrink-0"
-            title="New Folder"
-          >
-            <FolderPlus className="h-3.5 w-3.5 text-amber-400" />
-            <span className="hidden sm:inline">New Folder</span>
-          </button>
+          <ShortcutTooltip id="library.new-folder" label="New Folder">
+            <button
+              onClick={onNewFolder}
+              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-amber-400/50 transition shrink-0"
+            >
+              <FolderPlus className="h-3.5 w-3.5 text-amber-400" />
+              <span className="hidden sm:inline">New Folder</span>
+            </button>
+          </ShortcutTooltip>
 
-          <button
-            onClick={onUploadClick}
-            className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-blue-500/50 bg-blue-600/20 text-xs font-bold text-blue-400 hover:bg-blue-600/30 transition shadow-sm shrink-0"
-            title="Upload Files"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            <span>Upload</span>
-          </button>
+          <ShortcutTooltip id="library.upload" label="Upload Files">
+            <button
+              onClick={onUploadClick}
+              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-blue-500/50 bg-blue-600/20 text-xs font-bold text-blue-400 hover:bg-blue-600/30 transition shadow-sm shrink-0"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              <span>Upload</span>
+            </button>
+          </ShortcutTooltip>
         </div>
       </div>
 
@@ -416,63 +426,73 @@ export function LibraryToolbar({
       <div className="flex h-10 items-center justify-between gap-2 px-3 overflow-x-auto select-none no-scrollbar">
         {/* File Operation Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <button
-            onClick={onCutClick}
-            disabled={selectedCount === 0}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Cut (Ctrl+X)"
-          >
-            <Scissors className="h-3.5 w-3.5 text-amber-400" />
-          </button>
-          <button
-            onClick={onCopyClick}
-            disabled={selectedCount === 0}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Copy (Ctrl+C)"
-          >
-            <Copy className="h-3.5 w-3.5 text-blue-400" />
-          </button>
-          <button
-            onClick={onPasteClick}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
-            title="Paste (Ctrl+V)"
-          >
-            <Clipboard className="h-3.5 w-3.5 text-emerald-400" />
-          </button>
-          <button
-            onClick={onDuplicateClick}
-            disabled={selectedCount === 0}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Duplicate"
-          >
-            <Layers className="h-3.5 w-3.5 text-purple-400" />
-          </button>
-          <button
-            onClick={onDeleteClick}
-            disabled={selectedCount === 0}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
-            title="Delete (Del)"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-          </button>
+          <ShortcutTooltip id="library.cut" label="Cut Selected">
+            <button
+              onClick={onCutClick}
+              disabled={selectedCount === 0}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <Scissors className="h-3.5 w-3.5 text-amber-400" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.copy" label="Copy Selected">
+            <button
+              onClick={onCopyClick}
+              disabled={selectedCount === 0}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <Copy className="h-3.5 w-3.5 text-blue-400" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.paste" label="Paste Items">
+            <button
+              onClick={onPasteClick}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+            >
+              <Clipboard className="h-3.5 w-3.5 text-emerald-400" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip label="Duplicate Items">
+            <button
+              onClick={onDuplicateClick}
+              disabled={selectedCount === 0}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <Layers className="h-3.5 w-3.5 text-purple-400" />
+            </button>
+          </ShortcutTooltip>
+
+          <ShortcutTooltip id="library.delete" label="Delete Selected">
+            <button
+              onClick={onDeleteClick}
+              disabled={selectedCount === 0}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-rose-500/40 bg-rose-500/10 text-rose-400 hover:bg-rose-500/20 disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
 
           <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
 
           {/* Auto-Project Mode Toggle Button */}
           {onToggleAutoProject && (
-            <button
-              onClick={onToggleAutoProject}
-              className={cn(
-                "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md text-xs font-bold transition shadow-sm border shrink-0",
-                autoProjectEnabled
-                  ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                  : "border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground"
-              )}
-              title="Single-click on any item immediately projects it live"
-            >
-              <Zap className={cn("h-3.5 w-3.5", autoProjectEnabled ? "fill-emerald-400 text-emerald-400" : "")} />
-              <span className="hidden sm:inline">Auto Project: {autoProjectEnabled ? "ON" : "OFF"}</span>
-            </button>
+            <ShortcutTooltip label="Single-click on any item immediately projects it live">
+              <button
+                onClick={onToggleAutoProject}
+                className={cn(
+                  "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md text-xs font-bold transition shadow-sm border shrink-0",
+                  autoProjectEnabled
+                    ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
+                    : "border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground"
+                )}
+              >
+                <Zap className={cn("h-3.5 w-3.5", autoProjectEnabled ? "fill-emerald-400 text-emerald-400" : "")} />
+                <span className="hidden sm:inline">Auto Project: {autoProjectEnabled ? "ON" : "OFF"}</span>
+              </button>
+            </ShortcutTooltip>
           )}
 
           <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
@@ -480,30 +500,32 @@ export function LibraryToolbar({
           {/* Panel Toggle Buttons */}
           <div className="flex items-center rounded-md border border-[#2D3348] bg-[#111827] p-0.5 shrink-0">
             {onToggleLeftCollapsed && (
-              <button
-                onClick={onToggleLeftCollapsed}
-                className={cn(
-                  "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
-                  !isLeftCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Toggle Folder Tree (Ctrl+B)"
-              >
-                <PanelLeft className="h-3.5 w-3.5 text-amber-400" />
-                <span className="hidden sm:inline text-[10px]">Tree</span>
-              </button>
+              <ShortcutTooltip id="library.toggle-tree" label="Toggle Folder Tree">
+                <button
+                  onClick={onToggleLeftCollapsed}
+                  className={cn(
+                    "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
+                    !isLeftCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <PanelLeft className="h-3.5 w-3.5 text-amber-400" />
+                  <span className="hidden sm:inline text-[10px]">Tree</span>
+                </button>
+              </ShortcutTooltip>
             )}
             {onToggleRightCollapsed && (
-              <button
-                onClick={onToggleRightCollapsed}
-                className={cn(
-                  "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
-                  !isRightCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
-                )}
-                title="Toggle Details Inspector (Ctrl+])"
-              >
-                <PanelRight className="h-3.5 w-3.5 text-blue-400" />
-                <span className="hidden sm:inline text-[10px]">Details</span>
-              </button>
+              <ShortcutTooltip id="library.toggle-details" label="Toggle Details Inspector">
+                <button
+                  onClick={onToggleRightCollapsed}
+                  className={cn(
+                    "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
+                    !isRightCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <PanelRight className="h-3.5 w-3.5 text-blue-400" />
+                  <span className="hidden sm:inline text-[10px]">Details</span>
+                </button>
+              </ShortcutTooltip>
             )}
           </div>
         </div>
@@ -521,13 +543,14 @@ export function LibraryToolbar({
             title="Sort Options"
           />
 
-          <button
-            onClick={onToggleSortOrder}
-            className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
-            title="Toggle Sort Order"
-          >
-            <ArrowUpDown className="h-3.5 w-3.5 text-blue-400" />
-          </button>
+          <ShortcutTooltip label="Toggle Sort Order">
+            <button
+              onClick={onToggleSortOrder}
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 text-blue-400" />
+            </button>
+          </ShortcutTooltip>
 
           {/* View Custom Dropdown */}
           <CustomDropdown
@@ -542,13 +565,15 @@ export function LibraryToolbar({
 
           {/* Redesigned Preset-based & Editable Zoom Field Control: [-] [100%] [+] */}
           <div className="hidden md:flex items-center gap-1 border border-[#2D3348] bg-[#111827] rounded-md px-1 h-7 shrink-0 select-none">
-            <button
-              onClick={handleZoomPrev}
-              className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
-              title="Zoom Out (Previous Preset)"
-            >
-              <ZoomOut className="h-3 w-3" />
-            </button>
+            <ShortcutTooltip label="Zoom Out (Previous Preset)">
+              <button
+                onClick={handleZoomPrev}
+                className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <ZoomOut className="h-3 w-3" />
+              </button>
+            </ShortcutTooltip>
+
             <div className="flex items-center">
               <input
                 type="text"
@@ -560,29 +585,31 @@ export function LibraryToolbar({
                 onBlur={handleZoomInputCommit}
                 onDoubleClick={() => onZoomChange(1.0)}
                 className="w-8 text-center text-[11px] font-mono font-bold bg-transparent text-foreground focus:outline-none focus:bg-[#1F2937] rounded px-0.5"
-                title="Type percentage & press Enter, or double-click to reset to 100%"
               />
               <span className="text-[10px] font-mono text-muted-foreground -ml-0.5">%</span>
             </div>
-            <button
-              onClick={handleZoomNext}
-              className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
-              title="Zoom In (Next Preset)"
-            >
-              <ZoomIn className="h-3 w-3" />
-            </button>
+
+            <ShortcutTooltip label="Zoom In (Next Preset)">
+              <button
+                onClick={handleZoomNext}
+                className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <ZoomIn className="h-3 w-3" />
+              </button>
+            </ShortcutTooltip>
           </div>
 
           {/* More (⋯) Overflow Menu */}
           <div className="shrink-0">
-            <button
-              ref={moreButtonRef}
-              onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition"
-              title="More options (⋯)"
-            >
-              <MoreHorizontal className="h-4 w-4" />
-            </button>
+            <ShortcutTooltip label="More Options">
+              <button
+                ref={moreButtonRef}
+                onClick={() => setShowMoreDropdown(!showMoreDropdown)}
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition"
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </button>
+            </ShortcutTooltip>
 
             {typeof document !== "undefined" && moreMenuPortal && createPortal(moreMenuPortal, document.body)}
           </div>
