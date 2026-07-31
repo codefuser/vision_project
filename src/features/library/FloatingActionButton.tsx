@@ -10,6 +10,7 @@ import {
   Presentation,
   ListMusic,
 } from "lucide-react";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 
 interface FloatingActionButtonProps {
   onNewFolder: () => void;
@@ -102,13 +103,14 @@ export function FloatingActionButton({
       )}
 
       {/* Floating Action Button (+ Trigger) */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform duration-200 hover:scale-105 active:scale-95"
-        title="Add to Church Content Library"
-      >
-        <Plus className={`h-6 w-6 transition-transform duration-200 ${isOpen ? "rotate-45" : ""}`} />
-      </button>
+      <ShortcutTooltip label="Add Content to Library" side="left">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className="flex h-12 w-12 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-transform duration-200 hover:scale-105 active:scale-95"
+        >
+          <Plus className={`h-6 w-6 transition-transform duration-200 ${isOpen ? "rotate-45" : ""}`} />
+        </button>
+      </ShortcutTooltip>
     </div>
   );
 }

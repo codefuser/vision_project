@@ -6,6 +6,8 @@ import { Thumb } from "@/components/Thumb";
 import { getVerse, type BibleLang } from "@/lib/bible/loader";
 import { cn } from "@/lib/utils";
 
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
+
 interface QuickLookModalProps {
   item: LibraryItem | null;
   open: boolean;
@@ -61,13 +63,14 @@ export function QuickLookModal({ item, open, bibleLang, onClose, onProject }: Qu
               <Play className="h-3.5 w-3.5 fill-current" />
               Project Live
             </button>
-            <button
-              onClick={onClose}
-              className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/60 text-muted-foreground hover:bg-accent hover:text-foreground transition"
-              title="Close (ESC or Space)"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <ShortcutTooltip label="Close (ESC or Space)">
+              <button
+                onClick={onClose}
+                className="flex h-7 w-7 items-center justify-center rounded-full bg-muted/60 text-muted-foreground hover:bg-accent hover:text-foreground transition"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </ShortcutTooltip>
           </div>
         </div>
 

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -224,10 +225,10 @@ export function TextPanel() {
     const id = duplicate(selected.id);
     if (id) setSelectedId(id);
   };
+  const [deleteTarget, setDeleteTarget] = useState<TextItem | null>(null);
+
   const handleDelete = (it: TextItem) => {
-    if (!confirm(`Delete "${it.title}"?`)) return;
-    remove(it.id);
-    if (selectedId === it.id) setSelectedId(null);
+    setDeleteTarget(it);
   };
   const project = (i: number) => {
     if (!selected) return;
@@ -700,6 +701,23 @@ export function TextPanel() {
           </div>
         </div>
       </div>
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Text Item?"
+        description={`Are you sure you want to delete "${deleteTarget?.title}"?`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive={true}
+        defaultFocus="cancel"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) {
+            remove(deleteTarget.id);
+            if (selectedId === deleteTarget.id) setSelectedId(null);
+          }
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

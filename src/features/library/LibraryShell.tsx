@@ -22,6 +22,8 @@ import { formatBytes } from "@/lib/files";
 import { toast } from "sonner";
 import { PanelRightOpen } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 // Undo Stack Action Types
 type UndoAction =
@@ -80,6 +82,10 @@ export function LibraryShell() {
   // Navigation History
   const [history, setHistory] = useState<(string | null)[]>([null]);
   const [historyIdx, setHistoryIdx] = useState(0);
+
+  // Delete confirmation modal states
+  const [deleteFolderTarget, setDeleteFolderTarget] = useState<FolderRecord | null>(null);
+  const [deleteItemsTarget, setDeleteItemsTarget] = useState<LibraryItem[] | null>(null);
 
   // Range Selection Tracker
   const lastClickedIndexRef = useRef<number | null>(null);
@@ -661,16 +667,7 @@ export function LibraryShell() {
       // Delete: Remove Selected
       if ((e.key === "Delete" || e.key === "Backspace") && selectedItems.length > 0) {
         e.preventDefault();
-        const mediaIds = selectedItems.filter((i) => i.mediaRecord).map((i) => i.id);
-        const customIds = new Set(selectedItems.filter((i) => !i.mediaRecord).map((i) => i.id));
-        if (mediaIds.length) {
-          deleteMedia(mediaIds).then(refreshMedia);
-        }
-        if (customIds.size) {
-          setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
-        }
-        pushUndo({ type: "delete", items: selectedItems });
-        toast.success(`Deleted ${selectedItems.length} item(s) (Ctrl+Z to Undo)`);
+        setDeleteItemsTarget(selectedItems);
         return;
       }
 
@@ -809,11 +806,6 @@ export function LibraryShell() {
         lastClickedIndexRef.current = index;
       }
       setInspectedItem(item);
-
-      // Auto-slide open right details panel if collapsed
-      if (useFileManagerLayoutStore.getState().isRightCollapsed) {
-        useFileManagerLayoutStore.getState().setRightCollapsed(false);
-      }
 
       // Auto Project on click if Auto-Project Mode is Enabled
       if (useFileManagerLayoutStore.getState().autoProjectEnabled) {
@@ -1013,16 +1005,30 @@ export function LibraryShell() {
   };
 
   const handleDeleteItems = (items: LibraryItem[]) => {
+    if (!items || items.length === 0) return;
+    setDeleteItemsTarget(items);
+  };
+
+  const executeDeleteItems = async (items: LibraryItem[]) => {
     const mediaIds = items.filter((i) => i.mediaRecord).map((i) => i.id);
     const customIds = new Set(items.filter((i) => !i.mediaRecord).map((i) => i.id));
     if (mediaIds.length) {
-      deleteMedia(mediaIds).then(refreshMedia);
+      await deleteMedia(mediaIds);
+      await refreshMedia();
     }
     if (customIds.size) {
       setCustomItems((prev) => prev.filter((i) => !customIds.has(i.id)));
     }
     pushUndo({ type: "delete", items });
     toast.success(`Deleted ${items.length} item(s) (Ctrl+Z to Undo)`);
+    setDeleteItemsTarget(null);
+  };
+
+  const executeDeleteFolder = async (folder: FolderRecord) => {
+    await deleteFolderDeep(folder.id);
+    await refreshFolders();
+    await refreshMedia();
+    setDeleteFolderTarget(null);
   };
 
   const handleDuplicateItems = (items: LibraryItem[]) => {
@@ -1121,22 +1127,19 @@ export function LibraryShell() {
             onSelectFolder={navigateToFolder}
             onCreateFolder={() => setInlineCreatingFolder(true)}
             onRenameFolder={(f) => setInlineEditingId(f.id)}
-            onDeleteFolder={(f) => {
-              if (confirm(`Delete folder "${f.name}"?`)) {
-                deleteFolderDeep(f.id).then(refreshFolders);
-              }
-            }}
+            onDeleteFolder={(f) => setDeleteFolderTarget(f)}
             onDropItemsToFolder={handleDropItemsToFolder}
           />
         </div>
 
         {/* Left Resize Splitter Handle (only active when expanded) */}
         {!isLeftCollapsed && (
-          <div
-            onPointerDown={handleLeftPointerDown}
-            className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
-            title="Drag to resize folder tree panel"
-          />
+          <ShortcutTooltip label="Drag to resize folder tree panel" side="right">
+            <div
+              onPointerDown={handleLeftPointerDown}
+              className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
+            />
+          </ShortcutTooltip>
         )}
 
         {/* Pane 2: Center File Explorer Grid */}
@@ -1172,13 +1175,14 @@ export function LibraryShell() {
 
           {/* Collapsed Inspector Edge Handle Button */}
           {isRightCollapsed && (
-            <button
-              onClick={toggleRightCollapsed}
-              className="absolute top-1/2 right-0 z-30 flex h-10 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-border bg-card/90 shadow-md hover:bg-accent text-muted-foreground hover:text-foreground backdrop-blur transition"
-              title="Expand Details Inspector (Ctrl+])"
-            >
-              <PanelRightOpen className="h-3.5 w-3.5" />
-            </button>
+            <ShortcutTooltip id="library.toggle-details" label="Expand Details Inspector">
+              <button
+                onClick={toggleRightCollapsed}
+                className="absolute top-1/2 right-0 z-30 flex h-10 w-5 -translate-y-1/2 cursor-pointer items-center justify-center rounded-l-md border border-r-0 border-border bg-card/90 shadow-md hover:bg-accent text-muted-foreground hover:text-foreground backdrop-blur transition"
+              >
+                <PanelRightOpen className="h-3.5 w-3.5" />
+              </button>
+            </ShortcutTooltip>
           )}
 
           {/* Floating Action Button inside Center Pane */}
@@ -1193,11 +1197,12 @@ export function LibraryShell() {
 
         {/* Right Resize Splitter Handle (only active when expanded) */}
         {!isRightCollapsed && (
-          <div
-            onPointerDown={handleRightPointerDown}
-            className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
-            title="Drag to resize right inspector panel"
-          />
+          <ShortcutTooltip label="Drag to resize right inspector panel">
+            <div
+              onPointerDown={handleRightPointerDown}
+              className="w-1.5 shrink-0 cursor-col-resize hover:bg-primary transition bg-border/60 select-none touch-none"
+            />
+          </ShortcutTooltip>
         )}
 
         {/* Pane 3: Right Docked Inspector / Live Preview Pane */}
@@ -1231,32 +1236,35 @@ export function LibraryShell() {
           {selection.size > 0 && <span className="ml-3 font-semibold text-foreground">{selection.size} selected</span>}
         </div>
         <div className="flex items-center gap-3">
-          <button
-            onClick={toggleLeftCollapsed}
-            className="hover:text-foreground cursor-pointer transition"
-            title="Toggle Tree Panel (Ctrl+B)"
-          >
-            Tree: <span className="font-semibold">{isLeftCollapsed ? "Collapsed" : "Expanded"}</span>
-          </button>
+          <ShortcutTooltip id="library.toggle-tree" label="Toggle Folder Tree">
+            <button
+              onClick={toggleLeftCollapsed}
+              className="hover:text-foreground cursor-pointer transition"
+            >
+              Tree: <span className="font-semibold">{isLeftCollapsed ? "Collapsed" : "Expanded"}</span>
+            </button>
+          </ShortcutTooltip>
           <span>·</span>
-          <button
-            onClick={toggleRightCollapsed}
-            className="hover:text-foreground cursor-pointer transition"
-            title="Toggle Details Inspector (Ctrl+])"
-          >
-            Details: <span className="font-semibold">{isRightCollapsed ? "Collapsed" : "Expanded"}</span>
-          </button>
+          <ShortcutTooltip id="library.toggle-details" label="Toggle Details Inspector">
+            <button
+              onClick={toggleRightCollapsed}
+              className="hover:text-foreground cursor-pointer transition"
+            >
+              Details: <span className="font-semibold">{isRightCollapsed ? "Collapsed" : "Expanded"}</span>
+            </button>
+          </ShortcutTooltip>
           <span>·</span>
-          <button
-            onClick={toggleAutoProject}
-            className={cn(
-              "cursor-pointer font-semibold transition px-1.5 py-0.5 rounded text-[10px]",
-              autoProjectEnabled ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"
-            )}
-            title="Single-click on any item immediately projects it live"
-          >
-            Auto-Project: {autoProjectEnabled ? "ON" : "OFF"}
-          </button>
+          <ShortcutTooltip label="Single-click on any item immediately projects it live">
+            <button
+              onClick={toggleAutoProject}
+              className={cn(
+                "cursor-pointer font-semibold transition px-1.5 py-0.5 rounded text-[10px]",
+                autoProjectEnabled ? "bg-emerald-500/20 text-emerald-400" : "bg-muted text-muted-foreground"
+              )}
+            >
+              Auto-Project: {autoProjectEnabled ? "ON" : "OFF"}
+            </button>
+          </ShortcutTooltip>
           <span>·</span>
           <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
             <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
@@ -1342,14 +1350,58 @@ export function LibraryShell() {
         onClose={() => setShowTextImport(false)}
         onImport={handleCreateText}
       />
-      {/* macOS Quick Look Spacebar Preview Modal */}
-      <QuickLookModal
-        item={selectedItems[0] || inspectedItem}
-        open={showQuickLook}
-        bibleLang={bibleLang}
-        onClose={() => setShowQuickLook(false)}
-        onProject={projectItem}
-      />
+      {/* Custom Theme Confirm Dialogs */}
+      {deleteFolderTarget && (() => {
+        const childItemsCount = media.filter((m) => m.folderId === deleteFolderTarget.id).length;
+        return (
+          <ConfirmDialog
+            open={!!deleteFolderTarget}
+            title="Delete Folder?"
+            description={
+              <div className="space-y-1.5 text-sm text-muted-foreground">
+                <p>
+                  Are you sure you want to delete <strong className="text-foreground">"{deleteFolderTarget.name}"</strong>?
+                </p>
+                {childItemsCount > 0 ? (
+                  <p className="text-amber-400 font-medium">
+                    This folder contains {childItemsCount} item{childItemsCount === 1 ? "" : "s"}. Deleting this folder will move all contained items to the recycle bin (or permanently delete).
+                  </p>
+                ) : (
+                  <p>Deleting this folder will remove it permanently.</p>
+                )}
+              </div>
+            }
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            destructive={true}
+            defaultFocus="cancel"
+            onCancel={() => setDeleteFolderTarget(null)}
+            onConfirm={() => executeDeleteFolder(deleteFolderTarget)}
+          />
+        );
+      })()}
+
+      {deleteItemsTarget && (() => {
+        const isSingle = deleteItemsTarget.length === 1;
+        const singleItemName = isSingle ? deleteItemsTarget[0].name : "";
+        return (
+          <ConfirmDialog
+            open={!!deleteItemsTarget}
+            title={isSingle ? "Delete Media?" : "Delete Selected Items?"}
+            description={
+              isSingle
+                ? `Are you sure you want to delete "${singleItemName}"?`
+                : `Delete ${deleteItemsTarget.length} selected items?`
+            }
+            confirmLabel="Delete"
+            cancelLabel="Cancel"
+            destructive={true}
+            defaultFocus="cancel"
+            onCancel={() => setDeleteItemsTarget(null)}
+            onConfirm={() => executeDeleteItems(deleteItemsTarget)}
+          />
+        );
+      })()}
     </div>
   );
 }

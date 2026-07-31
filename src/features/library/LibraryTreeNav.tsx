@@ -229,101 +229,108 @@ export function LibraryTreeNav({
   if (isCollapsed) {
     return (
       <aside className="flex h-full w-12 shrink-0 flex-col items-center py-2 bg-card/40 border-r border-border select-none gap-2">
-        <button
-          onClick={onToggleCollapse}
-          className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition"
-          title="Expand Folder Tree (Ctrl+B)"
-        >
-          <PanelLeftOpen className="h-4 w-4" />
-        </button>
+        <ShortcutTooltip id="library.toggle-tree" label="Expand Folder Tree">
+          <button
+            onClick={onToggleCollapse}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </ShortcutTooltip>
 
         <div className="w-6 h-px bg-border/60 my-1" />
 
-        <button
-          onClick={() => {
-            onSelectCategory("all");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "all" && currentFolderId === null
-              ? "bg-primary text-primary-foreground shadow-sm"
-              : "text-foreground hover:bg-accent"
-          )}
-          title={`All Files (${categoryCounts.all})`}
-        >
-          <Home className="h-4 w-4" />
-        </button>
+        <ShortcutTooltip label={`All Files (${categoryCounts.all})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("all");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "all" && currentFolderId === null
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Home className="h-4 w-4" />
+          </button>
+        </ShortcutTooltip>
 
-        <button
-          onClick={() => {
-            onSelectCategory("songs");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "songs" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
-          )}
-          title={`Songs (${categoryCounts.songs})`}
-        >
-          <Music className="h-4 w-4 text-purple-400" />
-        </button>
+        <ShortcutTooltip label={`Songs (${categoryCounts.songs})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("songs");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "songs" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Music className="h-4 w-4 text-purple-400" />
+          </button>
+        </ShortcutTooltip>
 
-        <button
-          onClick={() => {
-            onSelectCategory("bible");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "bible" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
-          )}
-          title={`Bible Verses (${categoryCounts.bible})`}
-        >
-          <BookOpen className="h-4 w-4 text-blue-400" />
-        </button>
+        <ShortcutTooltip label={`Bible Verses (${categoryCounts.bible})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("bible");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "bible" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <BookOpen className="h-4 w-4 text-blue-400" />
+          </button>
+        </ShortcutTooltip>
 
-        <button
-          onClick={() => {
-            onSelectCategory("images");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "images" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
-          )}
-          title={`Images (${categoryCounts.images})`}
-        >
-          <ImageIcon className="h-4 w-4 text-green-400" />
-        </button>
+        <ShortcutTooltip label={`Images (${categoryCounts.images})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("images");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "images" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <ImageIcon className="h-4 w-4 text-green-400" />
+          </button>
+        </ShortcutTooltip>
 
-        <button
-          onClick={() => {
-            onSelectCategory("videos");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "videos" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
-          )}
-          title={`Videos (${categoryCounts.videos})`}
-        >
-          <VideoIcon className="h-4 w-4 text-rose-400" />
-        </button>
+        <ShortcutTooltip label={`Videos (${categoryCounts.videos})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("videos");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "videos" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <VideoIcon className="h-4 w-4 text-rose-400" />
+          </button>
+        </ShortcutTooltip>
 
-        <button
-          onClick={() => {
-            onSelectCategory("announcements");
-            onSelectFolder(null);
-          }}
-          className={cn(
-            "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-            currentCategory === "announcements" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
-          )}
-          title={`Text (${categoryCounts.announcements})`}
-        >
-          <Megaphone className="h-4 w-4 text-amber-400" />
-        </button>
+        <ShortcutTooltip label={`Text (${categoryCounts.announcements})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("announcements");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "announcements" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Megaphone className="h-4 w-4 text-amber-400" />
+          </button>
+        </ShortcutTooltip>
       </aside>
     );
   }
@@ -484,13 +491,14 @@ export function LibraryTreeNav({
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
             Folders Tree
           </span>
-          <button
-            onClick={() => onCreateFolder(currentFolderId)}
-            className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground"
-            title="Create Folder"
-          >
-            <Plus className="h-3.5 w-3.5" />
-          </button>
+          <ShortcutTooltip id="library.new-folder" label="New Folder">
+            <button
+              onClick={() => onCreateFolder(currentFolderId)}
+              className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
         </div>
 
         <div className="flex flex-col mt-1 overflow-y-auto">

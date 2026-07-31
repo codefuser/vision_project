@@ -21,6 +21,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useSongsStore } from "@/lib/songs/store";
 import { useSongsRecent } from "@/stores/songs-recent.store";
 import { useWorkspace } from "@/features/workspace/workspace.store";
@@ -598,6 +599,7 @@ interface ListProps {
 import { useVirtualizer } from "@tanstack/react-virtual";
 
 function SongList(p: ListProps) {
+  const [songToDelete, setSongToDelete] = useState<Song | null>(null);
   const userIds = useMemo(() => new Set(p.userSongs.map((u) => u.id)), [p.userSongs]);
   const parentRef = useRef<HTMLDivElement>(null);
 
@@ -702,9 +704,7 @@ function SongList(p: ListProps) {
                 else p.addFav({ id: song.id, title: song.title });
               }}
               onEdit={() => p.onEdit(song.id)}
-              onDelete={() => {
-                if (confirm(`Delete "${song.title}"?`)) p.onDelete(song.id);
-              }}
+              onDelete={() => setSongToDelete(song)}
               addFav={p.addFav}
               removeFav={p.removeFav}
               query={p.query}
@@ -712,6 +712,20 @@ function SongList(p: ListProps) {
           );
         })}
       </div>
+      <ConfirmDialog
+        open={!!songToDelete}
+        title="Delete Song?"
+        description={`Are you sure you want to delete "${songToDelete?.title}"?`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive={true}
+        defaultFocus="cancel"
+        onCancel={() => setSongToDelete(null)}
+        onConfirm={() => {
+          if (songToDelete) p.onDelete(songToDelete.id);
+          setSongToDelete(null);
+        }}
+      />
     </div>
   );
 }
@@ -986,7 +1000,7 @@ const SongRow = memo(
                     className="p-1.5 hover:bg-background/80 rounded text-muted-foreground hover:text-destructive"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (confirm("Delete this song?")) onDelete(song.id);
+                      onDelete(song.id);
                     }}
                   >
                     <Trash2 className="h-4 w-4" />

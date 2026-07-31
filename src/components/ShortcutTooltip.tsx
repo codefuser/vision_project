@@ -39,7 +39,7 @@ export function ShortcutTooltip({
   children,
   side = "bottom",
   align = "center",
-  delayDuration = 300,
+  delayDuration = 200,
   disabled = false,
 }: ShortcutTooltipProps) {
   const def = useShortcutFor(id ?? "");
@@ -55,7 +55,7 @@ export function ShortcutTooltip({
             side={side}
             align={align}
             sideOffset={6}
-            className="z-[9999] max-w-[240px] animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+            className="z-[9999] max-w-[340px] break-words animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 select-none"
             style={{
               background: "rgba(12,12,18,0.97)",
               border: "1px solid rgba(255,255,255,0.08)",
@@ -66,7 +66,7 @@ export function ShortcutTooltip({
             }}
           >
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-foreground">{label}</span>
+              <span className="text-xs font-medium text-foreground break-words leading-snug">{label}</span>
               {def && def.keys.length > 0 && (
                 <span className="flex items-center gap-1">
                   {def.keys.slice(0, 2).map((k) => (

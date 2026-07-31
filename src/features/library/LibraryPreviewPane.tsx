@@ -166,50 +166,58 @@ export function LibraryPreviewPane({
 
       {/* Inspector Tabs */}
       <div className="flex items-center border-b border-border bg-muted/20 px-2 text-[11px] font-medium text-muted-foreground">
-        <button
-          onClick={() => setActiveTab("preview")}
-          className={cn(
-            "flex-1 py-2 text-center transition border-b-2 font-semibold",
-            activeTab === "preview"
-              ? "border-primary text-primary bg-accent/40"
-              : "border-transparent hover:text-foreground"
-          )}
-        >
-          Preview
-        </button>
-        <button
-          onClick={() => setActiveTab("properties")}
-          className={cn(
-            "flex-1 py-2 text-center transition border-b-2 font-semibold",
-            activeTab === "properties"
-              ? "border-primary text-primary bg-accent/40"
-              : "border-transparent hover:text-foreground"
-          )}
-        >
-          Props
-        </button>
-        <button
-          onClick={() => setActiveTab("metadata")}
-          className={cn(
-            "flex-1 py-2 text-center transition border-b-2 font-semibold",
-            activeTab === "metadata"
-              ? "border-primary text-primary bg-accent/40"
-              : "border-transparent hover:text-foreground"
-          )}
-        >
-          Meta
-        </button>
-        <button
-          onClick={() => setActiveTab("history")}
-          className={cn(
-            "flex-1 py-2 text-center transition border-b-2 font-semibold",
-            activeTab === "history"
-              ? "border-primary text-primary bg-accent/40"
-              : "border-transparent hover:text-foreground"
-          )}
-        >
-          History
-        </button>
+        <ShortcutTooltip label="Preview Tab">
+          <button
+            onClick={() => setActiveTab("preview")}
+            className={cn(
+              "flex-1 py-2 text-center transition border-b-2 font-semibold cursor-pointer",
+              activeTab === "preview"
+                ? "border-primary text-primary bg-accent/40"
+                : "border-transparent hover:text-foreground"
+            )}
+          >
+            Preview
+          </button>
+        </ShortcutTooltip>
+        <ShortcutTooltip label="Properties Tab">
+          <button
+            onClick={() => setActiveTab("properties")}
+            className={cn(
+              "flex-1 py-2 text-center transition border-b-2 font-semibold cursor-pointer",
+              activeTab === "properties"
+                ? "border-primary text-primary bg-accent/40"
+                : "border-transparent hover:text-foreground"
+            )}
+          >
+            Props
+          </button>
+        </ShortcutTooltip>
+        <ShortcutTooltip label="Metadata Tab">
+          <button
+            onClick={() => setActiveTab("metadata")}
+            className={cn(
+              "flex-1 py-2 text-center transition border-b-2 font-semibold cursor-pointer",
+              activeTab === "metadata"
+                ? "border-primary text-primary bg-accent/40"
+                : "border-transparent hover:text-foreground"
+            )}
+          >
+            Meta
+          </button>
+        </ShortcutTooltip>
+        <ShortcutTooltip label="History Tab">
+          <button
+            onClick={() => setActiveTab("history")}
+            className={cn(
+              "flex-1 py-2 text-center transition border-b-2 font-semibold cursor-pointer",
+              activeTab === "history"
+                ? "border-primary text-primary bg-accent/40"
+                : "border-transparent hover:text-foreground"
+            )}
+          >
+            History
+          </button>
+        </ShortcutTooltip>
       </div>
 
       {/* Tab Contents */}
@@ -346,9 +354,11 @@ export function LibraryPreviewPane({
               ) : null}
               <div className="flex justify-between py-1">
                 <span className="text-muted-foreground font-medium">Folder Path</span>
-                <span className="font-mono text-[10px] text-primary truncate max-w-[140px]" title={folderPathStr}>
-                  {folderPathStr}
-                </span>
+                <ShortcutTooltip label={folderPathStr}>
+                  <span className="font-mono text-[10px] text-primary truncate max-w-[140px]">
+                    {folderPathStr}
+                  </span>
+                </ShortcutTooltip>
               </div>
             </div>
           </div>
