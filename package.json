@@ -1,15 +1,25 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "versolyn",
+  "version": "1.0.0",
+  "description": "VersoLyn — Church Presentation Software",
+  "author": "VersoLyn",
   "private": true,
   "sideEffects": false,
   "type": "module",
+  "main": "dist-electron/main/main.js",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:electron:renderer": "vite build --config vite.electron.config.ts",
+    "build:electron:main": "vite build --config vite.electron.main.config.ts",
+    "build:icons": "node build/generate-icons.cjs",
+    "electron:dev": "npm run build:electron:renderer && npm run build:electron:main && electron .",
+    "electron:pack": "npm run build:icons && npm run build:electron:renderer && npm run build:electron:main && electron-builder --dir",
+    "electron:dist": "npm run build:icons && npm run build:electron:renderer && npm run build:electron:main && electron-builder --win"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -75,11 +85,14 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@electron/asar": "^4.2.1",
     "@eslint/js": "^9.32.0",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
     "@vitejs/plugin-react": "^5.0.4",
+    "electron": "^43.2.0",
+    "electron-builder": "^26.15.3",
     "eslint": "^9.32.0",
     "eslint-config-prettier": "^10.1.1",
     "eslint-plugin-prettier": "^5.2.6",
@@ -88,6 +101,7 @@
     "globals": "^15.15.0",
     "nitro": "3.0.260603-beta",
     "prettier": "^3.7.3",
+    "sharp": "^0.35.3",
     "typescript": "^5.8.3",
     "typescript-eslint": "^8.56.1",
     "vite": "^7.3.1"
