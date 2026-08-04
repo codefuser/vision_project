@@ -161,10 +161,6 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
             <span className="min-w-[3ch] text-right">{smoothPercent}%</span>
           </div>
         </div>
-
-        <div className="text-[10px]" style={{ color: "rgba(255,255,255,0.15)" }}>
-          Online-first · Cloud Database Ready
-        </div>
       </div>
     </div>
   );

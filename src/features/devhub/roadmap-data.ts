@@ -48,7 +48,7 @@ export const VERSIONS: RoadmapVersion[] = [
       "Full-screen projection with multi-monitor support",
       "Keyboard shortcuts for every action",
       "Backup and restore functionality",
-      "Offline-first architecture",
+      "Local storage & data privacy",
     ],
     features: [
       {

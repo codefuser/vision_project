@@ -166,14 +166,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Pinned bottom: Settings */}
         <div className="overflow-hidden border-t border-sidebar-border/50 p-2">
           {renderNavItem(SETTINGS_NAV)}
-          <div
-            className={cn(
-              "whitespace-nowrap px-2 pt-2 text-[10px] text-muted-foreground transition-opacity duration-200",
-              collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            )}
-          >
-            Offline-first · Local only
-          </div>
         </div>
       </aside>
       )}

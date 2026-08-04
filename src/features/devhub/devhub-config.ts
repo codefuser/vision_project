@@ -53,23 +53,23 @@ export const PROJECT_INFO = {
   name: "VersoLyn",
   tagline: "Free & Open Source Church Presentation Software",
   shortDescription:
-    "Modern, offline-first presentation software built for churches. Project Bible verses, songs, media, and sermon content with beautiful themes and real-time control.",
+    "Modern presentation software built for churches. Project Bible verses, songs, media, and sermon content with beautiful themes and real-time control.",
   version: "1.0.0",
   buildStatus: "Stable",
   badges: [
-    { label: "Offline First", variant: "secondary" as const },
+    { label: "Tamil & English", variant: "secondary" as const },
     { label: "Open Source", variant: "default" as const },
     { label: "Tamil First", variant: "outline" as const },
     { label: "Cross Platform", variant: "secondary" as const },
   ],
-  description: `VersoLyn is a free and open-source church presentation software designed for modern worship services. Unlike proprietary solutions that lock you into expensive licenses and internet-dependent workflows, VersoLyn is built from the ground up with an offline-first architecture, putting you in complete control of your presentation experience.
+  description: `VersoLyn is a free and open-source church presentation software designed for modern worship services. Unlike proprietary solutions that lock you into expensive licenses, VersoLyn is built from the ground up with a high-performance architecture, putting you in complete control of your presentation experience.
 
 Whether you're projecting Bible verses in Tamil or English, displaying song lyrics, showing media content, or managing complex service flows, VersoLyn provides a fast, beautiful, and reliable tool that respects your privacy and independence.`,
   whoItIsFor:
     "Churches of all sizes, worship teams, pastors, youth groups, missionaries, and anyone who needs reliable projection software without the burden of subscription fees or internet dependency.",
   mainGoals: [
     "Provide a free, professional-grade presentation tool for churches worldwide",
-    "Deliver blazing-fast performance with offline-first architecture",
+    "Deliver blazing-fast performance with modern architecture",
     "Support Tamil language natively while offering full English support",
     "Create beautiful, customizable themes for worship environments",
     "Build a sustainable open-source community around the project",
@@ -82,7 +82,7 @@ Whether you're projecting Bible verses in Tamil or English, displaying song lyri
     "Removes data privacy concerns with fully local database storage",
   ],
   whyDifferent: [
-    "Truly offline-first — your data never leaves your device",
+    "Complete data privacy — your data never leaves your device",
     "Built specifically with Tamil churches in mind from day one",
     "Free and open source — no hidden costs, no premium tiers",
     "Modern tech stack — React, TypeScript, and Electron for native performance",
@@ -116,7 +116,7 @@ export const DEVELOPER_INFO = {
     "TypeScript / React",
     "TailwindCSS / UI Architecture",
     "Electron & Desktop Native Integrations",
-    "Offline-first Storage Systems",
+    "High-performance Storage Systems",
     "Tamil Font & Text Processing",
   ],
   interests: ["Worship Technology", "Open Source", "UI/UX Design", "Church Ministry"],
@@ -301,10 +301,10 @@ export const FEATURES: FeatureCard[] = [
     tags: ["Instant", "Indexed"],
   },
   {
-    title: "Offline First",
-    description: "Works completely offline. No internet required for any feature.",
+    title: "Local Privacy",
+    description: "Your data stays on your device. Complete control over all features.",
     icon: Code2,
-    tags: ["Local DB", "No Internet"],
+    tags: ["Local DB", "Privacy"],
   },
   {
     title: "Custom Themes",
@@ -352,7 +352,7 @@ export const TECHNOLOGIES: Technology[] = [
   },
   {
     name: "SQLite (Dexie)",
-    description: "Offline-first local database with IndexedDB",
+    description: "Local database with IndexedDB",
     category: "Database",
   },
   {
@@ -424,8 +424,8 @@ export const FAQ_ITEMS = [
     a: "Yes! VersoLyn is and always will be free. It's an open-source project licensed under MIT. There are no premium tiers, no subscription fees, and no hidden costs.",
   },
   {
-    q: "Does VersoLyn work offline?",
-    a: "Absolutely. VersoLyn is built with an offline-first architecture. All features work without an internet connection. Your data is stored locally on your device.",
+    q: "Does VersoLyn require an internet connection?",
+    a: "No! VersoLyn is built with a self-contained local architecture. All core features work without an internet connection. Your data is stored locally on your device.",
   },
   {
     q: "Which platforms are supported?",
