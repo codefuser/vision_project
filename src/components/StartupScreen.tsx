@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, useRef, type ReactNode } from "react";
 import { MonitorPlay } from "lucide-react";
 import { startupManager, buildSteps } from "@/lib/startup/startup-manager";
+import { VersoLynLogo } from "@/components/ui/VersoLynLogo";
 
 const PARTICLE_COUNT = 10;
 const BAR_COLORS = ["#4F8CFF", "#7C5CFF", "#45D6FF", "#7C5CFF", "#4F8CFF"];
@@ -101,21 +102,21 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
 
       <div className="relative flex flex-col items-center gap-7">
         <div className="relative flex items-center justify-center">
+          {/* Subtle soft ambient outer glow behind logo */}
           <div
-            className={`absolute h-28 w-28 rounded-full blur-2xl transition-all duration-500 ${
-              complete ? "scale-150 opacity-0" : "opacity-90 dark:opacity-80"
+            className={`absolute h-36 w-36 rounded-full blur-2xl transition-opacity duration-700 pointer-events-none ${
+              complete ? "opacity-0" : "opacity-35 dark:opacity-45"
             }`}
             style={{
-              background: "radial-gradient(circle, rgba(79,140,255,0.4) 0%, rgba(124,92,255,0.3) 50%, transparent 75%)",
-              animation: "startup-glow-pulse 3.5s ease-in-out infinite",
+              background:
+                "radial-gradient(circle, rgba(79,140,255,0.45) 0%, rgba(124,92,255,0.35) 50%, transparent 75%)",
             }}
           />
           <div
-            className="relative flex h-24 w-24 items-center justify-center p-3"
+            className="relative flex items-center justify-center transition-transform duration-300"
             style={{ animation: "startup-logo-breath 3.5s ease-in-out infinite" }}
           >
-            <div className="absolute inset-0 rounded-2xl border border-border/60 bg-card/80 dark:bg-muted/40 shadow-lg dark:shadow-2xl dark:shadow-primary/20 backdrop-blur-md" />
-            <img src="/versolyn-logo.png" alt="VersoLyn" className="relative h-16 w-16 object-contain drop-shadow-md" />
+            <VersoLynLogo className="h-32 w-32 md:h-40 md:w-40 object-contain transition-transform duration-300 select-none" />
           </div>
         </div>
 

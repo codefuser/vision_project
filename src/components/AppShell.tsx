@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { VersoLynLogo } from "@/components/ui/VersoLynLogo";
 import {
   FolderTree,
   ListVideo,
@@ -109,7 +110,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
-            <img src="/versolyn-logo.png" alt="VersoLyn" className="h-full w-full object-contain" />
+            <VersoLynLogo className="h-full w-full" />
           </button>
 
           <div
