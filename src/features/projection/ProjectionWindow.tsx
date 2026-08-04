@@ -472,7 +472,7 @@ export function ProjectionWindow() {
       {!cur && !black && !textOverlay && (
         <div className="flex h-full items-center justify-center text-neutral-700">
           <div className="text-center">
-            <div className="text-2xl font-semibold">Church Media — Projector</div>
+            <div className="text-2xl font-semibold">VersoLyn — Projector</div>
             <div className="mt-1 text-sm">Waiting for media…</div>
           </div>
         </div>

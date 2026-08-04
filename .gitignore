@@ -79,3 +79,58 @@ Thumbs.db
 # Environment Files
 # ---------------------------------------
 .env
+.env.local
+.env.*
+
+# =======================================
+# ELECTRON / DESKTOP BUILD ARTIFACTS
+# These must NEVER be committed or pushed.
+# Electron source files (electron/, etc.)
+# are intentionally tracked — only
+# generated outputs are excluded here.
+# =======================================
+
+# Electron renderer + main compiled output
+dist-electron/
+
+# Electron packager output (unpackaged app)
+out/
+release/
+
+# Windows installer & packaging artifacts
+*.exe
+*.msi
+*.appx
+*.msix
+*.blockmap
+*.nsis
+*.7z
+
+# electron-builder metadata & debug files
+builder-debug.yml
+builder-effective-config.yaml
+latest.yml
+*.yml.blockmap
+
+# Electron download / extraction cache
+.electron/
+electron-cache/
+electron-download/
+
+# Generated icon assets (recreated by build:icons script)
+build/icon.ico
+build/icon.png
+build/icon-*.png
+
+# electron-builder local cache (Windows)
+# %LOCALAPPDATA%/electron-builder is outside repo — no rule needed
+
+# Temporary packaging folders
+win-unpacked/
+linux-unpacked/
+mac-unpacked/
+*.tmp/
+
+# Auto-generated update manifest
+app-update.yml
+dev-app-update.yml

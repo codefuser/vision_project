@@ -15,6 +15,7 @@ import { RenameDialog } from "@/components/RenameDialog";
 import { FolderCreateDialog } from "@/components/FolderCreateDialog";
 import { FolderDeleteDialog, type FolderDeleteMode } from "@/components/FolderDeleteDialog";
 import { FolderHeader, FolderContextMenu } from "@/components/folder";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface Node {
   folder: FolderRecord;
@@ -113,39 +114,42 @@ export const FolderTree = memo(function FolderTree({
             )}
             <span className="flex-1 truncate">{n.folder.name}</span>
             <div className="invisible flex items-center gap-0.5 group-hover:visible group-focus-within:visible">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setCreateFor({ parentId: n.folder.id, parentLabel: n.folder.name });
-                }}
-                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="New subfolder"
-                title="New subfolder"
-              >
-                <Plus className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRenameTarget(n.folder);
-                }}
-                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Rename folder"
-                title="Rename"
-              >
-                <Pencil className="h-3 w-3" />
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDeleteTarget(n.folder);
-                }}
-                className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                aria-label="Delete folder"
-                title="Delete"
-              >
-                <Trash2 className="h-3 w-3" />
-              </button>
+              <Tooltip content="New subfolder">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setCreateFor({ parentId: n.folder.id, parentLabel: n.folder.name });
+                  }}
+                  className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="New subfolder"
+                >
+                  <Plus className="h-3 w-3" />
+                </button>
+              </Tooltip>
+              <Tooltip content="Rename folder">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setRenameTarget(n.folder);
+                  }}
+                  className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="Rename folder"
+                >
+                  <Pencil className="h-3 w-3" />
+                </button>
+              </Tooltip>
+              <Tooltip content="Delete folder">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDeleteTarget(n.folder);
+                  }}
+                  className="cursor-pointer rounded p-0.5 hover:bg-background focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  aria-label="Delete folder"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </FolderContextMenu>

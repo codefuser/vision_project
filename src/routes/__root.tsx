@@ -1,7 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   Outlet,
-  Link,
   createRootRouteWithContext,
   useRouter,
   HeadContent,
@@ -10,68 +9,52 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
-import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 import { GlobalShortcuts } from "@/components/GlobalShortcuts";
 import { ShortcutsDialog } from "@/components/ShortcutsDialog";
+import { ErrorPage } from "@/components/ErrorPage";
+import { NotFoundPage } from "@/components/NotFoundPage";
 
-function NotFoundComponent() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">
-          The page you're looking for doesn't exist or has been moved.
-        </p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
-      </div>
-    </div>
+const KNOWN_ROUTE_PREFIXES = [
+  "/",
+  "/library",
+  "/history",
+  "/playlists",
+  "/project",
+  "/service",
+  "/settings",
+  "/shortcuts",
+  "/contact",
+  "/roadmap",
+  "/developer-hub",
+];
+
+function isKnownRoute(pathname: string): boolean {
+  if (pathname === "/" || pathname === "/index.html" || pathname.includes("index.html")) {
+    return true;
+  }
+  return KNOWN_ROUTE_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
 }
 
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
-  console.error(error);
   const router = useRouter();
-  useEffect(() => {
-    reportLovableError(error, { boundary: "tanstack_root_error_component" });
-  }, [error]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-xl font-semibold tracking-tight text-foreground">
-          This page didn't load
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
-        </p>
-        <div className="mt-6 flex flex-wrap justify-center gap-2">
-          <button
-            onClick={() => {
-              router.invalidate();
-              reset();
-            }}
-            className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-          >
-            Try again
-          </button>
-          <a
-            href="/"
-            className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
-          >
-            Go home
-          </a>
-        </div>
-      </div>
-    </div>
+    <ErrorPage
+      errorCode="VP-500"
+      title="Something Went Wrong"
+      message="The application encountered an unexpected issue. Our team has been notified. You can try again or head home."
+      error={error}
+      recoverable
+      recommendedAction="retry"
+      onRetry={() => {
+        router.invalidate();
+        reset();
+      }}
+      showHistory={false}
+    />
   );
 }
 
@@ -80,21 +63,29 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Church Media — Projection Software" },
+      {
+        httpEquiv: "Content-Security-Policy",
+        content:
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co data: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+      },
+      { title: "VersoLyn — Church Presentation Software" },
       {
         name: "description",
         content:
-          "Offline-first media projection software for churches. Images, posters, and videos.",
+          "VersoLyn is a modern church presentation software. Tamil & English Bible verses, song lyrics, media, and service flow management.",
       },
       { name: "theme-color", content: "#0a0a0a" },
-      { property: "og:title", content: "Church Media — Projection Software" },
+      { property: "og:title", content: "VersoLyn — Church Presentation Software" },
       {
         property: "og:description",
-        content: "Offline-first media projection software for churches.",
+        content: "VersoLyn church presentation software.",
       },
       { property: "og:type", content: "website" },
     ],
     links: [
+      { rel: "icon", type: "image/png", href: "/versolyn-logo.png" },
+      { rel: "shortcut icon", type: "image/png", href: "/versolyn-logo.png" },
+      { rel: "apple-touch-icon", href: "/versolyn-logo.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -106,8 +97,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   }),
   shellComponent: RootShell,
   component: RootComponent,
-  notFoundComponent: NotFoundComponent,
   errorComponent: ErrorComponent,
+  notFoundComponent: NotFoundPage,
 });
 
 function RootShell({ children }: { children: ReactNode }) {
@@ -126,12 +117,12 @@ function RootShell({ children }: { children: ReactNode }) {
 
 import { AppShell } from "@/components/AppShell";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
+import { CommandPalette } from "@/components/CommandPalette";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
-  // Detect projector popup: skip app-wide shortcut handlers there so the
-  // popup window stays a passive renderer (the broadcast channel is the
-  // only command source it should react to).
+
+  // Detect projector popup
   const isProjectorPopup =
     typeof window !== "undefined" && window.opener != null && window.name === "church-projector";
 
@@ -140,6 +131,7 @@ function RootComponent() {
       <GlobalErrorBoundary>
         {!isProjectorPopup && <GlobalShortcuts />}
         {!isProjectorPopup && <ShortcutsDialog />}
+        {!isProjectorPopup && <CommandPalette />}
         {isProjectorPopup ? (
           <Outlet />
         ) : (

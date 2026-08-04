@@ -7,7 +7,7 @@ import { ProjectionWindow } from "@/features/projection/ProjectionWindow";
 export const Route = createFileRoute("/project")({
   head: () => ({
     meta: [
-      { title: "Project — Church Media" },
+      { title: "Project — VersoLyn" },
       { name: "description", content: "Live projection control room." },
     ],
   }),

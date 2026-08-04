@@ -1,4 +1,5 @@
 import { FolderPlus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface FolderToolbarProps {
   onNewFolder: () => void;
@@ -12,18 +13,21 @@ const btnBase =
 export function FolderToolbar({ onNewFolder, onToggleCollapse, collapsed }: FolderToolbarProps) {
   return (
     <div className="flex items-center gap-1.5">
-      <button onClick={onNewFolder} className={btnBase} aria-label="New folder" title="New folder">
-        <FolderPlus className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">New</span>
-      </button>
-      <button
-        onClick={onToggleCollapse}
-        className={btnBase}
-        aria-label={collapsed ? "Expand folders" : "Collapse folders"}
-        title={collapsed ? "Expand folders" : "Collapse folders"}
-      >
-        {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
-      </button>
+      <Tooltip content="New folder">
+        <button onClick={onNewFolder} className={btnBase} aria-label="New folder">
+          <FolderPlus className="h-3.5 w-3.5" />
+          <span className="hidden sm:inline">New</span>
+        </button>
+      </Tooltip>
+      <Tooltip content={collapsed ? "Expand folders" : "Collapse folders"}>
+        <button
+          onClick={onToggleCollapse}
+          className={btnBase}
+          aria-label={collapsed ? "Expand folders" : "Collapse folders"}
+        >
+          {collapsed ? <PanelLeftOpen className="h-3.5 w-3.5" /> : <PanelLeftClose className="h-3.5 w-3.5" />}
+        </button>
+      </Tooltip>
     </div>
   );
 }

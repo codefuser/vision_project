@@ -1,0 +1,516 @@
+import React, { useState, useRef } from "react";
+import {
+  Folder,
+  FolderOpen,
+  ChevronDown,
+  ChevronRight,
+  Home,
+  Music,
+  BookOpen,
+  Image as ImageIcon,
+  Video as VideoIcon,
+  Megaphone,
+  Plus,
+  Pencil,
+  Trash2,
+  PanelLeftClose,
+  PanelLeftOpen,
+} from "lucide-react";
+import type { FolderRecord } from "@/db/schema";
+import type { CategoryFilter } from "./types";
+import { cn } from "@/lib/utils";
+import { useDragAutoScroll } from "./useDragAutoScroll";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
+
+interface LibraryTreeNavProps {
+  currentCategory: CategoryFilter;
+  currentFolderId: string | null;
+  folders: FolderRecord[];
+  categoryCounts: Record<CategoryFilter, number>;
+  folderCounts: Record<string, number>;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
+  onSelectCategory: (cat: CategoryFilter) => void;
+  onSelectFolder: (folderId: string | null) => void;
+  onCreateFolder: (parentId?: string | null) => void;
+  onRenameFolder: (folder: FolderRecord) => void;
+  onDeleteFolder: (folder: FolderRecord) => void;
+  onDropItemsToFolder: (itemIds: string[], targetFolderId: string | null) => void;
+}
+
+export function LibraryTreeNav({
+  currentCategory,
+  currentFolderId,
+  folders,
+  categoryCounts,
+  folderCounts,
+  isCollapsed,
+  onToggleCollapse,
+  onSelectCategory,
+  onSelectFolder,
+  onCreateFolder,
+  onRenameFolder,
+  onDeleteFolder,
+  onDropItemsToFolder,
+}: LibraryTreeNavProps) {
+  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
+  // Auto-expand folder on drag hover timer
+  const dragHoverTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  useDragAutoScroll(scrollRef, 8, 40);
+
+  const toggleExpand = (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedFolders((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleDragOverNode = (folderId: string, e: React.DragEvent) => {
+    e.preventDefault();
+    if (dragOverFolderId !== folderId) {
+      setDragOverFolderId(folderId);
+
+      // Clear previous timer
+      if (dragHoverTimerRef.current) clearTimeout(dragHoverTimerRef.current);
+
+      // Set 500ms hover timer to auto-expand collapsed folder
+      dragHoverTimerRef.current = setTimeout(() => {
+        setExpandedFolders((prev) => new Set(prev).add(folderId));
+      }, 500);
+    }
+  };
+
+  const handleDragLeaveNode = () => {
+    setDragOverFolderId(null);
+    if (dragHoverTimerRef.current) {
+      clearTimeout(dragHoverTimerRef.current);
+      dragHoverTimerRef.current = null;
+    }
+  };
+
+  // Build parent-child tree mapping
+  const rootFolders = folders.filter((f) => !f.parentId);
+  const folderChildrenMap = new Map<string, FolderRecord[]>();
+  for (const f of folders) {
+    if (f.parentId) {
+      const list = folderChildrenMap.get(f.parentId) || [];
+      list.push(f);
+      folderChildrenMap.set(f.parentId, list);
+    }
+  }
+
+  const renderFolderNode = (folder: FolderRecord, depth = 0) => {
+    const children = folderChildrenMap.get(folder.id) || [];
+    const hasChildren = children.length > 0;
+    const isExpanded = expandedFolders.has(folder.id);
+    const isSelected = currentFolderId === folder.id;
+    const isDragOver = dragOverFolderId === folder.id;
+    const count = folderCounts[folder.id] || 0;
+
+    return (
+      <div key={folder.id} className="flex flex-col">
+        <div
+          draggable
+          onDragStart={(e) => {
+            e.stopPropagation();
+            e.dataTransfer.setData("application/json", JSON.stringify([folder.id]));
+            e.dataTransfer.setData("text/plain", folder.id);
+          }}
+          onClick={() => {
+            onSelectFolder(folder.id);
+            onSelectCategory("all");
+          }}
+          onDragOver={(e) => handleDragOverNode(folder.id, e)}
+          onDragLeave={handleDragLeaveNode}
+          onDrop={(e) => {
+            e.preventDefault();
+            handleDragLeaveNode();
+            try {
+              const raw = e.dataTransfer.getData("application/json");
+              if (raw) {
+                const ids = JSON.parse(raw);
+                if (Array.isArray(ids) && ids.length) {
+                  onDropItemsToFolder(ids, folder.id);
+                  return;
+                }
+              }
+            } catch {}
+            const itemId = e.dataTransfer.getData("text/plain");
+            if (itemId) onDropItemsToFolder([itemId], folder.id);
+          }}
+          style={{ paddingLeft: `${depth * 14 + 10}px` }}
+          className={cn(
+            "group flex h-7 cursor-pointer items-center justify-between pr-2 text-xs transition rounded-md my-0.5 select-none shrink-0",
+            isDragOver ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
+            isSelected
+              ? "bg-primary/15 text-primary font-semibold border border-primary/20 shadow-xs"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-1.5 min-w-0 overflow-hidden">
+            {/* Display disclosure arrow ONLY if folder has children */}
+            {hasChildren ? (
+              <button
+                onClick={(e) => toggleExpand(folder.id, e)}
+                className="flex h-4 w-4 shrink-0 items-center justify-center rounded hover:bg-muted/50 transition"
+              >
+                {isExpanded ? (
+                  <ChevronDown className="h-3 w-3" />
+                ) : (
+                  <ChevronRight className="h-3 w-3" />
+                )}
+              </button>
+            ) : (
+              <span className="w-4 shrink-0" />
+            )}
+
+            {isExpanded ? (
+              <FolderOpen className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            ) : (
+              <Folder className="h-3.5 w-3.5 shrink-0 text-amber-400" />
+            )}
+            <span className="truncate">{folder.name}</span>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <span
+              className={cn(
+                "text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-mono",
+                isSelected
+                  ? "bg-primary/20 text-primary font-bold"
+                  : "bg-muted text-muted-foreground",
+              )}
+            >
+              {count}
+            </span>
+            <div className="hidden group-hover:flex items-center gap-0.5">
+              <ShortcutTooltip id="library.rename" label="Rename">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRenameFolder(folder);
+                  }}
+                  className="h-4 w-4 flex items-center justify-center rounded hover:bg-background/80"
+                >
+                  <Pencil className="h-2.5 w-2.5" />
+                </button>
+              </ShortcutTooltip>
+
+              <ShortcutTooltip id="library.delete" label="Delete Folder">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDeleteFolder(folder);
+                  }}
+                  className="h-4 w-4 flex items-center justify-center rounded hover:bg-destructive/20 text-destructive"
+                >
+                  <Trash2 className="h-2.5 w-2.5" />
+                </button>
+              </ShortcutTooltip>
+            </div>
+          </div>
+        </div>
+
+        {isExpanded && hasChildren && (
+          <div className="flex flex-col">
+            {children.map((child) => renderFolderNode(child, depth + 1))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  if (isCollapsed) {
+    return (
+      <aside className="flex h-full w-12 shrink-0 flex-col items-center py-2 bg-card/40 border-r border-border select-none gap-2">
+        <ShortcutTooltip id="library.toggle-tree" label="Expand Folder Tree">
+          <button
+            onClick={onToggleCollapse}
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground transition"
+          >
+            <PanelLeftOpen className="h-4 w-4" />
+          </button>
+        </ShortcutTooltip>
+
+        <div className="w-6 h-px bg-border/60 my-1" />
+
+        <ShortcutTooltip label={`All Files (${categoryCounts.all})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("all");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "all" && currentFolderId === null
+                ? "bg-primary/15 text-primary font-semibold border border-primary/30"
+                : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Home className="h-4 w-4" />
+          </button>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip label={`Songs (${categoryCounts.songs})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("songs");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "songs" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Music className="h-4 w-4 text-purple-400" />
+          </button>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip label={`Bible Verses (${categoryCounts.bible})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("bible");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "bible" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <BookOpen className="h-4 w-4 text-blue-400" />
+          </button>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip label={`Images (${categoryCounts.images})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("images");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "images" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <ImageIcon className="h-4 w-4 text-green-400" />
+          </button>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip label={`Videos (${categoryCounts.videos})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("videos");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "videos" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <VideoIcon className="h-4 w-4 text-rose-400" />
+          </button>
+        </ShortcutTooltip>
+
+        <ShortcutTooltip label={`Text (${categoryCounts.announcements})`}>
+          <button
+            onClick={() => {
+              onSelectCategory("announcements");
+              onSelectFolder(null);
+            }}
+            className={cn(
+              "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
+              currentCategory === "announcements" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
+            )}
+          >
+            <Megaphone className="h-4 w-4 text-amber-400" />
+          </button>
+        </ShortcutTooltip>
+      </aside>
+    );
+  }
+
+  return (
+    <aside ref={scrollRef} className="flex h-full w-full flex-col overflow-y-auto bg-card/40 p-2 border-r border-border select-none">
+      {/* Header with Collapse Button */}
+      <div className="flex items-center justify-between mb-2 shrink-0">
+        <button
+          onClick={() => {
+            onSelectCategory("all");
+            onSelectFolder(null);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragOverFolderId("root");
+          }}
+          onDragLeave={() => setDragOverFolderId(null)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragOverFolderId(null);
+            try {
+              const raw = e.dataTransfer.getData("application/json");
+              if (raw) {
+                const ids = JSON.parse(raw);
+                if (Array.isArray(ids) && ids.length) {
+                  onDropItemsToFolder(ids, null);
+                  return;
+                }
+              }
+            } catch {}
+            const itemId = e.dataTransfer.getData("text/plain");
+            if (itemId) onDropItemsToFolder([itemId], null);
+          }}
+          className={cn(
+            "flex h-8 flex-1 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition font-semibold mr-1",
+            dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
+            currentCategory === "all" && currentFolderId === null
+              ? "bg-primary/15 text-primary font-semibold border border-primary/30 shadow-xs"
+              : "text-foreground hover:bg-accent",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Home className="h-4 w-4 text-primary" />
+            <span>File Manager</span>
+          </div>
+          <span className="text-[10px] tabular-nums font-mono opacity-80">
+            {categoryCounts.all}
+          </span>
+        </button>
+
+        {onToggleCollapse && (
+          <ShortcutTooltip id="library.toggle-tree" label="Collapse Folder Tree">
+            <button
+              onClick={onToggleCollapse}
+              className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
+            >
+              <PanelLeftClose className="h-4 w-4" />
+            </button>
+          </ShortcutTooltip>
+        )}
+      </div>
+
+      {/* Categories */}
+      <div className="mb-3 flex flex-col border-t border-border/50 pt-2 shrink-0">
+        <span className="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+          File Categories
+        </span>
+        <button
+          onClick={() => {
+            onSelectCategory("songs");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
+            currentCategory === "songs" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Music className="h-3.5 w-3.5 text-purple-400" />
+            <span>Songs</span>
+          </div>
+          <span className="text-[10px] tabular-nums">{categoryCounts.songs}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("bible");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
+            currentCategory === "bible" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-3.5 w-3.5 text-blue-400" />
+            <span>Bible Verses</span>
+          </div>
+          <span className="text-[10px] tabular-nums">{categoryCounts.bible}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("images");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
+            currentCategory === "images" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <ImageIcon className="h-3.5 w-3.5 text-green-400" />
+            <span>Images</span>
+          </div>
+          <span className="text-[10px] tabular-nums">{categoryCounts.images}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("videos");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
+            currentCategory === "videos" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <VideoIcon className="h-3.5 w-3.5 text-rose-400" />
+            <span>Videos</span>
+          </div>
+          <span className="text-[10px] tabular-nums">{categoryCounts.videos}</span>
+        </button>
+
+        <button
+          onClick={() => {
+            onSelectCategory("announcements");
+            onSelectFolder(null);
+          }}
+          className={cn(
+            "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
+            currentCategory === "announcements" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+          )}
+        >
+          <div className="flex items-center gap-2">
+            <Megaphone className="h-3.5 w-3.5 text-amber-400" />
+            <span>Announcements</span>
+          </div>
+          <span className="text-[10px] tabular-nums">{categoryCounts.announcements}</span>
+        </button>
+      </div>
+
+      {/* Folders Tree Section */}
+      <div className="flex flex-col border-t border-border/60 pt-2 flex-1 min-h-0">
+        <div className="flex items-center justify-between px-2 py-1 shrink-0">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70">
+            Folders Tree
+          </span>
+          <ShortcutTooltip id="library.new-folder" label="New Folder">
+            <button
+              onClick={() => onCreateFolder(currentFolderId)}
+              className="flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-accent text-muted-foreground hover:text-foreground"
+            >
+              <Plus className="h-3.5 w-3.5" />
+            </button>
+          </ShortcutTooltip>
+        </div>
+
+        <div className="flex flex-col mt-1 overflow-y-auto">
+          {rootFolders.length === 0 ? (
+            <p className="px-2 py-2 text-[11px] text-muted-foreground/60 italic">
+              No custom folders created.
+            </p>
+          ) : (
+            rootFolders.map((f) => renderFolderNode(f, 0))
+          )}
+        </div>
+      </div>
+    </aside>
+  );
+}

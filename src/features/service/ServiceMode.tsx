@@ -14,6 +14,7 @@ import { getPlaylist, listAllMedia } from "@/db/repo";
 import type { MediaRecord, PlaylistRecord } from "@/db/schema";
 import { Thumb } from "@/components/Thumb";
 import { MediaAdapter, projectionEngine } from "@/projection";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useProjection } from "@/stores/projection.store";
 import { formatDuration } from "@/lib/files";
 import { toast } from "sonner";
@@ -184,13 +185,14 @@ export function ServiceMode({ id }: { id: string }) {
       {/* Top bar */}
       <div className="flex shrink-0 items-center justify-between border-b border-border px-4 py-3">
         <div className="flex items-center gap-3">
-          <button
-            onClick={exit}
-            className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs hover:bg-accent"
-            title="Exit Service Mode (Esc)"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> Exit
-          </button>
+          <Tooltip content="Exit Service Mode" id="service.exit">
+            <button
+              onClick={exit}
+              className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs hover:bg-accent"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" /> Exit
+            </button>
+          </Tooltip>
           <div className="inline-flex items-center gap-2 rounded-md bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
             <Radio className="h-3.5 w-3.5" /> Service Mode
           </div>
@@ -250,14 +252,15 @@ export function ServiceMode({ id }: { id: string }) {
             <ControlButton onClick={stopAll} icon={<Square className="h-5 w-5" />} tone="danger">
               Stop
             </ControlButton>
-            <button
-              onClick={goNext}
-              disabled={cursor >= playlist.items.length - 1}
-              className="col-span-2 inline-flex h-16 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary text-base font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1"
-              title="Next cue (Space)"
-            >
-              <ChevronRight className="h-6 w-6" /> NEXT
-            </button>
+            <Tooltip content="Next cue" id="service.next">
+              <button
+                onClick={goNext}
+                disabled={cursor >= playlist.items.length - 1}
+                className="col-span-2 inline-flex h-16 cursor-pointer items-center justify-center gap-2 rounded-md bg-primary text-base font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 sm:col-span-1"
+              >
+                <ChevronRight className="h-6 w-6" /> NEXT
+              </button>
+            </Tooltip>
           </div>
         </div>
 

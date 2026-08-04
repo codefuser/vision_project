@@ -179,7 +179,11 @@ export function getChapterVerses(
   if (!meta) return [];
   const ch = data[book]?.[chapter - 1];
   if (!ch) return [];
-  return ch.map((text, i) => verseHit(meta, chapter, i + 1, text, lang, 100));
+  const out: VerseHit[] = [];
+  for (let i = 0; i < ch.length; i++) {
+    if (ch[i]) out.push(verseHit(meta, chapter, i + 1, ch[i], lang, 100));
+  }
+  return out;
 }
 
 function resolveReference(ref: ParsedRef, data: BibleData, lang: BibleLang): VerseHit[] {
@@ -192,8 +196,13 @@ function resolveReference(ref: ParsedRef, data: BibleData, lang: BibleLang): Ver
   }
   const ch = chapters[ref.chapter - 1];
   if (!ch) return [];
-  if (ref.verse == null)
-    return ch.map((text, i) => verseHit(book, ref.chapter!, i + 1, text, lang, 100));
+  if (ref.verse == null) {
+    const out: VerseHit[] = [];
+    for (let i = 0; i < ch.length; i++) {
+      if (ch[i]) out.push(verseHit(book, ref.chapter!, i + 1, ch[i], lang, 100));
+    }
+    return out;
+  }
   const start = ref.verse;
   const end = ref.verseEnd ?? start;
   const out: VerseHit[] = [];
@@ -265,6 +274,7 @@ function fullTextSearch(
       const verses = chapters[c];
       for (let v = 0; v < verses.length; v++) {
         const text = verses[v];
+        if (!text) continue;
         const { lower, norm } = getNorm(text, isTamilQuery);
 
         let exactHits = 0;

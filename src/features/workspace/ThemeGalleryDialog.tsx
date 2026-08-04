@@ -16,6 +16,7 @@ import { cn } from "@/lib/utils";
 import { ThemeGrid } from "./theme-gallery/ThemeGrid";
 import { ThemeCard } from "./theme-gallery/ThemeCard";
 import { themeCache } from "./theme-gallery/ThemeCache";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface Props {
   open: boolean;
@@ -256,13 +257,14 @@ export function ThemeGalleryDialog({ open, onOpenChange }: Props) {
               >
                 <Save className="h-3.5 w-3.5" /> Save Current
               </Button>
-              <button
-                onClick={() => onOpenChange(false)}
-                className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border/30 text-muted-foreground/60 transition-all duration-200 hover:border-foreground/20 hover:bg-accent hover:text-foreground hover:shadow-lg active:scale-95"
-                title="Close Theme Browser"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <Tooltip content="Close Theme Browser">
+                <button
+                  onClick={() => onOpenChange(false)}
+                  className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-border/30 text-muted-foreground/60 transition-all duration-200 hover:border-foreground/20 hover:bg-accent hover:text-foreground hover:shadow-lg active:scale-95"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </Tooltip>
             </div>
           </div>
         </DialogHeader>

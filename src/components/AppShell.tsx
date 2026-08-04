@@ -1,4 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
+import { VersoLynLogo } from "@/components/ui/VersoLynLogo";
 import {
   FolderTree,
   ListVideo,
@@ -18,9 +19,9 @@ import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
-import { GlobalFavoritesDock } from "@/components/GlobalFavoritesDock";
+import { GlobalFavoritesPopover } from "@/components/GlobalFavoritesPopover";
 import { AppStartupProvider } from "@/components/AppStartupProvider";
-import { useShortcutTooltip } from "@/lib/shortcuts/use-shortcut-for";
+import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { StartupScreen } from "@/components/StartupScreen";
@@ -53,6 +54,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { projectorOpen, openProjector, closeProjector, init } = useProjection();
   const collapsed = useWorkspace((s) => s.sidebarCollapsed);
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
+  const errorPageMode = useWorkspace((s) => s.errorPageMode);
   const activeSessionId = useSessionHistory((s) => s.activeSessionId);
   useEffect(() => {
     init();
@@ -91,6 +93,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   return (
     <StartupScreen onReady={() => {}}>
     <div className="flex h-screen bg-background text-foreground">
+      {!errorPageMode && (
       <aside
         style={{ width: collapsed ? 56 : 224, willChange: "width" }}
         className="flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-200 ease-out"
@@ -100,14 +103,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={collapsed ? () => setCollapsed(false) : undefined}
-            aria-label={collapsed ? "Expand sidebar" : "Church Media"}
-            title={collapsed ? "Expand sidebar" : "Church Media"}
+            aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
+            title={collapsed ? "Expand sidebar" : "VersoLyn"}
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-transform",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-1 bg-primary/10 transition-transform overflow-hidden",
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
-            <MonitorPlay className="h-4 w-4" />
+            <VersoLynLogo className="h-full w-full" />
           </button>
 
           <div
@@ -116,7 +119,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               collapsed ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
-            Church Media
+            VersoLyn
           </div>
           <button
             type="button"
@@ -164,28 +167,22 @@ export function AppShell({ children }: { children: ReactNode }) {
         {/* Pinned bottom: Settings */}
         <div className="overflow-hidden border-t border-sidebar-border/50 p-2">
           {renderNavItem(SETTINGS_NAV)}
-          <div
-            className={cn(
-              "whitespace-nowrap px-2 pt-2 text-[10px] text-muted-foreground transition-opacity duration-200",
-              collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            )}
-          >
-            Offline-first · Local only
-          </div>
         </div>
       </aside>
+      )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
         <AppStartupProvider>
-          {/* Integrated top bar — projector + theme controls. Compact, anchored, not floating. */}
-          <header className="flex h-10 shrink-0 items-center justify-end gap-1 border-b border-border bg-background px-3">
+          {/* Integrated top bar — projector + favorites + theme controls. Compact, anchored, not floating. */}
+          <header className="flex h-10 shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-3 select-none">
             <ProjectorToggleButton
               projectorOpen={projectorOpen}
               onToggle={projectorOpen ? closeProjector : openProjector}
             />
+            <GlobalFavoritesPopover />
             <button
               onClick={cycleTheme}
-              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition"
               aria-label="Toggle theme"
               title={`Theme: ${settings.theme}`}
             >
@@ -201,7 +198,6 @@ export function AppShell({ children }: { children: ReactNode }) {
           <main className="flex-1 overflow-hidden">{children}</main>
         </AppStartupProvider>
       </div>
-      <GlobalFavoritesDock />
     </div></StartupScreen>
   );
 }
@@ -219,39 +215,39 @@ const NavItem = memo(({
   collapsed: boolean;
   badge?: React.ReactNode;
 }) => {
-  const tooltip = useShortcutTooltip(item.shortcutId ?? "", item.label);
   return (
-    <Link
-      to={item.to}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "relative flex h-9 cursor-pointer items-center gap-3 overflow-hidden rounded-md px-2.5 text-sm transition-colors duration-150",
-        active
-          ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
-          : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
-      )}
-    >
-      {/* Icon — with an absolute badge dot when sidebar is collapsed */}
-      <span className="relative shrink-0">
-        <Icon className="h-4 w-4" />
-        {badge && collapsed && (
-          <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500" />
-        )}
-      </span>
-      <span
+    <ShortcutTooltip id={item.shortcutId ?? ""} label={item.label} side="right" disabled={!item.shortcutId}>
+      <Link
+        to={item.to}
+        aria-label={item.label}
         className={cn(
-          "min-w-0 flex-1 truncate whitespace-nowrap transition-[opacity,transform] duration-200 ease-out",
-          collapsed ? "pointer-events-none -translate-x-1 opacity-0" : "translate-x-0 opacity-100",
+          "relative flex h-9 cursor-pointer items-center gap-3 overflow-hidden rounded-md px-2.5 text-sm transition-colors duration-150",
+          active
+            ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium"
+            : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground",
         )}
       >
-        {item.label}
-      </span>
-      {/* Badge shown inline when sidebar is expanded */}
-      {badge && !collapsed && (
-        <span className="ml-auto shrink-0">{badge}</span>
-      )}
-    </Link>
+        {/* Icon — with an absolute badge dot when sidebar is collapsed */}
+        <span className="relative shrink-0">
+          <Icon className="h-4 w-4" />
+          {badge && collapsed && (
+            <span className="absolute -top-0.5 -right-0.5 h-1.5 w-1.5 rounded-full bg-red-500" />
+          )}
+        </span>
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate whitespace-nowrap transition-[opacity,transform] duration-200 ease-out",
+            collapsed ? "pointer-events-none -translate-x-1 opacity-0" : "translate-x-0 opacity-100",
+          )}
+        >
+          {item.label}
+        </span>
+        {/* Badge shown inline when sidebar is expanded */}
+        {badge && !collapsed && (
+          <span className="ml-auto shrink-0">{badge}</span>
+        )}
+      </Link>
+    </ShortcutTooltip>
   );
 });
 
@@ -262,26 +258,23 @@ function ProjectorToggleButton({
   projectorOpen: boolean;
   onToggle: () => void;
 }) {
-  const tooltip = useShortcutTooltip(
-    "projector.toggle",
-    projectorOpen ? "Close Projector" : "Open Projector",
-  );
   return (
-    <button
-      onClick={onToggle}
-      title={tooltip}
-      aria-label={tooltip}
-      className={cn(
-        "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
-        projectorOpen
-          ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
-          : "bg-primary text-primary-foreground hover:opacity-90",
-      )}
-    >
-      <MonitorPlay className="h-3.5 w-3.5" />
-      <span className="hidden sm:inline">
-        {projectorOpen ? "Close Projector" : "Open Projector"}
-      </span>
-    </button>
+    <ShortcutTooltip id="projector.toggle" label={projectorOpen ? "Close Projector" : "Open Projector"}>
+      <button
+        onClick={onToggle}
+        aria-label={projectorOpen ? "Close Projector" : "Open Projector"}
+        className={cn(
+          "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
+          projectorOpen
+            ? "bg-destructive/15 text-destructive hover:bg-destructive/25"
+            : "bg-primary text-primary-foreground hover:opacity-90",
+        )}
+      >
+        <MonitorPlay className="h-3.5 w-3.5" />
+        <span className="hidden sm:inline">
+          {projectorOpen ? "Close Projector" : "Open Projector"}
+        </span>
+      </button>
+    </ShortcutTooltip>
   );
 }

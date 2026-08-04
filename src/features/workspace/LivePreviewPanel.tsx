@@ -25,6 +25,7 @@ import { db } from "@/db/schema";
 import type { MediaRecord } from "@/db/schema";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import { useFocusZone } from "./focus-manager";
+import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import { LogoLayer } from "@/components/LogoLayer";
 import { useLogo } from "@/stores/logo.store";
@@ -387,12 +388,18 @@ export function LivePreviewPanel() {
         />
         {isVideo && (
           <div className="ml-1 flex items-center gap-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-            <span title="Current">{fmtTime(currentTime)}</span>
+            <Tooltip content="Current position">
+              <span>{fmtTime(currentTime)}</span>
+            </Tooltip>
             <span>/</span>
-            <span title="Duration">{fmtTime(duration)}</span>
-            <span className="ml-1 opacity-60" title="Remaining">
-              -{fmtTime(remaining)}
-            </span>
+            <Tooltip content="Total duration">
+              <span>{fmtTime(duration)}</span>
+            </Tooltip>
+            <Tooltip content="Time remaining">
+              <span className="ml-1 opacity-60">
+                -{fmtTime(remaining)}
+              </span>
+            </Tooltip>
           </div>
         )}
         <div className="ml-auto flex items-center gap-2 truncate text-[11px] text-muted-foreground">
@@ -458,10 +465,9 @@ function IconBtn({
   primary?: boolean;
   active?: boolean;
 }) {
-  return (
+  const btn = (
     <button
       onClick={onClick}
-      title={title}
       aria-label={title}
       className={cn(
         "inline-flex h-7 min-w-7 cursor-pointer items-center justify-center rounded-md border px-1.5 text-xs transition",
@@ -475,6 +481,8 @@ function IconBtn({
       {children}
     </button>
   );
+
+  return title ? <Tooltip content={title}>{btn}</Tooltip> : btn;
 }
 
 /**

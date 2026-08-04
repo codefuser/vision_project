@@ -1,4 +1,5 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { ErrorPage } from "@/components/ErrorPage";
 
 interface Props {
   children: ReactNode;
@@ -18,29 +19,24 @@ export class GlobalErrorBoundary extends Component<Props, State> {
     console.error("[GlobalErrorBoundary]", error, info.componentStack);
   }
 
+  handleRetry = () => {
+    this.setState({ error: null });
+    window.location.reload();
+  };
+
   render() {
     if (this.state.error) {
       return (
-        <div className="flex h-screen items-center justify-center bg-background p-8">
-          <div className="max-w-lg text-center">
-            <h1 className="text-xl font-semibold text-foreground">Something went wrong</h1>
-            <p className="mt-2 text-sm text-muted-foreground">
-              The application encountered an unexpected error. You can try refreshing the page.
-            </p>
-            <pre className="mt-4 max-h-48 overflow-auto rounded-md bg-muted p-4 text-left text-xs text-muted-foreground">
-              {this.state.error.message}
-            </pre>
-            <button
-              onClick={() => {
-                this.setState({ error: null });
-                window.location.reload();
-              }}
-              className="mt-4 inline-flex cursor-pointer items-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
-            >
-              Reload
-            </button>
-          </div>
-        </div>
+        <ErrorPage
+          errorCode="VP-500"
+          title="Application Error"
+          message="The application encountered an unexpected error. Please reload to continue."
+          error={this.state.error}
+          recoverable
+          recommendedAction="retry"
+          onRetry={this.handleRetry}
+          showHistory={false}
+        />
       );
     }
     return <>{this.props.children}</>;

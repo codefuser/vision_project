@@ -15,8 +15,6 @@ interface UserSongRecord {
   id: number;
   title: string;
   content: string;
-  artist?: string;
-  album?: string;
   scale?: string;
 }
 

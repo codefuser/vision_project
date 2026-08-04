@@ -15,11 +15,13 @@ import { projectVerseAt } from "@/lib/bible/project-ref";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 export function CollectionsPanel() {
   const { collections, create, remove } = useBibleCollections();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [newName, setNewName] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<Collection | null>(null);
 
   const active = activeId ? (collections.find((c) => c.id === activeId) ?? null) : null;
 
@@ -75,9 +77,7 @@ export function CollectionsPanel() {
                 </div>
               </button>
               <button
-                onClick={() => {
-                  if (confirm(`Delete collection "${c.name}"?`)) remove(c.id);
-                }}
+                onClick={() => setDeleteTarget(c)}
                 className="rounded p-1 text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100"
                 title="Delete"
               >
@@ -87,6 +87,21 @@ export function CollectionsPanel() {
           ))}
         </ul>
       </div>
+
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete Collection?"
+        description={`Are you sure you want to delete collection "${deleteTarget?.name}"?`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive={true}
+        defaultFocus="cancel"
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => {
+          if (deleteTarget) remove(deleteTarget.id);
+          setDeleteTarget(null);
+        }}
+      />
     </div>
   );
 }

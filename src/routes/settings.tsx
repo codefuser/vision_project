@@ -3,6 +3,6 @@ import { AppShell } from "@/components/AppShell";
 import { SettingsPage } from "@/features/settings/SettingsPage";
 
 export const Route = createFileRoute("/settings")({
-  head: () => ({ meta: [{ title: "Settings — Church Media" }] }),
+  head: () => ({ meta: [{ title: "Settings — VersoLyn" }] }),
   component: () => <SettingsPage />,
 });

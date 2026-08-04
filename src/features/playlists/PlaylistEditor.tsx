@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useShortcut, useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import { Link, useNavigate } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -368,59 +369,138 @@ export function PlaylistEditor({ id }: { id: string }) {
     }
   };
 
-  // ───────── keyboard shortcuts (editor-scoped) ─────────
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      const tag = target?.tagName;
-      if (tag === "INPUT" || tag === "TEXTAREA" || target?.isContentEditable) return;
+  // ───────── keyboard shortcuts (playlist-editor scope) ─────────
+  // Register the playlist-editor scope while this component is mounted.
+  useShortcutScope("playlist-editor");
+
+  useShortcut({
+    id: "playlist.select-all",
+    label: "Select all playlist items",
+    category: "playlist",
+    description: "Select all visible items in the playlist timeline",
+    keys: ["Ctrl+A", "Meta+A"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => {
+      const ids = visibleItems.map((it) => it.id);
+      setSelection(new Set(ids));
+    },
+  });
+  useShortcut({
+    id: "playlist.duplicate",
+    label: "Duplicate selected items",
+    category: "playlist",
+    description: "Duplicate the selected playlist items",
+    // Ctrl+D is browser bookmark — use Ctrl+Shift+D
+    keys: ["Ctrl+Shift+D", "Meta+Shift+D"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => {
+      if (selection.size) void duplicateItems(Array.from(selection));
+    },
+  });
+  useShortcut({
+    id: "playlist.move-down",
+    label: "Move selected items down",
+    category: "playlist",
+    description: "Move the selected items one position down in the timeline",
+    keys: ["Alt+ArrowDown"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => { void moveSelection(1); },
+  });
+  useShortcut({
+    id: "playlist.move-up",
+    label: "Move selected items up",
+    category: "playlist",
+    description: "Move the selected items one position up in the timeline",
+    keys: ["Alt+ArrowUp"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => { void moveSelection(-1); },
+  });
+  useShortcut({
+    id: "playlist.nav-down",
+    label: "Focus next playlist item",
+    category: "playlist",
+    description: "Move keyboard focus to the next item in the playlist",
+    keys: ["ArrowDown"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    priority: 10,
+    handler: (e) => {
+      const ids = visibleItems.map((it) => it.id);
+      const cur = focusId ? ids.indexOf(focusId) : -1;
+      const n = Math.min(ids.length - 1, cur < 0 ? 0 : cur + 1);
+      if (ids[n]) {
+        setFocusId(ids[n]);
+        if (!e.shiftKey) setSelection(new Set([ids[n]]));
+        else setSelection((prev) => new Set(prev).add(ids[n] as string));
+      }
+    },
+  });
+  useShortcut({
+    id: "playlist.nav-up",
+    label: "Focus previous playlist item",
+    category: "playlist",
+    description: "Move keyboard focus to the previous item in the playlist",
+    keys: ["ArrowUp"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    priority: 10,
+    handler: (e) => {
+      const ids = visibleItems.map((it) => it.id);
+      const cur = focusId ? ids.indexOf(focusId) : -1;
+      const n = Math.max(0, cur < 0 ? 0 : cur - 1);
+      if (ids[n]) {
+        setFocusId(ids[n]);
+        if (!e.shiftKey) setSelection(new Set([ids[n]]));
+        else setSelection((prev) => new Set(prev).add(ids[n] as string));
+      }
+    },
+  });
+  useShortcut({
+    id: "playlist.project-focused",
+    label: "Project focused playlist item",
+    category: "playlist",
+    description: "Project the currently focused playlist item",
+    keys: ["Enter"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    priority: 10,
+    handler: () => {
       const p = playlistRef.current;
       if (!p) return;
       const ids = visibleItems.map((it) => it.id);
       const cur = focusId ? ids.indexOf(focusId) : -1;
-
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        setSelection(new Set(ids));
-        return;
-      }
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "d" && selection.size) {
-        e.preventDefault();
-        void duplicateItems(Array.from(selection));
-        return;
-      }
-      if (e.altKey && e.key === "ArrowDown") {
-        e.preventDefault();
-        void moveSelection(1);
-      } else if (e.key === "ArrowDown") {
-        e.preventDefault();
-        const n = Math.min(ids.length - 1, cur < 0 ? 0 : cur + 1);
-        if (ids[n]) {
-          setFocusId(ids[n]);
-          if (!e.shiftKey) setSelection(new Set([ids[n]]));
-          else setSelection((prev) => new Set(prev).add(ids[n]));
-        }
-      } else if (e.key === "ArrowUp") {
-        e.preventDefault();
-        const n = Math.max(0, cur < 0 ? 0 : cur - 1);
-        if (ids[n]) {
-          setFocusId(ids[n]);
-          if (!e.shiftKey) setSelection(new Set([ids[n]]));
-          else setSelection((prev) => new Set(prev).add(ids[n]));
-        }
-      } else if (e.key === "Enter" && cur >= 0) {
-        e.preventDefault();
+      if (cur >= 0) {
         const realIdx = p.items.findIndex((it) => it.id === ids[cur]);
         if (realIdx >= 0) projectIndex(realIdx);
-      } else if ((e.key === "Delete" || e.key === "Backspace") && selection.size) {
-        e.preventDefault();
-        void removeItems(Array.from(selection));
       }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [focusId, selection, visibleItems]);
+    },
+  });
+  useShortcut({
+    id: "playlist.delete",
+    label: "Delete selected playlist items",
+    category: "playlist",
+    description: "Remove the selected items from the playlist",
+    keys: ["Delete", "Backspace"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => {
+      if (selection.size) void removeItems(Array.from(selection));
+    },
+  });
+  useShortcut({
+    id: "playlist.export",
+    label: "Export playlist",
+    category: "playlist",
+    description: "Export the current playlist to a JSON file",
+    keys: ["Ctrl+Shift+X"],
+    scope: "playlist-editor",
+    allowInInput: false,
+    handler: () => exportPlaylist(),
+  });
 
   // ───────── derived stats ─────────
   const stats = useMemo(() => {

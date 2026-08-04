@@ -642,7 +642,7 @@ function BugReportingGuide() {
             <ul className="space-y-1 mt-1 list-disc list-inside">
               <li>Take screenshots or screen recordings</li>
               <li>Collect log files (Settings &gt; About &gt; View Logs)</li>
-              <li>Note your OS version and Vision Projector version</li>
+              <li>Note your OS version and VersoLyn version</li>
               <li>Write down steps to reproduce the bug</li>
             </ul>
           </StepCard>
@@ -684,7 +684,7 @@ function FeatureRequestGuide() {
             </div>
             <CardTitle className="text-lg">Feature Request Guide</CardTitle>
           </div>
-          <CardDescription>Help shape the future of Vision Projector</CardDescription>
+          <CardDescription>Help shape the future of VersoLyn</CardDescription>
         </CardHeader>
         <CardContent>
           <StepCard number={1} title="Search existing requests">
@@ -762,7 +762,7 @@ function CommunityLinksSection() {
             <Users className="w-4 h-4 text-primary" />
             Join Our Community
           </CardTitle>
-          <CardDescription>Connect with the Vision Projector community</CardDescription>
+          <CardDescription>Connect with the VersoLyn community</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {COMMUNITY_LINKS.map((link) => {

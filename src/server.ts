@@ -1,21 +1,22 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
-import { renderErrorPage } from "./lib/error-page";
+import { renderErrorPage, renderNotFoundPage, isNotFoundRequest } from "./lib/error-page";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
 };
 
-let serverEntryPromise: Promise<ServerEntry> | undefined;
+import { createStartHandler, defaultStreamHandler } from "@tanstack/react-start/server";
+import { getRouter } from "./router";
+
+const fetchHandler = createStartHandler(defaultStreamHandler);
+const serverEntry: ServerEntry = {
+  fetch: fetchHandler as any
+};
 
 async function getServerEntry(): Promise<ServerEntry> {
-  if (!serverEntryPromise) {
-    serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => (m.default ?? m) as ServerEntry,
-    );
-  }
-  return serverEntryPromise;
+  return serverEntry;
 }
 
 // h3 swallows in-handler throws into a normal 500 Response with body
@@ -40,6 +41,15 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // Route validation before any React SSR — return standalone 404 immediately
+      const url = new URL(request.url);
+      if (isNotFoundRequest(url.pathname)) {
+        return new Response(renderNotFoundPage(), {
+          status: 404,
+          headers: { "content-type": "text/html; charset=utf-8" },
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

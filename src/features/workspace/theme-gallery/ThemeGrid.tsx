@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { ThemeCard } from "./ThemeCard";
 import { useCustomTemplates } from "@/stores/custom-templates.store";
@@ -63,44 +64,15 @@ export function ThemeGrid({
 
   const cardHeight = useMemo(() => cardWidth * (9 / 16) + INFO_HEIGHT, [cardWidth]);
   const rowHeight = cardHeight + GAP;
-  const totalRows = Math.ceil(items.length / cols);
-  const totalHeight = totalRows * rowHeight - GAP;
 
-  const startRow = Math.max(0, Math.floor(scrollTop / rowHeight) - 1);
-  const endRow = Math.min(totalRows, Math.ceil((scrollTop + dims.h) / rowHeight) + 1);
+  const virtualizer = useVirtualizer({
+    count: Math.ceil(items.length / cols),
+    getScrollElement: () => containerRef.current,
+    estimateSize: () => rowHeight,
+    overscan: 2,
+  });
 
-  const visibleItems = useMemo(() => {
-    const start = startRow * cols;
-    const end = Math.min(items.length, endRow * cols);
-    return items.slice(start, end).map((item, i) => ({
-      item,
-      absIndex: start + i,
-      row: startRow + Math.floor(i / cols),
-      col: i % cols,
-    }));
-  }, [items, startRow, endRow, cols]);
 
-  const scrollRaf = useRef<number | null>(null);
-
-  const handleScroll = useCallback(() => {
-    const el = containerRef.current;
-    if (el) {
-      if (scrollRaf.current !== null) return;
-      scrollRaf.current = requestAnimationFrame(() => {
-        setScrollTop(el.scrollTop);
-        setDims((d) => ({ ...d, h: el.clientHeight }));
-        scrollRaf.current = null;
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    return () => {
-      if (scrollRaf.current !== null) {
-        cancelAnimationFrame(scrollRaf.current);
-      }
-    };
-  }, []);
 
   const handleDragStart = useCallback((e: React.DragEvent, idx: number) => {
     setDragIndex(idx);
@@ -137,45 +109,68 @@ export function ThemeGrid({
   return (
     <div
       ref={containerRef}
-      onScroll={handleScroll}
       className="h-full overflow-y-auto overflow-x-hidden px-6 pt-6"
     >
-      <div className="relative will-change-transform" style={{ height: totalHeight }}>
-        {visibleItems.map(({ item, absIndex, row, col }) => (
-          <div
-            key={item.id}
-            className="absolute"
-            style={{
-              top: row * rowHeight,
-              left: col * (cardWidth + GAP),
-              width: cardWidth,
-              contain: "layout paint",
-            } as React.CSSProperties}
-            draggable={dragEnabled}
-            onDragStart={dragEnabled ? (e) => handleDragStart(e, absIndex) : undefined}
-            onDragOver={
-              dragEnabled
-                ? (e) => {
-                    e.preventDefault();
-                    e.dataTransfer.dropEffect = "move";
-                  }
-                : undefined
-            }
-            onDrop={dragEnabled ? (e) => handleDrop(e, absIndex) : undefined}
-          >
-            <ThemeCard
-              preset={item}
-              isSelected={appliedId === item.id}
-              isFavorite={favorites.includes(item.id)}
-              isCustom={item.id.startsWith("custom-")}
-              onClick={() => onApply(item)}
-              onFavorite={() => onToggleFavorite(item.id)}
-              onDuplicate={() => duplicateCustom(item)}
-              onRename={item.id.startsWith("custom-") ? () => onStartRename(item.id) : undefined}
-              onDelete={() => removeCustom(item.id)}
-            />
-          </div>
-        ))}
+      <div
+        className="relative will-change-transform"
+        style={{ height: `${virtualizer.getTotalSize()}px`, width: "100%" }}
+      >
+        {virtualizer.getVirtualItems().map((vRow) => {
+          const startIndex = vRow.index * cols;
+          const rowItems = items.slice(startIndex, startIndex + cols);
+
+          return (
+            <div
+              key={vRow.key}
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: `${cardHeight}px`,
+                transform: `translateY(${vRow.start}px)`,
+                display: "flex",
+                gap: `${GAP}px`,
+              }}
+            >
+              {rowItems.map((item, i) => {
+                const absIndex = startIndex + i;
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      width: cardWidth,
+                      contain: "layout paint",
+                    }}
+                    draggable={dragEnabled}
+                    onDragStart={dragEnabled ? (e) => handleDragStart(e, absIndex) : undefined}
+                    onDragOver={
+                      dragEnabled
+                        ? (e) => {
+                            e.preventDefault();
+                            e.dataTransfer.dropEffect = "move";
+                          }
+                        : undefined
+                    }
+                    onDrop={dragEnabled ? (e) => handleDrop(e, absIndex) : undefined}
+                  >
+                    <ThemeCard
+                      preset={item}
+                      isSelected={appliedId === item.id}
+                      isFavorite={favorites.includes(item.id)}
+                      isCustom={item.id.startsWith("custom-")}
+                      onClick={() => onApply(item)}
+                      onFavorite={() => onToggleFavorite(item.id)}
+                      onDuplicate={() => duplicateCustom(item)}
+                      onRename={item.id.startsWith("custom-") ? () => onStartRename(item.id) : undefined}
+                      onDelete={() => removeCustom(item.id)}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

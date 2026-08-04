@@ -39,3 +39,12 @@ export function useRegisteredShortcuts() {
     () => EMPTY_SHORTCUTS,
   );
 }
+
+/** Re-render whenever usage/favorites/recent changes (same subscription). */
+export function useShortcutMeta() {
+  return useSyncExternalStore(
+    (cb) => shortcutManager.subscribe(cb),
+    () => shortcutManager.getMetaSnapshot(),
+    () => shortcutManager.getMetaSnapshot(),
+  );
+}

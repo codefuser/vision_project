@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function NumberInput({
   value,
@@ -72,10 +73,9 @@ export function Toggle({
   size?: "sm" | "md";
   title?: string;
 }) {
-  return (
+  const btn = (
     <button
       type="button"
-      title={title}
       onClick={onClick}
       className={cn(
         "inline-flex cursor-pointer items-center justify-center rounded-md border text-xs font-medium transition-all",
@@ -88,6 +88,8 @@ export function Toggle({
       {label}
     </button>
   );
+
+  return title ? <Tooltip content={title}>{btn}</Tooltip> : btn;
 }
 
 export function SwitchRow({
@@ -201,19 +203,19 @@ export function ColorInput({
         <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-lg border border-border bg-popover p-2 shadow-lg">
           <div className="grid grid-cols-6 gap-1.5">
             {(swatches ?? DEFAULT_SWATCHES).map((c) => (
-              <button
-                key={c}
-                onClick={() => {
-                  onChange(c);
-                  setExpanded(false);
-                }}
-                className={cn(
-                  "h-6 w-full cursor-pointer rounded border transition hover:scale-110",
-                  c === value ? "border-primary ring-1 ring-primary" : "border-border",
-                )}
-                style={{ background: c }}
-                title={c}
-              />
+              <Tooltip key={c} content={c}>
+                <button
+                  onClick={() => {
+                    onChange(c);
+                    setExpanded(false);
+                  }}
+                  className={cn(
+                    "h-6 w-full cursor-pointer rounded border transition hover:scale-110",
+                    c === value ? "border-primary ring-1 ring-primary" : "border-border",
+                  )}
+                  style={{ background: c }}
+                />
+              </Tooltip>
             ))}
           </div>
         </div>

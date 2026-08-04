@@ -19,11 +19,23 @@ export type ShortcutCategory =
   | "bible"
   | "songs"
   | "text"
-  | "favorites";
+  | "favorites"
+  | "themes"
+  | "history"
+  | "window";
 
 /** Logical scope under which a shortcut is active. */
 export type ShortcutScope =
-  "global" | "workspace" | "playlist-editor" | "service-mode" | "bible" | "songs";
+  | "global"
+  | "workspace"
+  | "playlist-editor"
+  | "service-mode"
+  | "bible"
+  | "songs"
+  | "text"
+  | "media"
+  | "history"
+  | "theme-gallery";
 
 export interface ShortcutDef {
   /** Stable id, e.g. "tabs.media". */
@@ -44,6 +56,15 @@ export interface ShortcutDef {
   handler: (e: KeyboardEvent) => void | boolean;
   /** Higher runs first. Default 0. */
   priority?: number;
+  /** Brief description shown in Shortcut Center. */
+  description?: string;
+}
+
+/** A conflict is two shortcuts sharing an identical key combo + scope. */
+export interface ShortcutConflict {
+  combo: string;
+  scope: ShortcutScope;
+  ids: string[];
 }
 
 interface ParsedCombo {
@@ -94,6 +115,21 @@ function parseCombo(combo: string): ParsedCombo {
   return out;
 }
 
+/** Normalise a combo string for conflict comparison */
+function canonicalCombo(combo: string): string {
+  const c = parseCombo(combo);
+  const mods: string[] = [];
+  if (c.mod) mods.push("mod");
+  else {
+    if (c.ctrl) mods.push("ctrl");
+    if (c.meta) mods.push("meta");
+  }
+  if (c.alt) mods.push("alt");
+  if (c.shift) mods.push("shift");
+  mods.push(c.key);
+  return mods.join("+");
+}
+
 function eventMatches(e: KeyboardEvent, c: ParsedCombo): boolean {
   if (normaliseKey(e.key) !== c.key) return false;
   if (c.alt !== e.altKey) return false;
@@ -115,6 +151,15 @@ function isTypingTarget(target: EventTarget | null): boolean {
   return false;
 }
 
+const MAX_RECENT = 10;
+
+export interface ShortcutMetaSnapshot {
+  recentlyUsed: string[];
+  favoriteIds: string[];
+  usageCounts: Map<string, number>;
+  conflicts: ShortcutConflict[];
+}
+
 class ShortcutManagerImpl {
   private shortcuts = new Map<string, ShortcutDef>();
   private parsed = new Map<string, ParsedCombo[]>();
@@ -122,6 +167,33 @@ class ShortcutManagerImpl {
   private installed = false;
   private listeners = new Set<() => void>();
   private snapshot: ShortcutDef[] = [];
+  private metaSnapshot: ShortcutMetaSnapshot = {
+    recentlyUsed: [],
+    favoriteIds: [],
+    usageCounts: new Map(),
+    conflicts: [],
+  };
+
+  /** Usage count per shortcut ID */
+  private usageCounts = new Map<string, number>();
+  /** Recently fired shortcut IDs (most-recent first) */
+  private recentlyUsed: string[] = [];
+  /** Favorited shortcut IDs (persisted in localStorage) */
+  private favoriteIds: Set<string>;
+
+  constructor() {
+    // Restore favorites from localStorage
+    const stored =
+      typeof localStorage !== "undefined"
+        ? localStorage.getItem("vp-shortcut-favorites")
+        : null;
+    try {
+      this.favoriteIds = new Set(stored ? (JSON.parse(stored) as string[]) : []);
+    } catch {
+      this.favoriteIds = new Set();
+    }
+    this.refreshMetaSnapshot();
+  }
 
   install(): void {
     if (this.installed || typeof window === "undefined") return;
@@ -165,8 +237,83 @@ class ShortcutManagerImpl {
   }
   private refreshSnapshot(): void {
     this.snapshot = Array.from(this.shortcuts.values());
+    this.refreshMetaSnapshot();
+  }
+
+  private refreshMetaSnapshot(): void {
+    this.metaSnapshot = {
+      recentlyUsed: [...this.recentlyUsed],
+      favoriteIds: [...this.favoriteIds],
+      usageCounts: new Map(this.usageCounts),
+      conflicts: this.computeConflicts(),
+    };
     for (const l of this.listeners) l();
   }
+
+  // ── Usage tracking ──────────────────────────────────────────────────────────
+
+  getUsageCount(id: string): number {
+    return this.usageCounts.get(id) ?? 0;
+  }
+
+  getMetaSnapshot(): ShortcutMetaSnapshot {
+    return this.metaSnapshot;
+  }
+
+  private recordUsage(id: string): void {
+    this.usageCounts.set(id, (this.usageCounts.get(id) ?? 0) + 1);
+    this.recentlyUsed = [id, ...this.recentlyUsed.filter((x) => x !== id)].slice(0, MAX_RECENT);
+    this.refreshMetaSnapshot();
+  }
+
+  // ── Favorites ───────────────────────────────────────────────────────────────
+
+  isFavorite(id: string): boolean {
+    return this.favoriteIds.has(id);
+  }
+
+  toggleFavorite(id: string): void {
+    if (this.favoriteIds.has(id)) this.favoriteIds.delete(id);
+    else this.favoriteIds.add(id);
+    this.persistFavorites();
+    this.refreshMetaSnapshot();
+  }
+
+  private persistFavorites(): void {
+    if (typeof localStorage === "undefined") return;
+    try {
+      localStorage.setItem("vp-shortcut-favorites", JSON.stringify([...this.favoriteIds]));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  // ── Conflict detection ──────────────────────────────────────────────────────
+
+  private computeConflicts(): ShortcutConflict[] {
+    // Map of "scope::canonical-combo" → [ids...]
+    const map = new Map<string, string[]>();
+    for (const def of this.shortcuts.values()) {
+      const scope = def.scope ?? "global";
+      for (const key of def.keys) {
+        const canonical = canonicalCombo(key);
+        const k = `${scope}::${canonical}`;
+        const arr = map.get(k) ?? [];
+        arr.push(def.id);
+        map.set(k, arr);
+      }
+    }
+    const conflicts: ShortcutConflict[] = [];
+    for (const [key, ids] of map.entries()) {
+      if (ids.length > 1) {
+        const [scopeStr, combo] = key.split("::");
+        conflicts.push({ combo, scope: scopeStr as ShortcutScope, ids });
+      }
+    }
+    return conflicts;
+  }
+
+  // ── Key dispatch ─────────────────────────────────────────────────────────────
 
   private onKey = (e: KeyboardEvent): void => {
     const typing = isTypingTarget(e.target);
@@ -182,6 +329,7 @@ class ShortcutManagerImpl {
           if (res !== false) {
             e.preventDefault();
             e.stopPropagation();
+            this.recordUsage(def.id);
             return;
           }
         }
@@ -212,7 +360,9 @@ export function formatCombo(combo: string): string {
       if (lp === "escape" || lp === "esc") return "Esc";
       if (lp === "enter" || lp === "return") return "Enter";
       if (lp === "delete" || lp === "del") return "Del";
+      if (lp === "backspace") return "⌫";
+      if (lp === "tab") return "Tab";
       return p.trim().length === 1 ? p.trim().toUpperCase() : p.trim();
     })
-    .join(" + ");
+    .join(isMac ? "" : " + ");
 }

@@ -18,6 +18,7 @@ import { db, DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
 import { exportBackup, importBackup } from "@/features/backup/backup";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SETTINGS, CATEGORY_META } from "./settings-defs";
 import type { SettingDef } from "./settings-defs";
 import {
@@ -175,9 +176,11 @@ export function SettingsPage() {
     [update],
   );
 
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [importFilePending, setImportFilePending] = useState<File | null>(null);
+
   /* ── Reset all ── */
-  const resetAll = useCallback(async () => {
-    if (!confirm("Reset all settings to their default values?")) return;
+  const executeResetAll = useCallback(async () => {
     setSaving(true);
     try {
       await update(DEFAULT_SETTINGS);
@@ -186,8 +189,13 @@ export function SettingsPage() {
       toast.error("Reset failed: " + (e as Error).message);
     } finally {
       setSaving(false);
+      setShowResetConfirm(false);
     }
   }, [update]);
+
+  const resetAll = useCallback(() => {
+    setShowResetConfirm(true);
+  }, []);
 
   /* ── Scrolling ── */
   const scrollTo = useCallback((catId: string) => {
@@ -245,7 +253,7 @@ export function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `vision-projector-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Backup downloaded");
@@ -256,10 +264,7 @@ export function SettingsPage() {
     }
   }, []);
 
-  const onImport = useCallback(async (file: File) => {
-    const mode = confirm("Replace existing library? Cancel to merge.")
-      ? ("replace" as const)
-      : ("merge" as const);
+  const executeImport = useCallback(async (file: File, mode: "replace" | "merge") => {
     setBusy("import");
     try {
       await importBackup(file, { mode });
@@ -268,7 +273,13 @@ export function SettingsPage() {
     } catch (e) {
       toast.error("Import failed: " + (e as Error).message);
       setBusy(null);
+    } finally {
+      setImportFilePending(null);
     }
+  }, []);
+
+  const onImport = useCallback(async (file: File) => {
+    setImportFilePending(file);
   }, []);
 
   /* ── Settings by category ── */
@@ -477,6 +488,32 @@ export function SettingsPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={showResetConfirm}
+        title="Reset All Settings?"
+        description="Are you sure you want to reset all settings to their default values?"
+        confirmLabel="Reset Settings"
+        cancelLabel="Cancel"
+        destructive={true}
+        defaultFocus="cancel"
+        onCancel={() => setShowResetConfirm(false)}
+        onConfirm={executeResetAll}
+      />
+
+      {importFilePending && (
+        <ConfirmDialog
+          open={!!importFilePending}
+          title="Restore Backup"
+          description="Would you like to replace your existing library with the backup, or merge the backup with your existing content?"
+          confirmLabel="Replace Existing Library"
+          cancelLabel="Merge with Existing Library"
+          destructive={false}
+          defaultFocus="cancel"
+          onCancel={() => executeImport(importFilePending, "merge")}
+          onConfirm={() => executeImport(importFilePending, "replace")}
+        />
+      )}
     </div>
   );
 }

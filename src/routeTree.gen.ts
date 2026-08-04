@@ -9,59 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as ShortcutsRouteImport } from './routes/shortcuts'
-import { Route as SettingsRouteImport } from './routes/settings'
-import { Route as RoadmapRouteImport } from './routes/roadmap'
-import { Route as ProjectRouteImport } from './routes/project'
-import { Route as PlaylistsRouteImport } from './routes/playlists'
-import { Route as LibraryRouteImport } from './routes/library'
-import { Route as HistoryRouteImport } from './routes/history'
-import { Route as DeveloperHubRouteImport } from './routes/developer-hub'
-import { Route as ContactRouteImport } from './routes/contact'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ContactRouteImport } from './routes/contact'
+import { Route as DeveloperHubRouteImport } from './routes/developer-hub'
+import { Route as HistoryRouteImport } from './routes/history'
+import { Route as LibraryRouteImport } from './routes/library'
+import { Route as PlaylistsRouteImport } from './routes/playlists'
+import { Route as ProjectRouteImport } from './routes/project'
+import { Route as RoadmapRouteImport } from './routes/roadmap'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as ShortcutsRouteImport } from './routes/shortcuts'
 import { Route as HistoryIndexRouteImport } from './routes/history.index'
-import { Route as ServiceIdRouteImport } from './routes/service.$id'
-import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
 import { Route as HistoryIdRouteImport } from './routes/history.$id'
+import { Route as PlaylistsIdRouteImport } from './routes/playlists.$id'
+import { Route as ServiceIdRouteImport } from './routes/service.$id'
 
-const ShortcutsRoute = ShortcutsRouteImport.update({
-  id: '/shortcuts',
-  path: '/shortcuts',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SettingsRoute = SettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RoadmapRoute = RoadmapRouteImport.update({
-  id: '/roadmap',
-  path: '/roadmap',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ProjectRoute = ProjectRouteImport.update({
-  id: '/project',
-  path: '/project',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PlaylistsRoute = PlaylistsRouteImport.update({
-  id: '/playlists',
-  path: '/playlists',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LibraryRoute = LibraryRouteImport.update({
-  id: '/library',
-  path: '/library',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HistoryRoute = HistoryRouteImport.update({
-  id: '/history',
-  path: '/history',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DeveloperHubRoute = DeveloperHubRouteImport.update({
-  id: '/developer-hub',
-  path: '/developer-hub',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -69,9 +34,44 @@ const ContactRoute = ContactRouteImport.update({
   path: '/contact',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const DeveloperHubRoute = DeveloperHubRouteImport.update({
+  id: '/developer-hub',
+  path: '/developer-hub',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PlaylistsRoute = PlaylistsRouteImport.update({
+  id: '/playlists',
+  path: '/playlists',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectRoute = ProjectRouteImport.update({
+  id: '/project',
+  path: '/project',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoadmapRoute = RoadmapRouteImport.update({
+  id: '/roadmap',
+  path: '/roadmap',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ShortcutsRoute = ShortcutsRouteImport.update({
+  id: '/shortcuts',
+  path: '/shortcuts',
   getParentRoute: () => rootRouteImport,
 } as any)
 const HistoryIndexRoute = HistoryIndexRouteImport.update({
@@ -79,20 +79,20 @@ const HistoryIndexRoute = HistoryIndexRouteImport.update({
   path: '/',
   getParentRoute: () => HistoryRoute,
 } as any)
-const ServiceIdRoute = ServiceIdRouteImport.update({
-  id: '/service/$id',
-  path: '/service/$id',
-  getParentRoute: () => rootRouteImport,
+const HistoryIdRoute = HistoryIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => HistoryRoute,
 } as any)
 const PlaylistsIdRoute = PlaylistsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => PlaylistsRoute,
 } as any)
-const HistoryIdRoute = HistoryIdRouteImport.update({
-  id: '/$id',
-  path: '/$id',
-  getParentRoute: () => HistoryRoute,
+const ServiceIdRoute = ServiceIdRouteImport.update({
+  id: '/service/$id',
+  path: '/service/$id',
+  getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
@@ -209,60 +209,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/shortcuts': {
-      id: '/shortcuts'
-      path: '/shortcuts'
-      fullPath: '/shortcuts'
-      preLoaderRoute: typeof ShortcutsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/settings': {
-      id: '/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof SettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roadmap': {
-      id: '/roadmap'
-      path: '/roadmap'
-      fullPath: '/roadmap'
-      preLoaderRoute: typeof RoadmapRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/project': {
-      id: '/project'
-      path: '/project'
-      fullPath: '/project'
-      preLoaderRoute: typeof ProjectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/playlists': {
-      id: '/playlists'
-      path: '/playlists'
-      fullPath: '/playlists'
-      preLoaderRoute: typeof PlaylistsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/library': {
-      id: '/library'
-      path: '/library'
-      fullPath: '/library'
-      preLoaderRoute: typeof LibraryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/history': {
-      id: '/history'
-      path: '/history'
-      fullPath: '/history'
-      preLoaderRoute: typeof HistoryRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/developer-hub': {
-      id: '/developer-hub'
-      path: '/developer-hub'
-      fullPath: '/developer-hub'
-      preLoaderRoute: typeof DeveloperHubRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -272,11 +223,60 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ContactRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/developer-hub': {
+      id: '/developer-hub'
+      path: '/developer-hub'
+      fullPath: '/developer-hub'
+      preLoaderRoute: typeof DeveloperHubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/playlists': {
+      id: '/playlists'
+      path: '/playlists'
+      fullPath: '/playlists'
+      preLoaderRoute: typeof PlaylistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/project': {
+      id: '/project'
+      path: '/project'
+      fullPath: '/project'
+      preLoaderRoute: typeof ProjectRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roadmap': {
+      id: '/roadmap'
+      path: '/roadmap'
+      fullPath: '/roadmap'
+      preLoaderRoute: typeof RoadmapRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/shortcuts': {
+      id: '/shortcuts'
+      path: '/shortcuts'
+      fullPath: '/shortcuts'
+      preLoaderRoute: typeof ShortcutsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/history/': {
@@ -286,12 +286,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HistoryIndexRouteImport
       parentRoute: typeof HistoryRoute
     }
-    '/service/$id': {
-      id: '/service/$id'
-      path: '/service/$id'
-      fullPath: '/service/$id'
-      preLoaderRoute: typeof ServiceIdRouteImport
-      parentRoute: typeof rootRouteImport
+    '/history/$id': {
+      id: '/history/$id'
+      path: '/$id'
+      fullPath: '/history/$id'
+      preLoaderRoute: typeof HistoryIdRouteImport
+      parentRoute: typeof HistoryRoute
     }
     '/playlists/$id': {
       id: '/playlists/$id'
@@ -300,12 +300,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PlaylistsIdRouteImport
       parentRoute: typeof PlaylistsRoute
     }
-    '/history/$id': {
-      id: '/history/$id'
-      path: '/$id'
-      fullPath: '/history/$id'
-      preLoaderRoute: typeof HistoryIdRouteImport
-      parentRoute: typeof HistoryRoute
+    '/service/$id': {
+      id: '/service/$id'
+      path: '/service/$id'
+      fullPath: '/service/$id'
+      preLoaderRoute: typeof ServiceIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
   }
 }

@@ -4,7 +4,7 @@ import { SessionListPage } from "@/features/history/SessionListPage";
 export const Route = createFileRoute("/history/")({
   head: () => ({
     meta: [
-      { title: "Service History — Vision Projector" },
+      { title: "Service History — VersoLyn" },
       {
         name: "description",
         content:
