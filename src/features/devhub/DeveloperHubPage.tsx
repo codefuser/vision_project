@@ -245,8 +245,8 @@ function HeroSection() {
           visible && "visible",
         )}
       >
-        <div className="devhub-float inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5">
-          <MonitorPlay className="w-10 h-10 text-primary" />
+        <div className="devhub-float inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5 p-3 overflow-hidden">
+          <img src="/versolyn-logo.png" alt="VersoLyn" className="w-full h-full object-contain" />
         </div>
         <h1 className="devhub-gradient-text text-5xl md:text-7xl font-bold tracking-tight mb-4">
           {PROJECT_INFO.name}
@@ -1018,7 +1018,7 @@ function FooterSection() {
     <footer className="border-t border-border/40 py-10 px-6">
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <MonitorPlay className="w-4 h-4 text-primary" />
+          <img src="/versolyn-logo.png" alt="VersoLyn" className="w-4 h-4 object-contain" />
           <span className="font-medium">{PROJECT_INFO.name}</span>
           <span className="text-muted-foreground/50">v{PROJECT_INFO.version}</span>
         </div>

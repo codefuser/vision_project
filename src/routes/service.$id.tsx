@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { ServiceMode } from "@/features/service/ServiceMode";
 
 export const Route = createFileRoute("/service/$id")({
-  head: () => ({ meta: [{ title: "Service Mode — Church Media" }] }),
+  head: () => ({ meta: [{ title: "Service Mode — VersoLyn" }] }),
   component: ServiceModeRoute,
 });
 

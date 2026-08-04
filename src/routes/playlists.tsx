@@ -5,7 +5,7 @@ import { PlaylistsPage } from "@/features/playlists/PlaylistsPage";
 export const Route = createFileRoute("/playlists")({
   head: () => ({
     meta: [
-      { title: "Playlists — Church Media" },
+      { title: "Playlists — VersoLyn" },
       { name: "description", content: "Create and manage media playlists for services." },
     ],
   }),

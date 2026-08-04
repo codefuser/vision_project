@@ -3,7 +3,7 @@ import { AppShell } from "@/components/AppShell";
 import { PlaylistEditor } from "@/features/playlists/PlaylistEditor";
 
 export const Route = createFileRoute("/playlists/$id")({
-  head: () => ({ meta: [{ title: "Edit Playlist — Church Media" }] }),
+  head: () => ({ meta: [{ title: "Edit Playlist — VersoLyn" }] }),
   component: PlaylistEditorRoute,
 });
 

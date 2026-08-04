@@ -102,20 +102,20 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
       <div className="relative flex flex-col items-center gap-7">
         <div className="relative flex items-center justify-center">
           <div
-            className={`absolute h-20 w-20 rounded-full blur-xl transition-all duration-500 ${
-              complete ? "scale-150 opacity-0" : "opacity-100"
+            className={`absolute h-28 w-28 rounded-full blur-2xl transition-all duration-500 ${
+              complete ? "scale-150 opacity-0" : "opacity-90 dark:opacity-80"
             }`}
             style={{
-              background: "radial-gradient(circle, #4F8CFF 0%, #7C5CFF 50%, transparent 70%)",
+              background: "radial-gradient(circle, rgba(79,140,255,0.4) 0%, rgba(124,92,255,0.3) 50%, transparent 75%)",
               animation: "startup-glow-pulse 3.5s ease-in-out infinite",
             }}
           />
           <div
-            className="relative flex h-16 w-16 items-center justify-center"
+            className="relative flex h-24 w-24 items-center justify-center p-3"
             style={{ animation: "startup-logo-breath 3.5s ease-in-out infinite" }}
           >
-            <div className="absolute inset-0 rounded-2xl border border-white/10 bg-white/5" />
-            <MonitorPlay className="relative h-8 w-8" style={{ color: "#4F8CFF" }} />
+            <div className="absolute inset-0 rounded-2xl border border-border/60 bg-card/80 dark:bg-muted/40 shadow-lg dark:shadow-2xl dark:shadow-primary/20 backdrop-blur-md" />
+            <img src="/versolyn-logo.png" alt="VersoLyn" className="relative h-16 w-16 object-contain drop-shadow-md" />
           </div>
         </div>
 
@@ -123,10 +123,10 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
           className="flex flex-col items-center gap-1"
           style={{ animation: "startup-fade-in-up 0.6s ease-out" }}
         >
-          <h1 className="text-2xl font-bold tracking-tight text-white">
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
             VersoLyn
           </h1>
-          <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
+          <p className="text-sm font-medium text-muted-foreground">
             Church Presentation Software
           </p>
         </div>
@@ -141,24 +141,17 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
         >
           <StatusMessage message={progress.message} />
 
-          <div
-            className="flex items-center gap-2 text-xs tabular-nums"
-            style={{ color: "rgba(255,255,255,0.35)" }}
-          >
-            <div
-              className="relative h-1 w-48 overflow-hidden rounded-full"
-              style={{ background: "rgba(255,255,255,0.08)" }}
-            >
+          <div className="flex items-center gap-2 text-xs tabular-nums text-foreground/80">
+            <div className="relative h-1.5 w-60 md:w-72 overflow-hidden rounded-full border border-border/40 bg-muted/80 dark:bg-muted/30 shadow-inner">
               <div
-                className="h-full w-full rounded-full transition-all duration-150 ease-out"
+                className="h-full rounded-full transition-all duration-150 ease-out bg-gradient-to-r from-blue-600 via-indigo-600 to-sky-500 dark:from-blue-500 dark:via-indigo-500 dark:to-sky-400 shadow-sm"
                 style={{
                   width: `${smoothPercent}%`,
-                  background: "linear-gradient(90deg, #4F8CFF, #7C5CFF, #45D6FF)",
-                  boxShadow: "0 0 6px rgba(79,140,255,0.3)",
+                  boxShadow: "0 0 8px rgba(79,140,255,0.4)",
                 }}
               />
             </div>
-            <span className="min-w-[3ch] text-right">{smoothPercent}%</span>
+            <span className="min-w-[3ch] text-right font-semibold text-foreground/80">{smoothPercent}%</span>
           </div>
         </div>
       </div>
@@ -208,10 +201,9 @@ function StatusMessage({ message }: { message: string }) {
 
   return (
     <p
-      className={`h-4 text-center text-xs transition-opacity duration-150 ${
+      className={`h-4 text-center text-xs font-medium text-muted-foreground transition-opacity duration-150 ${
         visible ? "opacity-100" : "opacity-0"
       }`}
-      style={{ color: "rgba(255,255,255,0.4)" }}
     >
       {displayed}
     </p>

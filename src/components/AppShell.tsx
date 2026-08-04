@@ -102,14 +102,14 @@ export function AppShell({ children }: { children: ReactNode }) {
           <button
             type="button"
             onClick={collapsed ? () => setCollapsed(false) : undefined}
-            aria-label={collapsed ? "Expand sidebar" : "Church Media"}
-            title={collapsed ? "Expand sidebar" : "Church Media"}
+            aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
+            title={collapsed ? "Expand sidebar" : "VersoLyn"}
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-transform",
+              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-1 bg-primary/10 transition-transform overflow-hidden",
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
-            <MonitorPlay className="h-4 w-4" />
+            <img src="/versolyn-logo.png" alt="VersoLyn" className="h-full w-full object-contain" />
           </button>
 
           <div
@@ -118,7 +118,7 @@ export function AppShell({ children }: { children: ReactNode }) {
               collapsed ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
-            Church Media
+            VersoLyn
           </div>
           <button
             type="button"
