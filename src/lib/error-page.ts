@@ -3,7 +3,7 @@ export function renderErrorPage(): string {
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <title>Vision Projector â€” Error</title>
+    <title>VersoLyn — Error</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -138,7 +138,7 @@ export function renderNotFoundPage(): string {
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
-    <title>Vision Projector — 404</title>
+    <title>VersoLyn — 404</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -500,7 +500,7 @@ export function renderNotFoundPage(): string {
 
       function copyError(){
         var report = [
-          "= Vision Projector - 404 Report =",
+          "= VersoLyn - 404 Report =",
           "",
           "Error Code:    VP-404",
           "Title:         Page Not Found",
@@ -582,14 +582,14 @@ export function renderNotFoundPage(): string {
         ctx.textAlign = "center";
         ctx.fillStyle = "rgba(255,255,255,0.12)";
         ctx.font = "10px sans-serif";
-        ctx.fillText("Vision Projector - 404 Report", w/2, cy0 + ch - 16);
+        ctx.fillText("VersoLyn - 404 Report", w/2, cy0 + ch - 16);
 
         c.toBlob(function(blob){
           if(!blob){ showToast("Could not save"); return; }
           var url = URL.createObjectURL(blob);
           var a = document.createElement("a");
           a.href = url;
-          a.download = "vision-projector-404-" + Date.now() + ".png";
+          a.download = "versolyn-404-" + Date.now() + ".png";
           a.click();
           URL.revokeObjectURL(url);
           showToast("Screenshot saved");

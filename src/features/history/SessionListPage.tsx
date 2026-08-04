@@ -353,7 +353,7 @@ function EmptyState({ hasQuery }: { hasQuery: boolean }) {
         <p className="mt-1 max-w-xs text-[11px] text-muted-foreground/60">
           {hasQuery
             ? "Try a different search term or clear the filters."
-            : "Your service history will appear here automatically as you use Vision Projector."}
+            : "Your service history will appear here automatically as you use VersoLyn."}
         </p>
       </div>
     </div>

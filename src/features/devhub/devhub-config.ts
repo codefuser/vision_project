@@ -50,7 +50,7 @@ export interface Stat {
 }
 
 export const PROJECT_INFO = {
-  name: "Vision Projector",
+  name: "VersoLyn",
   tagline: "Free & Open Source Church Presentation Software",
   shortDescription:
     "Modern, offline-first presentation software built for churches. Project Bible verses, songs, media, and sermon content with beautiful themes and real-time control.",
@@ -62,9 +62,9 @@ export const PROJECT_INFO = {
     { label: "Tamil First", variant: "outline" as const },
     { label: "Cross Platform", variant: "secondary" as const },
   ],
-  description: `Vision Projector is a free and open-source church presentation software designed for modern worship services. Unlike proprietary solutions that lock you into expensive licenses and internet-dependent workflows, Vision Projector is built from the ground up with an offline-first architecture, putting you in complete control of your presentation experience.
+  description: `VersoLyn is a free and open-source church presentation software designed for modern worship services. Unlike proprietary solutions that lock you into expensive licenses and internet-dependent workflows, VersoLyn is built from the ground up with an offline-first architecture, putting you in complete control of your presentation experience.
 
-Whether you're projecting Bible verses in Tamil or English, displaying song lyrics, showing media content, or managing complex service flows, Vision Projector provides a fast, beautiful, and reliable tool that respects your privacy and independence.`,
+Whether you're projecting Bible verses in Tamil or English, displaying song lyrics, showing media content, or managing complex service flows, VersoLyn provides a fast, beautiful, and reliable tool that respects your privacy and independence.`,
   whoItIsFor:
     "Churches of all sizes, worship teams, pastors, youth groups, missionaries, and anyone who needs reliable projection software without the burden of subscription fees or internet dependency.",
   mainGoals: [
@@ -98,13 +98,13 @@ export const DEVELOPER_INFO = {
   photoUrl: "",
   coverUrl: "",
   biography:
-    "A passionate developer dedicated to building tools that empower churches and ministry work. With a heart for worship technology and a vision for accessible, beautiful presentation software, Joseph created Vision Projector to serve the global church community.",
+    "A passionate developer dedicated to building tools that empower churches and ministry work. With a heart for worship technology and a vision for accessible, beautiful presentation software, Joseph created VersoLyn to serve the global church community.",
   mission:
     "To equip every church with professional-grade presentation tools that are accessible, beautiful, and free.",
   vision:
     "A world where every church, regardless of size or budget, can present the Gospel with excellence and creativity.",
   story:
-    "The idea for Vision Projector was born from a simple observation: churches in India and around the world were spending thousands on presentation software that was either too expensive, required constant internet, or didn't support local languages properly. After years of struggling with existing solutions during worship services, the decision was made to build something better — something built for the church, by the church. What started as a personal project quickly grew into a vision for a truly free, open-source alternative that could serve congregations worldwide.",
+    "The idea for VersoLyn was born from a simple observation: churches in India and around the world were spending thousands on presentation software that was either too expensive, required constant internet, or didn't support local languages properly. After years of struggling with existing solutions during worship services, the decision was made to build something better — something built for the church, by the church. What started as a personal project quickly grew into a vision for a truly free, open-source alternative that could serve congregations worldwide.",
   timeline: [
     { year: "2023", event: "Initial concept and prototyping began" },
     { year: "2024", event: "Core development with Bible and song functionality" },
@@ -113,16 +113,17 @@ export const DEVELOPER_INFO = {
   ],
   education: "Computer Science & Engineering",
   skills: [
-    "React",
-    "TypeScript",
-    "Electron",
-    "Node.js",
-    "SQLite",
-    "TailwindCSS",
-    "UI/UX Design",
-    "Desktop Applications",
-    "Open Source",
-    "Church Technology",
+    "TypeScript / React",
+    "TailwindCSS / UI Architecture",
+    "Electron & Desktop Native Integrations",
+    "Offline-first Storage Systems",
+    "Tamil Font & Text Processing",
+  ],
+  interests: ["Worship Technology", "Open Source", "UI/UX Design", "Church Ministry"],
+  socialLinks: [
+    { platform: "GitHub", url: "https://github.com", icon: Github },
+    { platform: "Globe", url: "https://versolyn.app", icon: Globe },
+    { platform: "Mail", url: "mailto:joseph@versolyn.org", icon: Mail },
   ],
   experience:
     "Building church technology solutions with a focus on presentation software, media management, and worship tools.",
@@ -130,7 +131,7 @@ export const DEVELOPER_INFO = {
 };
 
 export const SOCIAL_LINKS: SocialLink[] = [
-  { label: "Website", url: "https://visionprojector.app", icon: Globe, color: "text-sky-500" },
+  { label: "Website", url: "https://versolyn.app", icon: Globe, color: "text-sky-500" },
   {
     label: "GitHub",
     url: "https://github.com/vision-projector",
@@ -235,7 +236,7 @@ export const VISION_MISSION = {
     },
   ],
   projectPhilosophy:
-    "Vision Projector believes that church technology should be a blessing, not a burden. Every design decision is made with the end goal of helping worship leaders focus on what matters most — presenting the Gospel. We prioritize reliability, performance, and beauty in equal measure, knowing that technology serves ministry, not the other way around.",
+    "VersoLyn believes that church technology should be a blessing, not a burden. Every design decision is made with the end goal of helping worship leaders focus on what matters most — presenting the Gospel. We prioritize reliability, performance, and beauty in equal measure, knowing that technology serves ministry, not the other way around.",
   designPhilosophy:
     "Clean, purposeful, and unobtrusive. The interface should fade into the background during a service, letting the content shine. We follow platform conventions when appropriate, but aren't afraid to innovate when it serves the user. Every pixel, animation, and interaction is designed with intention.",
   openSourcePhilosophy:
@@ -397,8 +398,8 @@ export const CONTRIBUTORS = [
 export const LICENSE_INFO = {
   name: "MIT License",
   description:
-    "Vision Projector is released under the MIT License, allowing you to freely use, modify, and distribute the software.",
-  url: "https://github.com/vision-projector/vision-projector/blob/main/LICENSE",
+    "VersoLyn is released under the MIT License, allowing you to freely use, modify, and distribute the software.",
+  url: "https://github.com/versolyn/versolyn/blob/main/LICENSE",
   credits: [
     "React — MIT License",
     "TanStack Router — MIT License",
@@ -419,16 +420,16 @@ export const LICENSE_INFO = {
 
 export const FAQ_ITEMS = [
   {
-    q: "Is Vision Projector really free?",
-    a: "Yes! Vision Projector is and always will be free. It's an open-source project licensed under MIT. There are no premium tiers, no subscription fees, and no hidden costs.",
+    q: "Is VersoLyn really free?",
+    a: "Yes! VersoLyn is and always will be free. It's an open-source project licensed under MIT. There are no premium tiers, no subscription fees, and no hidden costs.",
   },
   {
-    q: "Does Vision Projector work offline?",
-    a: "Absolutely. Vision Projector is built with an offline-first architecture. All features work without an internet connection. Your data is stored locally on your device.",
+    q: "Does VersoLyn work offline?",
+    a: "Absolutely. VersoLyn is built with an offline-first architecture. All features work without an internet connection. Your data is stored locally on your device.",
   },
   {
     q: "Which platforms are supported?",
-    a: "Vision Projector runs on Windows, macOS, and Linux. A web version is also available for basic use.",
+    a: "VersoLyn runs on Windows, macOS, and Linux. A web version is also available for basic use.",
   },
   {
     q: "Can I contribute to the project?",
@@ -436,7 +437,7 @@ export const FAQ_ITEMS = [
   },
   {
     q: "Does it support Tamil?",
-    a: "Yes, Tamil is a first-class citizen in Vision Projector. The entire interface, Bible texts, and search functionality support Tamil and Tanglish (Tamil typed in English script).",
+    a: "Yes, Tamil is a first-class citizen in VersoLyn. The entire interface, Bible texts, and search functionality support Tamil and Tanglish (Tamil typed in English script).",
   },
   {
     q: "How do I report a bug?",

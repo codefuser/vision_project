@@ -124,7 +124,7 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
           style={{ animation: "startup-fade-in-up 0.6s ease-out" }}
         >
           <h1 className="text-2xl font-bold tracking-tight text-white">
-            Vision Projector
+            VersoLyn
           </h1>
           <p className="text-sm" style={{ color: "rgba(255,255,255,0.45)" }}>
             Church Presentation Software

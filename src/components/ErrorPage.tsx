@@ -76,7 +76,7 @@ function buildDiagnosticReport(opts: {
   appVersion?: string;
 }): string {
   const lines = [
-    "═ Vision Projector — Error Report ═",
+    "═ VersoLyn — Error Report ═",
     "",
     `Error Code:    ${opts.errorCode}`,
     `Title:         ${opts.title}`,
@@ -277,7 +277,7 @@ export function ErrorPage({
     ctx.textAlign = "center";
     ctx.fillStyle = textMuted;
     ctx.font = "10px sans-serif";
-    ctx.fillText("Vision Projector — Error Report", cx, cy0 + ch - 16);
+    ctx.fillText("VersoLyn — Error Report", cx, cy0 + ch - 16);
 
     const blob = await new Promise<Blob | null>((resolve) => c.toBlob(resolve, "image/png"));
     if (!blob) {
@@ -287,7 +287,7 @@ export function ErrorPage({
     const blobUrl = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = blobUrl;
-    a.download = `vision-projector-error-${errorCode.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.png`;
+    a.download = `versolyn-error-${errorCode.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.png`;
     a.click();
     URL.revokeObjectURL(blobUrl);
     toast.success("Screenshot saved");

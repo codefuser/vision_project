@@ -23,7 +23,7 @@ const ERROR_CODE = "VP-404";
 
 function buildReport(): string {
   return [
-    "═ Vision Projector — 404 Report ═",
+    "═ VersoLyn — 404 Report ═",
     "",
     `Error Code:    ${ERROR_CODE}`,
     `Title:         Page Not Found`,
@@ -154,14 +154,14 @@ export function NotFoundPage() {
 
     ctx.textAlign = "center";
     ctx.font = "10px sans-serif";
-    ctx.fillText("Vision Projector — 404 Report", cx, cy0 + ch - 16);
+    ctx.fillText("VersoLyn — 404 Report", cx, cy0 + ch - 16);
 
     const blob = await new Promise<Blob | null>((r) => c.toBlob(r, "image/png"));
     if (!blob) { showNotification("Could not save"); return; }
     const url2 = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url2;
-    a.download = `vision-projector-404-${Date.now()}.png`;
+    a.download = `versolyn-404-${Date.now()}.png`;
     a.click();
     URL.revokeObjectURL(url2);
     showNotification("Screenshot saved");

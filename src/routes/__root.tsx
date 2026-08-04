@@ -61,17 +61,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Church Media - Projection Software" },
+      { title: "VersoLyn — Church Presentation Software" },
       {
         name: "description",
         content:
-          "Offline-first media projection software for churches. Images, posters, and videos.",
+          "VersoLyn is an offline-first church presentation software. Tamil & English Bible verses, song lyrics, media, and service flow management.",
       },
       { name: "theme-color", content: "#0a0a0a" },
-      { property: "og:title", content: "Church Media - Projection Software" },
+      { property: "og:title", content: "VersoLyn — Church Presentation Software" },
       {
         property: "og:description",
-        content: "Offline-first media projection software for churches.",
+        content: "VersoLyn offline-first church presentation software.",
       },
       { property: "og:type", content: "website" },
     ],

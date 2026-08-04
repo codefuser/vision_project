@@ -4,11 +4,11 @@ import { DeveloperHubPage } from "@/features/devhub/DeveloperHubPage";
 export const Route = createFileRoute("/developer-hub")({
   head: () => ({
     meta: [
-      { title: "Developer Hub — Vision Projector" },
+      { title: "Developer Hub — VersoLyn" },
       {
         name: "description",
         content:
-          "Learn about Vision Projector, the free and open-source church presentation software.",
+          "Learn about VersoLyn, the free and open-source church presentation software.",
       },
     ],
   }),

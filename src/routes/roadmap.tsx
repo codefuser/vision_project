@@ -4,10 +4,10 @@ import { RoadmapPage } from "@/features/devhub/RoadmapPage";
 export const Route = createFileRoute("/roadmap")({
   head: () => ({
     meta: [
-      { title: "Version History — Vision Projector" },
+      { title: "Version History — VersoLyn" },
       {
         name: "description",
-        content: "View the version history and release notes for Vision Projector.",
+        content: "View the version history and release notes for VersoLyn.",
       },
     ],
   }),

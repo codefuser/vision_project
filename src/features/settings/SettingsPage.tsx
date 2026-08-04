@@ -253,7 +253,7 @@ export function SettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `vision-projector-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success("Backup downloaded");

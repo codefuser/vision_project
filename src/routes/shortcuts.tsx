@@ -39,11 +39,11 @@ import { cn } from "@/lib/utils";
 export const Route = createFileRoute("/shortcuts")({
   head: () => ({
     meta: [
-      { title: "Shortcut Center — Vision Projector" },
+      { title: "Shortcut Center — VersoLyn" },
       {
         name: "description",
         content:
-          "Complete keyboard shortcut reference for Vision Projector. Search, filter, and explore every shortcut.",
+          "Complete keyboard shortcut reference for VersoLyn. Search, filter, and explore every shortcut.",
       },
     ],
   }),

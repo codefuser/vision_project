@@ -199,7 +199,7 @@ export function RoadmapPage() {
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground font-medium">v{CURRENT_VERSION}</p>
           <p className="text-md text-muted-foreground/80 max-w-2xl mx-auto leading-relaxed mt-4">
-            Track the evolution of Vision Projector — from initial release to latest updates.
+            Track the evolution of VersoLyn — from initial release to latest updates.
           </p>
           <div className="flex items-center justify-center gap-4 mt-8">
             <Button
@@ -226,7 +226,7 @@ export function RoadmapPage() {
             <span className="text-muted-foreground/50">v{CURRENT_VERSION}</span>
           </div>
           <p className="text-xs text-muted-foreground/50">
-            Vision Projector &middot; First public release
+            VersoLyn &middot; First public release
           </p>
         </div>
       </footer>

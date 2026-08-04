@@ -308,7 +308,7 @@ function AboutSection() {
   return (
     <section id="about" className="py-20 px-6">
       <SectionHeader
-        title="About Vision Projector"
+        title="About VersoLyn"
         subtitle="A modern presentation tool built for the church, by the church."
       />
       <div
@@ -419,7 +419,7 @@ function DeveloperSection() {
   const { ref, visible } = useScrollReveal({ threshold: 0.05 });
   return (
     <section id="developer" className="py-20 px-6 bg-muted/30">
-      <SectionHeader title="About the Developer" subtitle="The person behind Vision Projector." />
+      <SectionHeader title="About the Developer" subtitle="The person behind VersoLyn." />
       <div
         ref={ref}
         className={cn(
@@ -765,7 +765,7 @@ function GallerySection() {
     <section id="gallery" className="py-20 px-6 bg-muted/30">
       <SectionHeader
         title="Screenshots"
-        subtitle="A visual preview of Vision Projector in action."
+        subtitle="A visual preview of VersoLyn in action."
       />
       <div
         ref={ref}
@@ -797,7 +797,7 @@ function StatsSection() {
   const { ref, visible } = useScrollReveal({ threshold: 0.2 });
   return (
     <section id="stats" className="py-20 px-6">
-      <SectionHeader title="By the Numbers" subtitle="Vision Projector in statistics." />
+      <SectionHeader title="By the Numbers" subtitle="VersoLyn in statistics." />
       <div ref={ref} className="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4">
         {STATISTICS.map((stat) => (
           <Card
@@ -848,7 +848,7 @@ function CommunitySection() {
     <section id="community" className="py-20 px-6 bg-muted/30">
       <SectionHeader
         title="Join the Community"
-        subtitle="Connect with us and be part of the Vision Projector community."
+        subtitle="Connect with us and be part of the VersoLyn community."
       />
       <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         {COMMUNITY_LINKS.map((link) => (
@@ -864,7 +864,7 @@ function SupportSection() {
     <section id="support" className="py-20 px-6">
       <SectionHeader
         title="Support Development"
-        subtitle="Help keep Vision Projector free and open source."
+        subtitle="Help keep VersoLyn free and open source."
       />
       <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {SUPPORT_LINKS.map((link) => {
@@ -943,7 +943,7 @@ function ContributorCard({
 function ContributorsSection() {
   return (
     <section id="contributors" className="py-20 px-6 bg-muted/30">
-      <SectionHeader title="Contributors" subtitle="The people making Vision Projector possible." />
+      <SectionHeader title="Contributors" subtitle="The people making VersoLyn possible." />
       <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {CONTRIBUTORS.map((contributor, i) => (
           <ContributorCard key={`${contributor.name}-${i}`} contributor={contributor} index={i} />
@@ -957,7 +957,7 @@ function LicenseSection() {
   const { ref, visible } = useScrollReveal();
   return (
     <section id="license" className="py-20 px-6">
-      <SectionHeader title="License" subtitle="Vision Projector is free and open source." />
+      <SectionHeader title="License" subtitle="VersoLyn is free and open source." />
       <div ref={ref} className={cn("devhub-reveal max-w-3xl mx-auto", visible && "visible")}>
         <Card className="devhub-glass-strong devhub-card-hover border-border/50">
           <CardHeader>
