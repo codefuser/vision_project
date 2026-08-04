@@ -14,6 +14,7 @@ import { useMediaFavorites } from "@/stores/media-favorites.store";
 import { getMedia } from "@/db/repo";
 import type { MediaRecord } from "@/db/schema";
 import { Thumb } from "@/components/Thumb";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import {
@@ -68,24 +69,25 @@ export function GlobalFavoritesPopover() {
   return (
     <div ref={popoverRef} className="relative inline-block text-left select-none">
       {/* Header Trigger Button */}
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className={cn(
-          "inline-flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border text-xs font-semibold transition shadow-sm",
-          isOpen
-            ? "border-amber-400/60 bg-amber-500/20 text-amber-400"
-            : "border-[#2D3348] bg-[#111827] text-amber-400 hover:bg-[#1F2937] hover:border-amber-400/40"
-        )}
-        title="Starred Favorites (Bible, Songs, Media)"
-      >
-        <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
-        <span>Favorites</span>
-        {totalCount > 0 && (
-          <span className="ml-0.5 rounded-full bg-amber-400/20 px-1.5 py-0.2 text-[10px] font-mono font-bold text-amber-300">
-            {totalCount}
-          </span>
-        )}
-      </button>
+      <Tooltip content="Starred Favorites (Bible, Songs, Media)">
+        <button
+          onClick={() => setIsOpen(!isOpen)}
+          className={cn(
+            "flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-bold transition shadow-md cursor-pointer",
+            isOpen
+              ? "border-amber-400/60 bg-amber-500/20 text-amber-400"
+              : "border-[#2D3348] bg-[#111827] text-amber-400 hover:bg-[#1F2937] hover:border-amber-400/40"
+          )}
+        >
+          <Star className="h-3.5 w-3.5 fill-current text-amber-400" />
+          <span>Favorites</span>
+          {totalCount > 0 && (
+            <span className="ml-0.5 rounded-full bg-amber-400/20 px-1.5 py-0.2 text-[10px] font-mono font-bold text-amber-300">
+              {totalCount}
+            </span>
+          )}
+        </button>
+      </Tooltip>
 
       {/* Floating 380px Popover Box */}
       {isOpen && (
@@ -176,28 +178,30 @@ export function GlobalFavoritesPopover() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void activateBibleFavorite(navigate, fav.book, fav.chapter, fav.verse, fav.displayMode);
-                            setIsOpen(false);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
-                          title="Project Live"
-                        >
-                          <Play className="h-3 w-3 fill-current" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeBibleFav(fav.id);
-                            toast.success(`Removed ${fav.ref}`);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
-                          title="Remove Favorite"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        <Tooltip content="Project Live">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void activateBibleFavorite(navigate, fav.book, fav.chapter, fav.verse, fav.displayMode);
+                              setIsOpen(false);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            <Play className="h-3 w-3 fill-current" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Remove Favorite">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeBibleFav(fav.id);
+                              toast.success(`Removed ${fav.ref}`);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   ))}
@@ -221,28 +225,30 @@ export function GlobalFavoritesPopover() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void activateSongFavorite(fav.id, 0);
-                            setIsOpen(false);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
-                          title="Project Live"
-                        >
-                          <Play className="h-3 w-3 fill-current" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeSongFav(fav.id);
-                            toast.success(`Removed ${fav.title}`);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
-                          title="Remove Favorite"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        <Tooltip content="Project Live">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void activateSongFavorite(fav.id, 0);
+                              setIsOpen(false);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            <Play className="h-3 w-3 fill-current" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Remove Favorite">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeSongFav(fav.id);
+                              toast.success(`Removed ${fav.title}`);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   ))}
@@ -268,28 +274,30 @@ export function GlobalFavoritesPopover() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            void activateMediaFavorite(media.id);
-                            setIsOpen(false);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
-                          title="Project Live"
-                        >
-                          <Play className="h-3 w-3 fill-current" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeMediaFav(media.id);
-                            toast.success(`Removed ${media.name}`);
-                          }}
-                          className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
-                          title="Remove Favorite"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </button>
+                        <Tooltip content="Project Live">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void activateMediaFavorite(media.id);
+                              setIsOpen(false);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20"
+                          >
+                            <Play className="h-3 w-3 fill-current" />
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Remove Favorite">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeMediaFav(media.id);
+                              toast.success(`Removed ${media.name}`);
+                            }}
+                            className="h-6 w-6 rounded flex items-center justify-center text-rose-400 hover:bg-rose-500/20"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Tooltip>
                       </div>
                     </div>
                   ))}

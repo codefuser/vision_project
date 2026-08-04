@@ -15,6 +15,7 @@ import { TextPanel } from "@/features/text/TextPanel";
 import { useFocusZone, type FocusZone } from "./focus-manager";
 import { useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import { ShortcutTooltip } from "@/components/ShortcutTooltip";
+import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 const TABS: {
@@ -59,14 +60,15 @@ export function WorkspaceTabsPanel() {
   if (collapsed) {
     return (
       <div className="flex h-full w-12 flex-col items-center gap-1 border-l border-border bg-card py-2">
-        <button
-          onClick={toggleCollapsed}
-          title="Expand workspace"
-          aria-label="Expand workspace"
-          className="mb-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <PanelRightOpen className="h-4 w-4" />
-        </button>
+        <Tooltip content="Expand workspace" side="left">
+          <button
+            onClick={toggleCollapsed}
+            aria-label="Expand workspace"
+            className="mb-1 inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <PanelRightOpen className="h-4 w-4" />
+          </button>
+        </Tooltip>
         {TABS.map((t) => (
           <TabRailButton
             key={t.id}
@@ -101,14 +103,15 @@ export function WorkspaceTabsPanel() {
             onClick={() => setActiveTab(t.id)}
           />
         ))}
-        <button
-          onClick={toggleCollapsed}
-          title="Collapse workspace"
-          aria-label="Collapse workspace"
-          className="ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <PanelRightClose className="h-4 w-4" />
-        </button>
+        <Tooltip content="Collapse workspace" side="left">
+          <button
+            onClick={toggleCollapsed}
+            aria-label="Collapse workspace"
+            className="ml-auto inline-flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <PanelRightClose className="h-4 w-4" />
+          </button>
+        </Tooltip>
       </div>
 
       <div className="min-h-0 flex-1 overflow-hidden" role="tabpanel" aria-label={`${activeTab} panel`}>

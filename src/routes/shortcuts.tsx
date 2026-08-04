@@ -23,6 +23,7 @@ import {
   Check,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Tooltip } from "@/components/ui/tooltip";
 import {
   useRegisteredShortcuts,
   useShortcutMeta,
@@ -110,27 +111,30 @@ function ShortcutRow({
       )}
     >
       {/* Favorite star */}
-      <button
-        onClick={toggleFav}
-        title={isFavorite ? "Remove from favorites" : "Add to favorites"}
-        className={cn(
-          "shrink-0 rounded p-0.5 transition-colors",
-          isFavorite
-            ? "text-amber-400"
-            : "text-transparent hover:text-muted-foreground group-hover:text-muted-foreground/50",
-        )}
-      >
-        <Star className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
-      </button>
+      <Tooltip content={isFavorite ? "Remove from favorites" : "Add to favorites"}>
+        <button
+          onClick={toggleFav}
+          className={cn(
+            "shrink-0 rounded p-0.5 transition-colors",
+            isFavorite
+              ? "text-amber-400"
+              : "text-transparent hover:text-muted-foreground group-hover:text-muted-foreground/50",
+          )}
+        >
+          <Star className={cn("h-3.5 w-3.5", isFavorite && "fill-current")} />
+        </button>
+      </Tooltip>
 
       {/* Label */}
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-medium">{highlight(def.label)}</span>
           {isConflicted && (
-            <span title="Key conflict">
-              <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />
-            </span>
+            <Tooltip content="Key conflict">
+              <span>
+                <AlertTriangle className="h-3 w-3 shrink-0 text-amber-400" />
+              </span>
+            </Tooltip>
           )}
           {usageCount > 0 && (
             <span className="rounded-full bg-primary/10 px-1.5 py-0.5 text-[9px] font-semibold text-primary">
@@ -309,30 +313,33 @@ function ShortcutsPage() {
           </div>
           {/* Export buttons */}
           <div className="flex items-center gap-2 print:hidden">
-            <button
-              onClick={() => window.print()}
-              title="Print shortcut list"
-              className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            >
-              <Printer className="h-3.5 w-3.5" />
-              Print
-            </button>
-            <button
-              onClick={() => exportJSON(all)}
-              title="Export as JSON"
-              className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            >
-              <Download className="h-3.5 w-3.5" />
-              JSON
-            </button>
-            <button
-              onClick={() => exportCSV(all)}
-              title="Export as CSV"
-              className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
-            >
-              <Download className="h-3.5 w-3.5" />
-              CSV
-            </button>
+            <Tooltip content="Print shortcut list">
+              <button
+                onClick={() => window.print()}
+                className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Printer className="h-3.5 w-3.5" />
+                Print
+              </button>
+            </Tooltip>
+            <Tooltip content="Export as JSON">
+              <button
+                onClick={() => exportJSON(all)}
+                className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Download className="h-3.5 w-3.5" />
+                JSON
+              </button>
+            </Tooltip>
+            <Tooltip content="Export as CSV">
+              <button
+                onClick={() => exportCSV(all)}
+                className="flex items-center gap-1.5 rounded-lg border border-border/60 bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
+              >
+                <Download className="h-3.5 w-3.5" />
+                CSV
+              </button>
+            </Tooltip>
           </div>
         </div>
 

@@ -8,7 +8,6 @@ import {
   jaroWinkler,
   trigramSimilarity,
 } from "./normalize";
-import { getCachedSearchIndex, setCachedSearchIndex } from "./cache";
 
 export interface SongHit {
   song: Song;
@@ -171,7 +170,6 @@ export function markSearchIndexUpdated(songs: Song[]) {
   // Rebuild lookup map to reflect current songs list
   songLookup = new Map(songs.map((s) => [s.id, s]));
   lastBuiltVersion = indexVersion;
-  setCachedSearchIndex(String(indexVersion), { searchIndex, tokenInvertedIndex, stemInvertedIndex });
 }
 
 export function buildSearchIndex(songs: Song[]) {

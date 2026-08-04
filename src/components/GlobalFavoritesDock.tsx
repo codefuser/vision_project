@@ -30,6 +30,7 @@ import {
 import { getMedia } from "@/db/repo";
 import type { MediaRecord } from "@/db/schema";
 import { cn } from "@/lib/utils";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export function GlobalFavoritesDock() {
   const { open, group, toggle, setGroup } = useFavoritesDock();
@@ -69,13 +70,14 @@ export function GlobalFavoritesDock() {
   if (!open) {
     return (
       <div className="fixed right-0 top-12 z-40 flex flex-col items-center gap-1 rounded-l-lg border border-r-0 border-border bg-card/95 p-1 shadow-lg backdrop-blur">
-        <button
-          onClick={toggle}
-          title="Open Favorites (Alt+Shift+F)"
-          className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-amber-500 hover:bg-accent"
-        >
-          <Star className="h-4 w-4 fill-current" />
-        </button>
+        <Tooltip content="Open Favorites" id="favorites.toggle-dock" side="left">
+          <button
+            onClick={toggle}
+            className="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-md text-amber-500 hover:bg-accent"
+          >
+            <Star className="h-4 w-4 fill-current" />
+          </button>
+        </Tooltip>
         <ChevronLeft className="h-3 w-3 text-muted-foreground" />
       </div>
     );
@@ -93,13 +95,14 @@ export function GlobalFavoritesDock() {
       <div className="flex h-9 shrink-0 items-center gap-1 border-b border-border bg-muted/40 px-2">
         <Star className="h-3.5 w-3.5 text-amber-500" />
         <div className="text-[11px] font-semibold uppercase tracking-wide">Favorites</div>
-        <button
-          onClick={toggle}
-          title="Collapse"
-          className="ml-auto inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
+        <Tooltip content="Collapse" side="left">
+          <button
+            onClick={toggle}
+            className="ml-auto inline-flex h-6 w-6 cursor-pointer items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </Tooltip>
       </div>
 
       <div className="flex shrink-0 items-center gap-0.5 border-b border-border bg-background/40 p-1">
@@ -118,20 +121,20 @@ export function GlobalFavoritesDock() {
           const Icon = g.icon;
           const active = g.id === group;
           return (
-            <button
-              key={g.id}
-              onClick={() => setGroup(g.id)}
-              title={g.label}
-              className={cn(
-                "inline-flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded px-1 text-[10px] font-medium transition",
-                active
-                  ? "bg-primary/15 text-primary"
-                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
-            >
-              <Icon className="h-3 w-3" />
-              <span>{counts[g.id]}</span>
-            </button>
+            <Tooltip key={g.id} content={g.label} side="bottom">
+              <button
+                onClick={() => setGroup(g.id)}
+                className={cn(
+                  "inline-flex h-7 flex-1 cursor-pointer items-center justify-center gap-1 rounded px-1 text-[10px] font-medium transition",
+                  active
+                    ? "bg-primary/15 text-primary"
+                    : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                )}
+              >
+                <Icon className="h-3 w-3" />
+                <span>{counts[g.id]}</span>
+              </button>
+            </Tooltip>
           );
         })}
       </div>
@@ -213,24 +216,26 @@ function FavRow({
 }) {
   return (
     <li className="group flex items-center gap-1 rounded px-1.5 py-1 hover:bg-accent/60">
-      <button
-        onClick={onActivate}
-        title={`Project ${label}`}
-        className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
-      >
-        <Send className="h-3 w-3 shrink-0 text-primary opacity-60 group-hover:opacity-100" />
-        <div className="min-w-0 flex-1">
-          <div className="truncate text-[11px] font-medium leading-tight">{label}</div>
-          {sub && <div className="truncate text-[9px] text-muted-foreground">{sub}</div>}
-        </div>
-      </button>
-      <button
-        onClick={onRemove}
-        title="Remove favorite"
-        className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
-      >
-        <X className="h-3 w-3" />
-      </button>
+      <Tooltip content={`Project ${label}`} side="left">
+        <button
+          onClick={onActivate}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 text-left"
+        >
+          <Send className="h-3 w-3 shrink-0 text-primary opacity-60 group-hover:opacity-100" />
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[11px] font-medium leading-tight">{label}</div>
+            {sub && <div className="truncate text-[9px] text-muted-foreground">{sub}</div>}
+          </div>
+        </button>
+      </Tooltip>
+      <Tooltip content="Remove favorite" side="left">
+        <button
+          onClick={onRemove}
+          className="inline-flex h-5 w-5 shrink-0 cursor-pointer items-center justify-center rounded text-muted-foreground opacity-0 transition hover:bg-destructive/20 hover:text-destructive group-hover:opacity-100"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </Tooltip>
     </li>
   );
 }

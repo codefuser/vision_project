@@ -36,6 +36,7 @@ import { toast } from "sonner";
 import { SongEditorDialog } from "./SongEditorDialog";
 import { SplitPane } from "@/components/ui/split-pane";
 import { suggestTanglish } from "@/lib/text/tanglish";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export type SongFilter = "all" | "favorites" | "recent" | "added" | "most" | "mine";
 const FILTER_LABELS: Record<SongFilter, string> = {
@@ -461,18 +462,19 @@ export function SongsPanel() {
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button
-              title="Filter"
-              className={cn(
-                "inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2 text-xs font-medium transition hover:bg-accent",
-                filter !== "all" && "border-primary/50 bg-primary/10 text-primary",
-              )}
-            >
-              <Filter className="h-3.5 w-3.5" />
-              <span className="hidden max-w-[140px] truncate @sm:inline">
-                {FILTER_LABELS[filter]}
-              </span>
-            </button>
+            <Tooltip content="Filter songs">
+              <button
+                className={cn(
+                  "inline-flex h-8 cursor-pointer items-center gap-1 rounded-md border border-border px-2 text-xs font-medium transition hover:bg-accent",
+                  filter !== "all" && "border-primary/50 bg-primary/10 text-primary",
+                )}
+              >
+                <Filter className="h-3.5 w-3.5" />
+                <span className="hidden max-w-[140px] truncate @sm:inline">
+                  {FILTER_LABELS[filter]}
+                </span>
+              </button>
+            </Tooltip>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="max-h-[70vh] w-56 overflow-y-auto">
             <DropdownMenuLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
@@ -492,16 +494,17 @@ export function SongsPanel() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <button
-          onClick={() => {
-            setEditingId(null);
-            setEditorOpen(true);
-          }}
-          title="New song"
-          className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
-        >
-          <Plus className="h-3.5 w-3.5" /> New
-        </button>
+        <Tooltip content="New song">
+          <button
+            onClick={() => {
+              setEditingId(null);
+              setEditorOpen(true);
+            }}
+            className="inline-flex h-8 cursor-pointer items-center gap-1 rounded-md bg-primary px-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90"
+          >
+            <Plus className="h-3.5 w-3.5" /> New
+          </button>
+        </Tooltip>
       </div>
 
       {/* Status */}
@@ -772,13 +775,14 @@ function SlidePane({ song, activeSlide, onSelect, onProject, onEdit, projectedTe
             {song.slides.length} slide{song.slides.length === 1 ? "" : "s"}
           </div>
         </div>
-        <button
-          onClick={onEdit}
-          title="Edit song"
-          className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-[11px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
-        >
-          <Pencil className="h-3.5 w-3.5" /> Edit
-        </button>
+        <Tooltip content="Edit song">
+          <button
+            onClick={onEdit}
+            className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2 text-[11px] font-medium text-muted-foreground transition hover:bg-accent hover:text-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" /> Edit
+          </button>
+        </Tooltip>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2.5">

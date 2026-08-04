@@ -2,6 +2,7 @@ import { memo, useMemo, useState } from "react";
 import type { TemplatePreset } from "@/lib/templates/presets";
 import { cn } from "@/lib/utils";
 import { Star, Copy, Trash2, Pencil, Check } from "lucide-react";
+import { Tooltip } from "@/components/ui/tooltip";
 
 interface ThemeCardProps {
   preset: TemplatePreset;
@@ -178,17 +179,18 @@ function ActionBtn({
   hoverBg?: string;
 }) {
   return (
-    <button
-      onClick={onClick}
-      title={title}
-      className={cn(
-        "flex h-8 w-8 items-center justify-center rounded-md bg-black/60 text-white/90 transition-colors",
-        "hover:bg-white/20 hover:text-white",
-        hoverBg,
-      )}
-    >
-      {children}
-    </button>
+    <Tooltip content={title}>
+      <button
+        onClick={onClick}
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-md bg-black/60 text-white/90 transition-colors",
+          "hover:bg-white/20 hover:text-white",
+          hoverBg,
+        )}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 

@@ -32,9 +32,25 @@ function songFingerprint(songs: Song[]): string {
   return `${songs.length}:${sum}`;
 }
 
+export function updateWorkerSong(song: Song) {
+  const w = getSearchWorker();
+  if (w) {
+    w.postMessage({ type: "UPDATE_SONG", payload: { song } });
+  }
+}
+
+export function removeWorkerSong(songId: number) {
+  const w = getSearchWorker();
+  if (w) {
+    w.postMessage({ type: "REMOVE_SONG", payload: { songId } });
+  }
+}
+
+let isGlobalIndexed = false;
+
 export function useSongSearchWorker(songs: Song[] | null) {
   const workerRef = useRef<Worker | null>(null);
-  const isIndexedRef = useRef(false);
+  const isIndexedRef = useRef(isGlobalIndexed);
   /**
    * Track the fingerprint of the songs array most recently sent to the worker.
    * Only re-send INDEX_ALL when the actual content changes.
@@ -51,8 +67,11 @@ export function useSongSearchWorker(songs: Song[] | null) {
     if (!songs || !songs.length) return;
 
     const fingerprint = songFingerprint(songs);
-    // Guard: if we already indexed this exact dataset, skip INDEX_ALL entirely
-    if (fingerprint === indexedFingerprintRef.current) return;
+    // Guard: if we already indexed this exact dataset or worker is already globally indexed, skip INDEX_ALL
+    if (fingerprint === indexedFingerprintRef.current || (isGlobalIndexed && indexedFingerprintRef.current)) {
+      indexedFingerprintRef.current = fingerprint;
+      return;
+    }
 
     const worker = getSearchWorker();
     workerRef.current = worker;
@@ -69,6 +88,7 @@ export function useSongSearchWorker(songs: Song[] | null) {
     const handleMessage = (e: MessageEvent) => {
       if (e.data.type === "INDEXED_COMPLETE") {
         isIndexedRef.current = true;
+        isGlobalIndexed = true;
       }
     };
 
