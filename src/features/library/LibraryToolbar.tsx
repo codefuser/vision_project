@@ -278,7 +278,7 @@ export function LibraryToolbar({
         right: `${moreCoords.right}px`,
         zIndex: 99999,
       }}
-      className="min-w-[220px] max-h-[420px] overflow-y-auto rounded-xl border border-[#2D3348] bg-[#111827]/98 p-1.5 shadow-2xl backdrop-blur-md select-none text-xs space-y-1 custom-scrollbar transition-opacity duration-75 opacity-100"
+      className="min-w-[220px] max-h-[420px] overflow-y-auto rounded-xl border border-border bg-popover/98 p-1.5 shadow-2xl backdrop-blur-md select-none text-xs space-y-1 custom-scrollbar transition-opacity duration-75 opacity-100 text-popover-foreground"
     >
       <span className="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/70 block">
         Quick Actions
@@ -289,7 +289,7 @@ export function LibraryToolbar({
           setFoldersFirst(!foldersFirst);
           setShowMoreDropdown(false);
         }}
-        className="flex h-9 w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-[#1F2937] transition"
+        className="flex h-9 w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition"
       >
         <div className="flex items-center gap-2">
           <Folder className="h-3.5 w-3.5 text-amber-400" />
@@ -303,7 +303,7 @@ export function LibraryToolbar({
           onZoomChange(1.0);
           setShowMoreDropdown(false);
         }}
-        className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-[#1F2937] transition"
+        className="flex h-9 w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent transition"
       >
         <Maximize2 className="h-3.5 w-3.5 text-blue-400" />
         <span>Reset Zoom (100%)</span>
@@ -312,18 +312,18 @@ export function LibraryToolbar({
   ) : null;
 
   return (
-    <header className="flex flex-col border-b border-[#2D3348] bg-[#111827]/90 backdrop-blur-md select-none shrink-0">
+    <header className="flex flex-col border-b border-border bg-card/90 backdrop-blur-md select-none shrink-0">
       {/* ==================================================
           ROW 1 = NAVIGATION ONLY
           ================================================== */}
-      <div className="flex h-10 items-center justify-between gap-2 border-b border-[#2D3348]/60 px-3 overflow-x-auto no-scrollbar">
+      <div className="flex h-10 items-center justify-between gap-2 border-b border-border/60 px-3 overflow-x-auto no-scrollbar">
         {/* Left Navigation Buttons & Breadcrumb */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1">
           <ShortcutTooltip id="library.back" label="Back">
             <button
               onClick={onGoBack}
               disabled={!canGoBack}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <ArrowLeft className="h-3.5 w-3.5" />
             </button>
@@ -333,7 +333,7 @@ export function LibraryToolbar({
             <button
               onClick={onGoForward}
               disabled={!canGoForward}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <ArrowRight className="h-3.5 w-3.5" />
             </button>
@@ -343,7 +343,7 @@ export function LibraryToolbar({
             <button
               onClick={onGoUp}
               disabled={!currentFolderId}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <ArrowUp className="h-3.5 w-3.5" />
             </button>
@@ -352,13 +352,13 @@ export function LibraryToolbar({
           <ShortcutTooltip id="library.refresh" label="Refresh Library">
             <button
               onClick={onRefresh}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
             >
               <RotateCw className="h-3.5 w-3.5" />
             </button>
           </ShortcutTooltip>
 
-          <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
+          <div className="mx-1 h-4 w-px bg-border/80 shrink-0" />
 
           {/* Breadcrumb Path Display */}
           <div className="min-w-0 flex-1 overflow-hidden">
@@ -382,7 +382,7 @@ export function LibraryToolbar({
               placeholder="Search library…"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="h-7 w-full rounded-md border border-[#2D3348] bg-[#111827] pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500"
+              className="h-7 w-full rounded-md border border-border bg-background pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             />
           </div>
 
@@ -395,13 +395,13 @@ export function LibraryToolbar({
             title="Search Scope"
           />
 
-          <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
+          <div className="mx-1 h-4 w-px bg-border/80 shrink-0" />
 
           {/* New Folder & Upload Buttons in Row 1 */}
           <ShortcutTooltip id="library.new-folder" label="New Folder">
             <button
               onClick={onNewFolder}
-              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-amber-400/50 transition shrink-0"
+              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background text-xs font-semibold text-foreground hover:bg-accent hover:border-amber-400/50 transition shrink-0"
             >
               <FolderPlus className="h-3.5 w-3.5 text-amber-400" />
               <span className="hidden sm:inline">New Folder</span>
@@ -411,7 +411,7 @@ export function LibraryToolbar({
           <ShortcutTooltip id="library.upload" label="Upload Files">
             <button
               onClick={onUploadClick}
-              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-blue-500/50 bg-blue-600/20 text-xs font-bold text-blue-400 hover:bg-blue-600/30 transition shadow-sm shrink-0"
+              className="flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-blue-500/50 bg-blue-600/20 text-xs font-bold text-blue-500 dark:text-blue-400 hover:bg-blue-600/30 transition shadow-xs shrink-0"
             >
               <Upload className="h-3.5 w-3.5" />
               <span>Upload</span>
@@ -430,7 +430,7 @@ export function LibraryToolbar({
             <button
               onClick={onCutClick}
               disabled={selectedCount === 0}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <Scissors className="h-3.5 w-3.5 text-amber-400" />
             </button>
@@ -440,7 +440,7 @@ export function LibraryToolbar({
             <button
               onClick={onCopyClick}
               disabled={selectedCount === 0}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <Copy className="h-3.5 w-3.5 text-blue-400" />
             </button>
@@ -449,7 +449,7 @@ export function LibraryToolbar({
           <ShortcutTooltip id="library.paste" label="Paste Items">
             <button
               onClick={onPasteClick}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
             >
               <Clipboard className="h-3.5 w-3.5 text-emerald-400" />
             </button>
@@ -459,7 +459,7 @@ export function LibraryToolbar({
             <button
               onClick={onDuplicateClick}
               disabled={selectedCount === 0}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-30 disabled:pointer-events-none transition shrink-0"
             >
               <Layers className="h-3.5 w-3.5 text-purple-400" />
             </button>
@@ -475,7 +475,7 @@ export function LibraryToolbar({
             </button>
           </ShortcutTooltip>
 
-          <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
+          <div className="mx-1 h-4 w-px bg-border/80 shrink-0" />
 
           {/* Auto-Project Mode Toggle Button */}
           {onToggleAutoProject && (
@@ -483,10 +483,10 @@ export function LibraryToolbar({
               <button
                 onClick={onToggleAutoProject}
                 className={cn(
-                  "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md text-xs font-bold transition shadow-sm border shrink-0",
+                  "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md text-xs font-bold transition shadow-xs border shrink-0",
                   autoProjectEnabled
-                    ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25"
-                    : "border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground"
+                    ? "border-emerald-500/50 bg-emerald-500/15 text-emerald-500 dark:text-emerald-400 hover:bg-emerald-500/25"
+                    : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
                 )}
               >
                 <Zap className={cn("h-3.5 w-3.5", autoProjectEnabled ? "fill-emerald-400 text-emerald-400" : "")} />
@@ -495,17 +495,17 @@ export function LibraryToolbar({
             </ShortcutTooltip>
           )}
 
-          <div className="mx-1 h-4 w-px bg-[#2D3348]/80 shrink-0" />
+          <div className="mx-1 h-4 w-px bg-border/80 shrink-0" />
 
           {/* Panel Toggle Buttons */}
-          <div className="flex items-center rounded-md border border-[#2D3348] bg-[#111827] p-0.5 shrink-0">
+          <div className="flex items-center rounded-md border border-border bg-background p-0.5 shrink-0">
             {onToggleLeftCollapsed && (
               <ShortcutTooltip id="library.toggle-tree" label="Toggle Folder Tree">
                 <button
                   onClick={onToggleLeftCollapsed}
                   className={cn(
                     "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
-                    !isLeftCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                    !isLeftCollapsed ? "bg-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <PanelLeft className="h-3.5 w-3.5 text-amber-400" />
@@ -519,7 +519,7 @@ export function LibraryToolbar({
                   onClick={onToggleRightCollapsed}
                   className={cn(
                     "flex h-6 px-2 cursor-pointer items-center justify-center rounded text-xs transition gap-1",
-                    !isRightCollapsed ? "bg-[#1F2937] text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
+                    !isRightCollapsed ? "bg-accent text-foreground font-semibold" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
                   <PanelRight className="h-3.5 w-3.5 text-blue-400" />
@@ -546,7 +546,7 @@ export function LibraryToolbar({
           <ShortcutTooltip label="Toggle Sort Order">
             <button
               onClick={onToggleSortOrder}
-              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition shrink-0"
+              className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-xs font-semibold text-muted-foreground hover:bg-accent hover:text-foreground transition shrink-0"
             >
               <ArrowUpDown className="h-3.5 w-3.5 text-blue-400" />
             </button>
@@ -564,11 +564,11 @@ export function LibraryToolbar({
           />
 
           {/* Redesigned Preset-based & Editable Zoom Field Control: [-] [100%] [+] */}
-          <div className="hidden md:flex items-center gap-1 border border-[#2D3348] bg-[#111827] rounded-md px-1 h-7 shrink-0 select-none">
+          <div className="hidden md:flex items-center gap-1 border border-border bg-background rounded-md px-1 h-7 shrink-0 select-none">
             <ShortcutTooltip label="Zoom Out (Previous Preset)">
               <button
                 onClick={handleZoomPrev}
-                className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
+                className="h-5 w-5 rounded flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <ZoomOut className="h-3 w-3" />
               </button>
@@ -584,7 +584,7 @@ export function LibraryToolbar({
                 }}
                 onBlur={handleZoomInputCommit}
                 onDoubleClick={() => onZoomChange(1.0)}
-                className="w-8 text-center text-[11px] font-mono font-bold bg-transparent text-foreground focus:outline-none focus:bg-[#1F2937] rounded px-0.5"
+                className="w-8 text-center text-[11px] font-mono font-bold bg-transparent text-foreground focus:outline-none focus:bg-accent rounded px-0.5"
               />
               <span className="text-[10px] font-mono text-muted-foreground -ml-0.5">%</span>
             </div>
@@ -592,7 +592,7 @@ export function LibraryToolbar({
             <ShortcutTooltip label="Zoom In (Next Preset)">
               <button
                 onClick={handleZoomNext}
-                className="h-5 w-5 rounded flex items-center justify-center hover:bg-[#1F2937] text-muted-foreground hover:text-foreground cursor-pointer"
+                className="h-5 w-5 rounded flex items-center justify-center hover:bg-accent text-muted-foreground hover:text-foreground cursor-pointer"
               >
                 <ZoomIn className="h-3 w-3" />
               </button>
@@ -605,7 +605,7 @@ export function LibraryToolbar({
               <button
                 ref={moreButtonRef}
                 onClick={() => setShowMoreDropdown(!showMoreDropdown)}
-                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-[#2D3348] bg-[#111827] text-muted-foreground hover:bg-[#1F2937] hover:text-foreground transition"
+                className="flex h-7 w-7 cursor-pointer items-center justify-center rounded-md border border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground transition"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </button>

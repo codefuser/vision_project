@@ -545,19 +545,19 @@ export function LibraryExplorerGrid({
                           }
                         }}
                         className={cn(
-                          "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-[#111827] shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:bg-[#161F33] select-none",
+                          "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40 select-none",
                           isDragOver
                             ? "border-amber-400 bg-amber-500/20 ring-2 ring-amber-400 scale-[1.02]"
-                            : "border-[#2D3348] hover:border-amber-400/60"
+                            : "border-border hover:border-amber-400/60"
                         )}
                       >
                         {/* Top-Left Media Badge */}
-                        <span className="absolute top-2 left-2 z-10 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-black bg-amber-400 shadow-sm backdrop-blur">
+                        <span className="absolute top-2 left-2 z-10 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-black bg-amber-400 shadow-xs backdrop-blur">
                           FOLDER
                         </span>
 
                         {/* Folder 16:10 Thumbnail Graphic Box */}
-                        <div className="relative aspect-[16/10] w-full overflow-hidden bg-amber-950/20 flex items-center justify-center border-b border-[#2D3348]">
+                        <div className="relative aspect-[16/10] w-full overflow-hidden bg-amber-500/10 flex items-center justify-center border-b border-border">
                           {quadItems.length > 0 ? (
                             <div className="grid h-full w-full grid-cols-2 gap-1 p-1 bg-black/40">
                               {quadItems.map((qItem, idx) => (
@@ -574,7 +574,7 @@ export function LibraryExplorerGrid({
                                 </div>
                               ))}
                               {Array.from({ length: Math.max(0, 4 - quadItems.length) }).map((_, idx) => (
-                                <div key={`empty-${idx}`} className="rounded bg-white/5" />
+                                <div key={`empty-${idx}`} className="rounded bg-muted/40" />
                               ))}
                             </div>
                           ) : (
@@ -598,7 +598,7 @@ export function LibraryExplorerGrid({
                             />
                           ) : (
                             <>
-                              <p className="line-clamp-2 text-xs font-semibold text-foreground group-hover:text-amber-400 transition-colors leading-snug">
+                              <p className="line-clamp-2 text-xs font-semibold text-foreground group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors leading-snug">
                                 {folder.name}
                               </p>
                               <span className="text-[10px] text-muted-foreground font-mono block mt-1">
@@ -631,11 +631,11 @@ export function LibraryExplorerGrid({
                           onContextMenu(e, item);
                         }}
                         className={cn(
-                          "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-[#111827]/90 px-2.5 text-xs shadow-sm transition",
-                          selected ? "border-blue-500 bg-blue-600/15 ring-1 ring-blue-500" : "border-[#2D3348] hover:border-blue-500/50"
+                          "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card text-card-foreground px-2.5 text-xs shadow-xs transition hover:bg-accent/50",
+                          selected ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"
                         )}
                       >
-                        <div className="h-5 w-5 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center">
+                        <div className="h-5 w-5 shrink-0 overflow-hidden rounded bg-muted/60 flex items-center justify-center">
                           {item.mediaRecord ? (
                             <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
                           ) : item.type === "song" ? (
@@ -665,8 +665,8 @@ export function LibraryExplorerGrid({
                           onContextMenu(e, item);
                         }}
                         className={cn(
-                          "group relative flex items-center h-10 cursor-pointer overflow-hidden rounded-lg border bg-[#111827]/90 px-3 text-xs shadow-sm transition",
-                          selected ? "border-blue-500 bg-blue-600/15 ring-1 ring-blue-500" : "border-[#2D3348] hover:border-blue-500/50"
+                          "group relative flex items-center h-10 cursor-pointer overflow-hidden rounded-lg border bg-card text-card-foreground px-3 text-xs shadow-xs transition hover:bg-accent/50",
+                          selected ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"
                         )}
                       >
                         <div className="h-6 w-6 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center mr-3">
@@ -725,8 +725,8 @@ export function LibraryExplorerGrid({
                           onContextMenu(e, item);
                         }}
                         className={cn(
-                          "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-black shadow-md transition hover:-translate-y-0.5 hover:shadow-xl select-none aspect-[4/3]",
-                          selected ? "border-blue-500 ring-2 ring-blue-500" : "border-[#2D3348] hover:border-blue-400"
+                          "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-md transition hover:-translate-y-0.5 hover:shadow-xl select-none aspect-[4/3]",
+                          selected ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/60"
                         )}
                       >
                         <div className="relative h-full w-full overflow-hidden flex items-center justify-center bg-black/60">
@@ -783,10 +783,10 @@ export function LibraryExplorerGrid({
                         onContextMenu(e, item);
                       }}
                       className={cn(
-                        "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-[#111827] shadow-sm transition-all duration-150 hover:-translate-y-0.5 hover:shadow-xl hover:bg-[#161F33] select-none",
+                        "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40 select-none",
                         selected
-                          ? "border-blue-500 bg-blue-600/15 ring-2 ring-blue-500/40 shadow-lg shadow-blue-500/20"
-                          : "border-[#2D3348] hover:border-blue-500/60"
+                          ? "border-primary bg-primary/15 ring-2 ring-primary/40 shadow-md shadow-primary/20"
+                          : "border-border hover:border-primary/60"
                       )}
                     >
                       {/* Top-Left Media Type Badge */}
@@ -809,7 +809,7 @@ export function LibraryExplorerGrid({
 
                       {/* Selected Checkmark Badge (Top Right) */}
                       {selected && (
-                        <div className="absolute top-2 right-2 z-20 h-5 w-5 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md animate-in fade-in duration-150">
+                        <div className="absolute top-2 right-2 z-20 h-5 w-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center shadow-md animate-in fade-in duration-150">
                           <Check className="h-3.5 w-3.5 stroke-[3]" />
                         </div>
                       )}
@@ -824,7 +824,7 @@ export function LibraryExplorerGrid({
                                 e.stopPropagation();
                                 onToggleFavorite(item);
                               }}
-                              className="h-6 w-6 rounded-md bg-black/70 hover:bg-amber-500 text-white hover:text-black flex items-center justify-center backdrop-blur transition shadow cursor-pointer"
+                              className="h-6 w-6 rounded-md bg-black/70 hover:bg-amber-500 text-white hover:text-black flex items-center justify-center backdrop-blur transition shadow-xs cursor-pointer"
                             >
                               <Star className={cn("h-3.5 w-3.5", item.isFavorite ? "fill-amber-400 text-amber-400" : "")} />
                             </button>
@@ -833,7 +833,7 @@ export function LibraryExplorerGrid({
                       )}
 
                       {/* Proportional 16:10 Thumbnail Graphic Box */}
-                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-black/60 flex items-center justify-center border-b border-[#2D3348]">
+                      <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/60 flex items-center justify-center border-b border-border">
                         {item.mediaRecord ? (
                           <>
                             <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />

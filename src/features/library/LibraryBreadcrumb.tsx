@@ -99,12 +99,12 @@ export function LibraryBreadcrumb({
       {currentCategory !== "all" && (
         <>
           <ChevronRight className="h-3.5 w-3.5 shrink-0 opacity-40" />
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-600/20 text-blue-400 font-bold text-[11px] border border-blue-500/30 shrink-0">
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 font-bold text-[11px] border border-blue-500/30 shrink-0">
             <span>Filter: {currentCategory.toUpperCase()}</span>
             <ShortcutTooltip label="Clear Category Filter">
               <button
                 onClick={() => onSelectCategory("all")}
-                className="ml-1 cursor-pointer rounded-full p-0.5 hover:bg-blue-500/30 transition text-blue-300"
+                className="ml-1 cursor-pointer rounded-full p-0.5 hover:bg-blue-500/30 transition text-blue-600 dark:text-blue-300"
               >
                 <X className="h-3 w-3" />
               </button>

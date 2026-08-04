@@ -149,7 +149,7 @@ export function LibraryTreeNav({
             "group flex h-7 cursor-pointer items-center justify-between pr-2 text-xs transition rounded-md my-0.5 select-none shrink-0",
             isDragOver ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
             isSelected
-              ? "bg-primary text-primary-foreground font-medium shadow-sm"
+              ? "bg-primary/15 text-primary font-semibold border border-primary/20 shadow-xs"
               : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
@@ -181,9 +181,9 @@ export function LibraryTreeNav({
           <div className="flex items-center gap-1">
             <span
               className={cn(
-                "text-[10px] tabular-nums px-1.5 py-0.2 rounded-full",
+                "text-[10px] tabular-nums px-1.5 py-0.2 rounded-full font-mono",
                 isSelected
-                  ? "bg-primary-foreground/20 text-primary-foreground"
+                  ? "bg-primary/20 text-primary font-bold"
                   : "bg-muted text-muted-foreground",
               )}
             >
@@ -249,7 +249,7 @@ export function LibraryTreeNav({
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
               currentCategory === "all" && currentFolderId === null
-                ? "bg-primary text-primary-foreground shadow-sm"
+                ? "bg-primary/15 text-primary font-semibold border border-primary/30"
                 : "text-foreground hover:bg-accent"
             )}
           >
@@ -265,7 +265,7 @@ export function LibraryTreeNav({
             }}
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-              currentCategory === "songs" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+              currentCategory === "songs" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
             )}
           >
             <Music className="h-4 w-4 text-purple-400" />
@@ -280,7 +280,7 @@ export function LibraryTreeNav({
             }}
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-              currentCategory === "bible" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+              currentCategory === "bible" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
             )}
           >
             <BookOpen className="h-4 w-4 text-blue-400" />
@@ -295,7 +295,7 @@ export function LibraryTreeNav({
             }}
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-              currentCategory === "images" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+              currentCategory === "images" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
             )}
           >
             <ImageIcon className="h-4 w-4 text-green-400" />
@@ -310,7 +310,7 @@ export function LibraryTreeNav({
             }}
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-              currentCategory === "videos" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+              currentCategory === "videos" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
             )}
           >
             <VideoIcon className="h-4 w-4 text-rose-400" />
@@ -325,7 +325,7 @@ export function LibraryTreeNav({
             }}
             className={cn(
               "flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg transition text-xs",
-              currentCategory === "announcements" ? "bg-primary text-primary-foreground" : "text-foreground hover:bg-accent"
+              currentCategory === "announcements" ? "bg-primary/15 text-primary font-semibold border border-primary/30" : "text-foreground hover:bg-accent"
             )}
           >
             <Megaphone className="h-4 w-4 text-amber-400" />
@@ -369,7 +369,7 @@ export function LibraryTreeNav({
             "flex h-8 flex-1 cursor-pointer items-center justify-between rounded-md px-2.5 text-xs transition font-semibold mr-1",
             dragOverFolderId === "root" ? "bg-amber-400/20 border border-amber-400 ring-1 ring-amber-400" : "",
             currentCategory === "all" && currentFolderId === null
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-primary/15 text-primary font-semibold border border-primary/30 shadow-xs"
               : "text-foreground hover:bg-accent",
           )}
         >
@@ -406,7 +406,7 @@ export function LibraryTreeNav({
           }}
           className={cn(
             "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
-            currentCategory === "songs" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            currentCategory === "songs" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -423,7 +423,7 @@ export function LibraryTreeNav({
           }}
           className={cn(
             "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
-            currentCategory === "bible" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            currentCategory === "bible" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -440,7 +440,7 @@ export function LibraryTreeNav({
           }}
           className={cn(
             "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
-            currentCategory === "images" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            currentCategory === "images" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -457,7 +457,7 @@ export function LibraryTreeNav({
           }}
           className={cn(
             "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
-            currentCategory === "videos" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            currentCategory === "videos" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">
@@ -474,7 +474,7 @@ export function LibraryTreeNav({
           }}
           className={cn(
             "flex h-7 cursor-pointer items-center justify-between rounded-md px-2 text-xs transition my-0.5 shrink-0",
-            currentCategory === "announcements" ? "bg-primary text-primary-foreground font-medium" : "text-muted-foreground hover:bg-accent hover:text-foreground",
+            currentCategory === "announcements" ? "bg-primary/15 text-primary font-semibold border border-primary/20" : "text-muted-foreground hover:bg-accent hover:text-foreground",
           )}
         >
           <div className="flex items-center gap-2">

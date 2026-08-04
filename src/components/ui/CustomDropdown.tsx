@@ -110,11 +110,11 @@ export function CustomDropdown<T extends string = string>({
         ...(coords.left !== undefined ? { left: `${coords.left}px` } : {}),
         zIndex: 99999,
       }}
-      className="w-max min-w-[220px] max-w-[320px] max-h-[420px] overflow-y-auto rounded-xl border border-[#2D3348] bg-[#111827]/98 p-1.5 shadow-2xl backdrop-blur-md select-none text-xs transition-opacity duration-75 opacity-100 custom-scrollbar"
+      className="w-max min-w-[220px] max-w-[320px] max-h-[420px] overflow-y-auto rounded-xl border border-border bg-popover/98 p-1.5 shadow-2xl backdrop-blur-md select-none text-xs transition-opacity duration-75 opacity-100 custom-scrollbar text-popover-foreground"
     >
       {options.map((opt, idx) => {
         if (opt.isSeparator) {
-          return <div key={`sep-${idx}`} className="my-1 border-t border-[#2D3348]/80" />;
+          return <div key={`sep-${idx}`} className="my-1 border-t border-border/80" />;
         }
         if (opt.isHeader) {
           return (
@@ -138,15 +138,15 @@ export function CustomDropdown<T extends string = string>({
               setIsOpen(false);
             }}
             className={cn(
-              "flex h-9 w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-[#1F2937] hover:text-blue-400 transition-colors duration-100",
-              isSelected && "bg-blue-600/20 text-blue-400 font-semibold border border-blue-500/30"
+              "flex h-9 w-full cursor-pointer items-center justify-between rounded-lg px-3 py-1.5 text-xs font-medium text-foreground hover:bg-accent hover:text-primary transition-colors duration-100",
+              isSelected && "bg-primary/15 text-primary font-semibold border border-primary/30"
             )}
           >
             <div className="flex items-center gap-2.5 min-w-0">
               {opt.icon}
               <span className="truncate">{opt.label}</span>
             </div>
-            {isSelected && <Check className="h-3.5 w-3.5 text-blue-400 shrink-0 ml-2" />}
+            {isSelected && <Check className="h-3.5 w-3.5 text-primary shrink-0 ml-2" />}
           </button>
         );
       })}
@@ -159,7 +159,7 @@ export function CustomDropdown<T extends string = string>({
       type="button"
       onClick={() => setIsOpen(!isOpen)}
       className={cn(
-        "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-[#2D3348] bg-[#111827] text-xs font-semibold text-foreground hover:bg-[#1F2937] hover:border-blue-500/50 transition shadow-sm select-none shrink-0",
+        "flex h-7 px-2.5 cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background text-xs font-semibold text-foreground hover:bg-accent hover:border-primary/40 transition shadow-xs select-none shrink-0",
         className
       )}
     >
