@@ -9,7 +9,7 @@ export default defineConfig({
         main: resolve(__dirname, "electron/main.ts"),
         preload: resolve(__dirname, "electron/preload.ts"),
       },
-      formats: ["es"],
+      formats: ["cjs"],
     },
     outDir: "dist-electron/main",
     emptyOutDir: true,
@@ -37,7 +37,7 @@ export default defineConfig({
       output: {
         entryFileNames: "[name].js",
         chunkFileNames: "[name].js",
-        format: "es",
+        format: "cjs",
       },
     },
     target: "node22",

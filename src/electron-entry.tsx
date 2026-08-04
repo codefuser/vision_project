@@ -12,7 +12,6 @@ import {
   createHashHistory,
 } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
-import { StartupScreen } from "@/components/StartupScreen";
 
 // Use hash history so file:// URLs work correctly in Electron
 const hashHistory = createHashHistory();
@@ -45,9 +44,7 @@ const rootEl = document.getElementById("root")!;
 createRoot(rootEl).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <StartupScreen onReady={() => {}}>
-        <RouterProvider router={router} />
-      </StartupScreen>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   </StrictMode>,
 );

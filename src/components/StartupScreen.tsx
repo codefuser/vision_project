@@ -39,36 +39,42 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
 
   // Smooth continuous step loop going strictly 1, 2, 3... 100 without skipping numbers
   useEffect(() => {
-    let current = 0;
     const interval = setInterval(() => {
       const target = targetPercentRef.current;
 
-      // Increase current by 1 step at a time up to target (or up to 100 if done)
-      if (current < target) {
-        current += 1;
-        setSmoothPercent(current);
-      } else if (progress.done && current < 100) {
-        current += 1;
-        setSmoothPercent(current);
+      if (currentPercentRef.current < target) {
+        currentPercentRef.current += 1;
+        setSmoothPercent(currentPercentRef.current);
+      } else if (progress.done && currentPercentRef.current < 100) {
+        currentPercentRef.current += 1;
+        setSmoothPercent(currentPercentRef.current);
       }
 
-      if (progress.done && current >= 100) {
+      if (progress.done && currentPercentRef.current >= 100) {
         clearInterval(interval);
         setComplete(true);
-        setTimeout(() => setFadeOut(true), 250);
+        setTimeout(() => setFadeOut(true), 200);
         setTimeout(() => {
           setShowApp(true);
           onReady();
-        }, 600);
+        }, 500);
       }
-    }, 20); // ~20ms per step for smooth numbers
+    }, 16);
 
     return () => clearInterval(interval);
   }, [progress.done, onReady]);
 
   useEffect(() => {
-    const steps = buildSteps();
-    startupManager.execute(steps);
+    if (!startupManager.done) {
+      const steps = buildSteps();
+      startupManager.execute(steps);
+    } else {
+      currentPercentRef.current = 100;
+      setSmoothPercent(100);
+      setComplete(true);
+      setShowApp(true);
+      onReady();
+    }
   }, []);
 
   if (showApp) {

@@ -1,9 +1,5 @@
-import { app, BrowserWindow, shell, ipcMain, nativeTheme } from "electron";
+import { app, BrowserWindow, shell, ipcMain, nativeTheme, Menu } from "electron";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // Single instance lock
 const gotTheLock = app.requestSingleInstanceLock();
@@ -15,6 +11,9 @@ if (!gotTheLock) {
 app.setAppUserModelId("VersoLyn");
 app.setName("VersoLyn");
 
+// Completely remove default application menu bar (File, Edit, View, Window, Help)
+Menu.setApplicationMenu(null);
+
 let mainWindow: BrowserWindow | null = null;
 
 function createMainWindow() {
@@ -24,10 +23,12 @@ function createMainWindow() {
     minWidth: 900,
     minHeight: 600,
     title: "VersoLyn",
-    icon: path.join(__dirname, "../build/icon.ico"),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#0a0a14" : "#ffffff",
-    show: false, // show after ready-to-show for smooth startup
+    icon: path.join(__dirname, "../../build/icon.ico"),
+    backgroundColor: "#0a0a14",
+    show: false,
     frame: true,
+    autoHideMenuBar: true,
+    menuBarVisible: false,
     titleBarStyle: "default",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
@@ -39,22 +40,36 @@ function createMainWindow() {
     },
   });
 
+  mainWindow.setMenu(null);
+
   // Load renderer
   const rendererPath = path.join(__dirname, "../renderer/index.electron.html");
   mainWindow.loadFile(rendererPath);
 
-  // Show window when ready for a smooth startup
+  // Show window smoothly when DOM content is ready
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
+    mainWindow?.focus();
   });
 
-  // Open external links in default browser, not inside Electron
+  // Open external links in default browser, allow local child windows (e.g. projector)
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
     if (url.startsWith("http://") || url.startsWith("https://")) {
       shell.openExternal(url);
       return { action: "deny" };
     }
-    return { action: "allow" };
+    return {
+      action: "allow",
+      overrideBrowserWindowOptions: {
+        autoHideMenuBar: true,
+        frame: true,
+        webPreferences: {
+          preload: path.join(__dirname, "preload.js"),
+          contextIsolation: true,
+          nodeIntegration: false,
+        },
+      },
+    };
   });
 
   mainWindow.on("closed", () => {
@@ -75,7 +90,6 @@ app.on("ready", () => {
 });
 
 app.on("window-all-closed", () => {
-  // On Windows/Linux, quit when all windows closed
   if (process.platform !== "darwin") {
     app.quit();
   }
