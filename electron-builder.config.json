@@ -2,7 +2,7 @@
   "appId": "com.versolyn.app",
   "productName": "VersoLyn",
   "copyright": "Copyright © 2025 VersoLyn",
-  "asar": false,
+  "asar": true,
   "compression": "normal",
   "icon": "build/icon.ico",
   "directories": {
@@ -24,6 +24,7 @@
     "target": "nsis",
     "executableName": "VersoLyn",
     "icon": "build/icon.ico",
+    "forceCodeSigning": false,
     "artifactName": "${productName} Setup ${version}.${ext}"
   },
   "nsis": {

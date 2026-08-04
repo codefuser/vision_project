@@ -7,7 +7,7 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
-  "main": "dist-electron/main/main.js",
+  "main": "dist-electron/main/main.cjs",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",

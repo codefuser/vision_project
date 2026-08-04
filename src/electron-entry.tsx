@@ -13,6 +13,11 @@ import {
 } from "@tanstack/react-router";
 import { routeTree } from "./routeTree.gen";
 
+// Ensure initial hash location is #/ in Electron file:// mode
+if (typeof window !== "undefined" && (!window.location.hash || window.location.hash === "#")) {
+  window.location.hash = "#/";
+}
+
 // Use hash history so file:// URLs work correctly in Electron
 const hashHistory = createHashHistory();
 

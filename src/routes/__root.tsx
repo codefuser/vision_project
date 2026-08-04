@@ -30,7 +30,15 @@ const KNOWN_ROUTE_PREFIXES = [
 ];
 
 function isKnownRoute(pathname: string): boolean {
-  if (pathname === "/") return true;
+  if (
+    pathname === "/" ||
+    pathname === "/index.html" ||
+    pathname === "/index.electron.html" ||
+    pathname.includes("index.electron.html") ||
+    pathname.includes("index.html")
+  ) {
+    return true;
+  }
   return KNOWN_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(prefix + "/"),
   );
@@ -61,6 +69,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
+      {
+        httpEquiv: "Content-Security-Policy",
+        content:
+          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co data: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+      },
       { title: "VersoLyn — Church Presentation Software" },
       {
         name: "description",

@@ -31,7 +31,7 @@ function createMainWindow() {
     menuBarVisible: false,
     titleBarStyle: "default",
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false,
@@ -50,6 +50,26 @@ function createMainWindow() {
   mainWindow.once("ready-to-show", () => {
     mainWindow?.show();
     mainWindow?.focus();
+    // Open DevTools ONLY during development (never in production packaged EXE)
+    if (!app.isPackaged) {
+      mainWindow?.webContents.openDevTools({ mode: "detach" });
+    }
+  });
+
+  // F11 Fullscreen Toggle & ESC Exit Fullscreen
+  mainWindow.webContents.on("before-input-event", (event, input) => {
+    if (input.type === "keyDown") {
+      if (input.key === "F11") {
+        event.preventDefault();
+        const isFS = mainWindow?.isFullScreen() ?? false;
+        mainWindow?.setFullScreen(!isFS);
+      } else if (input.key === "Escape") {
+        if (mainWindow?.isFullScreen()) {
+          event.preventDefault();
+          mainWindow?.setFullScreen(false);
+        }
+      }
+    }
   });
 
   // Open external links in default browser, allow local child windows (e.g. projector)
@@ -64,7 +84,7 @@ function createMainWindow() {
         autoHideMenuBar: true,
         frame: true,
         webPreferences: {
-          preload: path.join(__dirname, "preload.js"),
+          preload: path.join(__dirname, "preload.cjs"),
           contextIsolation: true,
           nodeIntegration: false,
         },

@@ -1,7 +1,7 @@
 import { defineConfig } from "vite";
 import { resolve } from "path";
 
-// Builds the Electron main process and preload scripts into dist-electron/main/
+// Builds the Electron main process and preload scripts into dist-electron/main/ as .cjs
 export default defineConfig({
   build: {
     lib: {
@@ -35,8 +35,8 @@ export default defineConfig({
         "querystring",
       ],
       output: {
-        entryFileNames: "[name].js",
-        chunkFileNames: "[name].js",
+        entryFileNames: "[name].cjs",
+        chunkFileNames: "[name].cjs",
         format: "cjs",
       },
     },
