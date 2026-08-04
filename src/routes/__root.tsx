@@ -30,13 +30,7 @@ const KNOWN_ROUTE_PREFIXES = [
 ];
 
 function isKnownRoute(pathname: string): boolean {
-  if (
-    pathname === "/" ||
-    pathname === "/index.html" ||
-    pathname === "/index.electron.html" ||
-    pathname.includes("index.electron.html") ||
-    pathname.includes("index.html")
-  ) {
+  if (pathname === "/" || pathname === "/index.html" || pathname.includes("index.html")) {
     return true;
   }
   return KNOWN_ROUTE_PREFIXES.some(
@@ -104,6 +98,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   shellComponent: RootShell,
   component: RootComponent,
   errorComponent: ErrorComponent,
+  notFoundComponent: NotFoundPage,
 });
 
 function RootShell({ children }: { children: ReactNode }) {
@@ -122,17 +117,10 @@ function RootShell({ children }: { children: ReactNode }) {
 
 import { AppShell } from "@/components/AppShell";
 import { GlobalErrorBoundary } from "@/components/GlobalErrorBoundary";
-import { useRouterState } from "@tanstack/react-router";
 import { CommandPalette } from "@/components/CommandPalette";
 
 function RootComponent() {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { queryClient } = Route.useRouteContext();
-
-  // 404 gate: render standalone NotFoundPage before any providers
-  if (!isKnownRoute(pathname)) {
-    return <NotFoundPage />;
-  }
 
   // Detect projector popup
   const isProjectorPopup =
