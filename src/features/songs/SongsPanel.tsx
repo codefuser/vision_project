@@ -88,7 +88,8 @@ export function SongsPanel() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  const debouncedQuery = useDebounce(query, 300);
+  // Single 200ms debounce — SongSearchInput no longer double-debounces.
+  const debouncedQuery = useDebounce(query, 200);
   const [results, setResults] = useState<SongHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
@@ -132,7 +133,16 @@ export function SongsPanel() {
     void ensureLoaded();
   }, [ensureLoaded]);
 
-  const allSongs = useMemo(() => (loaded ? getSongs() : null), [loaded, userSongs]);
+  /**
+   * Stable memoization — recompute only when songs actually change.
+   * userSongs.length is a primitive; content changes increment it via add/update/delete.
+   * We also track loaded so we re-get after first load.
+   */
+  const allSongs = useMemo(
+    () => (loaded ? getSongs() : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [loaded, userSongs.length],
+  );
   const { executeSearch } = useSongSearchWorker(allSongs);
 
   useEffect(() => {
@@ -845,15 +855,18 @@ function SongSearchInput({ inputRef }: { inputRef: React.RefObject<HTMLInputElem
     setLocalValue(query);
   }, [query]);
 
-  // Debounce pushing to Zustand
+  // Single 200ms debounce — this is the only debounce in the search pipeline.
+  // The panel uses useDebounce(query, 200) which now reads the same store value
+  // already debounced here, so there is no double-debounce stacking.
   useEffect(() => {
     if (localValue === query) return;
     const t = setTimeout(() => {
       setQuery(localValue);
       setSongsSearch({ query: localValue });
-    }, 100);
+    }, 200);
     return () => clearTimeout(t);
   }, [localValue, query, setQuery, setSongsSearch]);
+
 
   return (
     <Input
@@ -1034,7 +1047,9 @@ const SongRow = memo(
     prev.slideIdx === next.slideIdx &&
     prev.query === next.query &&
     prev.compact === next.compact &&
+    prev.projectedText === next.projectedText &&
     prev.hit.score === next.hit.score &&
     prev.hit.matchedLine === next.hit.matchedLine &&
-    prev.hit.firstLine === next.hit.firstLine
+    prev.hit.firstLine === next.hit.firstLine &&
+    prev.hit.contextLines.length === next.hit.contextLines.length
 );

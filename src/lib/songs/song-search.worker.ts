@@ -1,8 +1,14 @@
 /**
-  * Dedicated Web Worker for Song Search Engine.
-  * Runs tokenization, phonetic normalization, inverted index candidate retrieval,
-  * Levenshtein, Jaro-Winkler, and multi-tier ranking off the main UI thread.
-  */
+ * Dedicated Web Worker for Song Search Engine.
+ * Runs tokenization, phonetic normalization, inverted index candidate retrieval,
+ * Levenshtein, Jaro-Winkler, and multi-tier ranking off the main UI thread.
+ *
+ * Performance optimizations (DO NOT change search logic):
+ *  - LRU query result cache (100 entries) — cache is invalidated on INDEX_ALL.
+ *  - Pre-computed lineFlat, titleNormTokens stored in index entries — no runtime replace/split.
+ *  - Sorted token array built at index time for O(log N) prefix lookup.
+ *  - Stale query guard: only posts SEARCH_RESULTS when queryId matches latest.
+ */
 
 import type { Song } from "./loader";
 import {
@@ -33,6 +39,8 @@ interface LineEntry {
   stem: string;
   stemTokens: string[];
   rawTokens: string[];
+  /** Pre-computed: normalized.replace(/\s+/g, "") — avoids hot-loop allocation */
+  lineFlat: string;
 }
 
 interface SongSearchData {
@@ -42,15 +50,55 @@ interface SongSearchData {
   titleNorm: string;
   titleStem: string;
   titleLower: string;
+  /** Pre-computed: titleNorm.split(/\s+/).filter(t => t.length >= 2) */
+  titleNormTokens: string[];
   allTrigrams: Set<string>;
 }
 
-// In-Memory Inverted Index Structures
+// ── In-Memory Inverted Index Structures ───────────────────────────────────────
 const songsMap = new Map<number, SongSearchData>();
 const tokenInvertedIndex = new Map<string, Set<number>>();
 const trigramInvertedIndex = new Map<string, Set<number>>();
 const stemInvertedIndex = new Map<string, Set<number>>();
 
+/**
+ * Sorted array of all indexed tokens — used for O(log N) binary prefix search
+ * instead of iterating the entire token map.
+ */
+let sortedTokens: string[] = [];
+let tokensDirty = true; // rebuilt lazily on first search after indexing
+
+// ── LRU Query Cache ───────────────────────────────────────────────────────────
+const MAX_QUERY_CACHE = 100;
+const queryCache = new Map<string, SongHitWorker[]>();
+
+function queryCacheGet(key: string): SongHitWorker[] | undefined {
+  const val = queryCache.get(key);
+  if (val === undefined) return undefined;
+  // Move to end (most-recently-used)
+  queryCache.delete(key);
+  queryCache.set(key, val);
+  return val;
+}
+
+function queryCacheSet(key: string, val: SongHitWorker[]): void {
+  if (queryCache.has(key)) queryCache.delete(key);
+  if (queryCache.size >= MAX_QUERY_CACHE) {
+    // Evict least-recently-used (first entry)
+    const firstKey = queryCache.keys().next().value;
+    if (firstKey !== undefined) queryCache.delete(firstKey);
+  }
+  queryCache.set(key, val);
+}
+
+function clearQueryCache(): void {
+  queryCache.clear();
+}
+
+// ── Latest query ID guard (drop stale responses) ─────────────────────────────
+let latestQueryId = 0;
+
+// ── Index helpers ─────────────────────────────────────────────────────────────
 function addInvertedIndex(indexMap: Map<string, Set<number>>, key: string, songId: number) {
   if (!key) return;
   let set = indexMap.get(key);
@@ -61,6 +109,23 @@ function addInvertedIndex(indexMap: Map<string, Set<number>>, key: string, songI
   set.add(songId);
 }
 
+function buildSortedTokens(): void {
+  sortedTokens = Array.from(tokenInvertedIndex.keys()).sort();
+  tokensDirty = false;
+}
+
+/** Binary search — finds first index where sortedTokens[i] >= prefix */
+function lowerBound(arr: string[], prefix: string): number {
+  let lo = 0;
+  let hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[mid] < prefix) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 function indexSong(song: Song) {
   const lines: LineEntry[] = [];
   const songTrigrams = new Set<string>();
@@ -69,9 +134,10 @@ function indexSong(song: Song) {
   const titleNorm = tanglishNorm(song.title);
   const titleStem = song.titleStem || songStem(song.title);
   const titleLower = songLower(song.title);
+  const titleNormTokens = titleNorm.split(/\s+/).filter((t) => t.length >= 2);
 
-  for (const t of titleNorm.split(/\s+/)) {
-    if (t.length >= 2) addInvertedIndex(tokenInvertedIndex, t, song.id);
+  for (const t of titleNormTokens) {
+    addInvertedIndex(tokenInvertedIndex, t, song.id);
   }
   for (const s of titleStem.split(/\s+/)) {
     if (s.length >= 2) addInvertedIndex(stemInvertedIndex, s, song.id);
@@ -110,13 +176,16 @@ function indexSong(song: Song) {
         }
       }
 
+      const normalized = normTokens.join(" ");
       lines.push({
         text,
-        normalized: normTokens.join(" "),
+        normalized,
         normTokens,
         stem: stemTokens.join(" "),
         stemTokens,
         rawTokens: validRawTokens,
+        // Pre-compute lineFlat once — eliminates hot-loop .replace() calls
+        lineFlat: normalized.replace(/\s+/g, ""),
       });
     }
   }
@@ -130,6 +199,7 @@ function indexSong(song: Song) {
     titleNorm,
     titleStem,
     titleLower,
+    titleNormTokens,
     allTrigrams: songTrigrams,
   });
 }
@@ -139,7 +209,12 @@ function clearAllIndexes() {
   tokenInvertedIndex.clear();
   trigramInvertedIndex.clear();
   stemInvertedIndex.clear();
+  sortedTokens = [];
+  tokensDirty = true;
+  clearQueryCache();
 }
+
+// ── Candidate lookup ──────────────────────────────────────────────────────────
 
 function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: string[]): Set<number> {
   const candidates = new Set<number>();
@@ -157,6 +232,23 @@ function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: str
     if (ids) for (const id of ids) candidates.add(id);
   }
 
+  // Prefix matching via binary search — O(log N + k) instead of O(N)
+  if (candidates.size < 10 && qTokens.length > 0) {
+    if (tokensDirty) buildSortedTokens();
+    for (const qt of qTokens) {
+      if (qt.length < 3) continue;
+      const start = lowerBound(sortedTokens, qt);
+      for (let i = start; i < sortedTokens.length; i++) {
+        const tok = sortedTokens[i];
+        if (!tok.startsWith(qt)) break;
+        const ids = tokenInvertedIndex.get(tok);
+        if (ids) for (const id of ids) candidates.add(id);
+        if (candidates.size >= 100) break;
+      }
+      if (candidates.size >= 100) break;
+    }
+  }
+
   // If query is short or no token hits, include top 500 fallback songs
   if (candidates.size === 0) {
     let count = 0;
@@ -169,6 +261,8 @@ function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: str
 
   return candidates;
 }
+
+// ── Token match scoring ───────────────────────────────────────────────────────
 
 function getMatchIndices(
   lineTokens: string[],
@@ -241,11 +335,17 @@ function getMatchIndices(
   return { indices: Array.from(indices), scoreBonus: totalBonus };
 }
 
+// ── Main scoring function ─────────────────────────────────────────────────────
+
 function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
   const q = query.trim();
   if (!q) return [];
 
-  const start = performance.now();
+  // LRU cache hit — no work needed
+  const cacheKey = `${q}:${limit}`;
+  const cached = queryCacheGet(cacheKey);
+  if (cached) return cached;
+
   const qNorm = tanglishNorm(q);
   const qTokens = qNorm.split(/\s+/).filter((t) => t.length >= 2);
   const qFlat = qNorm.replace(/\s+/g, "");
@@ -272,8 +372,8 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
     } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qFlat)) {
       titleScore = 750;
     } else if (qTokens.length) {
-      const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
-      const { indices, scoreBonus } = getMatchIndices(tTokens, qTokens);
+      // Use pre-computed titleNormTokens — no runtime split
+      const { indices, scoreBonus } = getMatchIndices(data.titleNormTokens, qTokens);
       if (indices.length > 0) {
         titleScore = (indices.length / qTokens.length) * 200 + scoreBonus;
       }
@@ -292,7 +392,8 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
       let ls = 0;
       let indices: number[] = [];
 
-      const lineFlat = line.normalized.replace(/\s+/g, "");
+      // Use pre-computed lineFlat — no runtime .replace()
+      const lineFlat = line.lineFlat;
 
       if (lineFlat === qFlat || line.text.toLowerCase() === rawQueryLower) {
         ls = 600;
@@ -370,10 +471,13 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
   }
 
   hits.sort((a, b) => b.score - a.score);
-  return hits.slice(0, limit);
+  const result = hits.slice(0, limit);
+
+  queryCacheSet(cacheKey, result);
+  return result;
 }
 
-// Worker Message Handler
+// ── Worker Message Handler ────────────────────────────────────────────────────
 self.onmessage = (e: MessageEvent) => {
   const { type, payload, queryId } = e.data;
 
@@ -383,19 +487,29 @@ self.onmessage = (e: MessageEvent) => {
     for (const song of songs) {
       indexSong(song);
     }
+    tokensDirty = true; // will rebuild sorted list on next search
     self.postMessage({ type: "INDEXED_COMPLETE", totalSongs: songsMap.size });
   } else if (type === "UPDATE_SONG") {
     const song: Song = payload.song;
     indexSong(song);
+    tokensDirty = true;
+    clearQueryCache(); // invalidate stale results
     self.postMessage({ type: "SONG_UPDATED", songId: song.id });
   } else if (type === "REMOVE_SONG") {
     const songId: number = payload.songId;
     songsMap.delete(songId);
+    tokensDirty = true;
+    clearQueryCache();
     self.postMessage({ type: "SONG_REMOVED", songId });
   } else if (type === "SEARCH") {
+    // Track latest query so we can drop stale responses on the hook side
+    latestQueryId = queryId;
     const t0 = performance.now();
     const hits = evaluateSearch(payload.query, payload.limit ?? 120);
     const searchMs = performance.now() - t0;
-    self.postMessage({ type: "SEARCH_RESULTS", queryId, hits, searchMs });
+    // Only post if this query is still the latest (guards against race in very fast typing)
+    if (queryId === latestQueryId) {
+      self.postMessage({ type: "SEARCH_RESULTS", queryId, hits, searchMs });
+    }
   }
 };

@@ -26,6 +26,8 @@ export interface LineEntry {
   stem: string;
   stemTokens: string[];
   rawTokens: string[];
+  /** Pre-computed: normalized.replace(/\s+/g, "") — avoids hot-loop allocation */
+  lineFlat: string;
 }
 
 export interface SongSearchData {
@@ -34,16 +36,33 @@ export interface SongSearchData {
   titleNorm: string;
   titleStem: string;
   titleLower: string;
+  /** Pre-computed: titleNorm.split(/\s+/).filter(t => t.length >= 2) */
+  titleNormTokens: string[];
 }
 
 let searchIndex = new Map<number, SongSearchData>();
 let tokenInvertedIndex = new Map<string, Set<number>>();
 let stemInvertedIndex = new Map<string, Set<number>>();
-let indexedSongsId: string | null = null;
 
-function songsId(songs: Song[]): string {
-  return songs.map((s) => `${s.id}:${s.content.length}`).join(",");
-}
+/**
+ * Sorted array of all indexed tokens for O(log N) binary prefix search.
+ * Rebuilt lazily on first search after an index update.
+ */
+let sortedTokens: string[] = [];
+let tokensDirty = true;
+
+/**
+ * Stable songLookup map — built once in buildSearchIndex, updated incrementally.
+ * Avoids creating a new Map on every search call.
+ */
+let songLookup = new Map<number, Song>();
+
+/**
+ * Monotonic version counter — incremented on every index change.
+ * Replaces the O(N) songsId() string join for staleness detection.
+ */
+let indexVersion = 0;
+let lastBuiltVersion = -1;
 
 function addIndexToken(map: Map<string, Set<number>>, token: string, songId: number) {
   if (!token || token.length < 2) return;
@@ -55,8 +74,26 @@ function addIndexToken(map: Map<string, Set<number>>, token: string, songId: num
   set.add(songId);
 }
 
+function buildSortedTokens(): void {
+  sortedTokens = Array.from(tokenInvertedIndex.keys()).sort();
+  tokensDirty = false;
+}
+
+/** Binary search: first index where sortedTokens[i] >= prefix */
+function lowerBound(arr: string[], prefix: string): number {
+  let lo = 0;
+  let hi = arr.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (arr[mid] < prefix) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
 export function removeSearchIndex(songId: number) {
   searchIndex.delete(songId);
+  songLookup.delete(songId);
   // Iterating all sets to delete is slow, but fine for single item deletion
   for (const set of tokenInvertedIndex.values()) {
     set.delete(songId);
@@ -64,6 +101,9 @@ export function removeSearchIndex(songId: number) {
   for (const set of stemInvertedIndex.values()) {
     set.delete(songId);
   }
+  tokensDirty = true;
+  indexVersion++;
+  queryCache.clear();
 }
 
 export function updateSearchIndex(song: Song) {
@@ -72,8 +112,9 @@ export function updateSearchIndex(song: Song) {
   const titleNorm = tanglishNorm(song.title);
   const titleStem = song.titleStem || songStem(song.title);
   const titleLower = songLower(song.title);
+  const titleNormTokens = titleNorm.split(/\s+/).filter((t) => t.length >= 2);
 
-  for (const t of titleNorm.split(/\s+/)) addIndexToken(tokenInvertedIndex, t, song.id);
+  for (const t of titleNormTokens) addIndexToken(tokenInvertedIndex, t, song.id);
   for (const s of titleStem.split(/\s+/)) addIndexToken(stemInvertedIndex, s, song.id);
 
   for (let si = 0; si < song.slides.length; si++) {
@@ -99,35 +140,46 @@ export function updateSearchIndex(song: Song) {
         }
       }
 
+      const normalized = normTokens.join(" ");
       lines.push({
         text,
-        normalized: normTokens.join(" "),
+        normalized,
         normTokens,
         stem: stemTokens.join(" "),
         stemTokens,
         rawTokens: validRawTokens,
+        lineFlat: normalized.replace(/\s+/g, ""),
       });
     }
   }
 
+  songLookup.set(song.id, song);
   searchIndex.set(song.id, {
     firstLine: lines[0]?.text || song.title,
     lines,
     titleNorm,
     titleStem,
     titleLower,
+    titleNormTokens,
   });
+  tokensDirty = true;
+  indexVersion++;
+  queryCache.clear();
 }
 
 export function markSearchIndexUpdated(songs: Song[]) {
-  indexedSongsId = songsId(songs);
-  setCachedSearchIndex(indexedSongsId, { searchIndex, tokenInvertedIndex, stemInvertedIndex });
+  // Rebuild lookup map to reflect current songs list
+  songLookup = new Map(songs.map((s) => [s.id, s]));
+  lastBuiltVersion = indexVersion;
+  setCachedSearchIndex(String(indexVersion), { searchIndex, tokenInvertedIndex, stemInvertedIndex });
 }
 
 export function buildSearchIndex(songs: Song[]) {
   searchIndex.clear();
   tokenInvertedIndex.clear();
   stemInvertedIndex.clear();
+  songLookup.clear();
+  queryCache.clear();
 
   let totalLines = 0;
 
@@ -136,8 +188,9 @@ export function buildSearchIndex(songs: Song[]) {
     const titleNorm = tanglishNorm(song.title);
     const titleStem = song.titleStem || songStem(song.title);
     const titleLower = songLower(song.title);
+    const titleNormTokens = titleNorm.split(/\s+/).filter((t) => t.length >= 2);
 
-    for (const t of titleNorm.split(/\s+/)) addIndexToken(tokenInvertedIndex, t, song.id);
+    for (const t of titleNormTokens) addIndexToken(tokenInvertedIndex, t, song.id);
     for (const s of titleStem.split(/\s+/)) addIndexToken(stemInvertedIndex, s, song.id);
 
     for (let si = 0; si < song.slides.length; si++) {
@@ -164,13 +217,15 @@ export function buildSearchIndex(songs: Song[]) {
           }
         }
 
+        const normalized = normTokens.join(" ");
         lines.push({
           text,
-          normalized: normTokens.join(" "),
+          normalized,
           normTokens,
           stem: stemTokens.join(" "),
           stemTokens,
           rawTokens: validRawTokens,
+          lineFlat: normalized.replace(/\s+/g, ""),
         });
       }
     }
@@ -182,17 +237,39 @@ export function buildSearchIndex(songs: Song[]) {
       titleNorm,
       titleStem,
       titleLower,
+      titleNormTokens,
     });
+    songLookup.set(song.id, song);
   }
 
-  indexedSongsId = songsId(songs);
+  tokensDirty = true;
+  indexVersion++;
+  lastBuiltVersion = indexVersion;
   console.log(
     `[Songs Search] Built Inverted Candidate Index: ${searchIndex.size} songs, ${totalLines} lines`,
   );
 }
 
+// ── Query result LRU cache (main-thread fallback) ─────────────────────────────
 const queryCache = new Map<string, SongHit[]>();
 const MAX_CACHE = 100;
+
+function queryCacheGet(key: string): SongHit[] | undefined {
+  const val = queryCache.get(key);
+  if (val === undefined) return undefined;
+  queryCache.delete(key);
+  queryCache.set(key, val);
+  return val;
+}
+
+function queryCacheSet(key: string, val: SongHit[]): void {
+  if (queryCache.has(key)) queryCache.delete(key);
+  if (queryCache.size >= MAX_CACHE) {
+    const firstKey = queryCache.keys().next().value;
+    if (firstKey !== undefined) queryCache.delete(firstKey);
+  }
+  queryCache.set(key, val);
+}
 
 import { supabase } from "../supabase";
 import { buildSong } from "./loader";
@@ -228,39 +305,21 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
   const q = query.trim();
   if (!q) return [];
 
-  const currentId = songsId(songs);
-  if (!searchIndex.size || indexedSongsId !== currentId) {
+  // Re-index only if the version has changed since last build
+  if (!searchIndex.size || lastBuiltVersion !== indexVersion) {
     buildSearchIndex(songs);
   }
 
-  const cached = queryCache.get(q);
+  const cached = queryCacheGet(q);
   if (cached) return cached.slice(0, limit);
 
-  const hits = runCandidateSearch(q, songs, limit);
+  const hits = runCandidateSearch(q, limit);
 
-  if (queryCache.size >= MAX_CACHE) {
-    const firstKey = queryCache.keys().next().value;
-    if (firstKey !== undefined) queryCache.delete(firstKey);
-  }
-  queryCache.set(q, hits);
-
+  queryCacheSet(q, hits);
   return hits;
 }
 
-function normTokens(s: string): { tokens: string[]; flat: string } {
-  const n = tanglishNorm(s);
-  if (!n) return { tokens: [], flat: "" };
-  return {
-    tokens: n.split(/\s+/).filter((t) => t.length >= 2),
-    flat: n.replace(/\s+/g, ""),
-  };
-}
-
-function stemTokens(s: string): string[] {
-  return songStem(s)
-    .split(/\s+/)
-    .filter((t) => t.length >= 2);
-}
+// ── Candidate lookup ──────────────────────────────────────────────────────────
 
 function getCandidateSongIds(qTokens: string[], qStems: string[], songs: Song[]): Set<number> {
   const candidates = new Set<number>();
@@ -274,16 +333,20 @@ function getCandidateSongIds(qTokens: string[], qStems: string[], songs: Song[])
     if (ids) for (const id of ids) candidates.add(id);
   }
 
-  // Prefix matching on tokens if candidates < 10
+  // Prefix matching via binary search — O(log N + k) instead of O(N)
   if (candidates.size < 10 && qTokens.length > 0) {
+    if (tokensDirty) buildSortedTokens();
     for (const qt of qTokens) {
       if (qt.length < 3) continue;
-      for (const [token, ids] of tokenInvertedIndex.entries()) {
-        if (token.startsWith(qt) || qt.startsWith(token)) {
-          for (const id of ids) candidates.add(id);
-          if (candidates.size >= 50) break;
-        }
+      const start = lowerBound(sortedTokens, qt);
+      for (let i = start; i < sortedTokens.length; i++) {
+        const tok = sortedTokens[i];
+        if (!tok.startsWith(qt)) break;
+        const ids = tokenInvertedIndex.get(tok);
+        if (ids) for (const id of ids) candidates.add(id);
+        if (candidates.size >= 50) break;
       }
+      if (candidates.size >= 50) break;
     }
   }
 
@@ -368,17 +431,24 @@ function getMatchIndices(
   return { indices: Array.from(indices), scoreBonus: totalBonus };
 }
 
-function runCandidateSearch(query: string, songs: Song[], limit: number): SongHit[] {
-  const qn = normTokens(query);
-  const qs = stemTokens(query);
-  if (!qn.flat) return [];
+/**
+ * runCandidateSearch — uses the stable songLookup map (no per-call Map construction).
+ * songs param kept for fallback getCandidateSongIds only.
+ */
+function runCandidateSearch(query: string, limit: number): SongHit[] {
+  const qNorm = tanglishNorm(query);
+  if (!qNorm) return [];
+  const qTokens = qNorm.split(/\s+/).filter((t) => t.length >= 2);
+  const qFlat = qNorm.replace(/\s+/g, "");
+  const qStems = songStem(query)
+    .split(/\s+/)
+    .filter((t) => t.length >= 2);
 
   const rawQueryLower = query.toLowerCase().trim();
   const qRawTokens = query.trim().split(/\s+/).filter(Boolean);
 
-  const candidateIds = getCandidateSongIds(qn.tokens, qs, songs);
-  const songLookup = new Map(songs.map((s) => [s.id, s]));
-
+  // Use stable songLookup; pass empty array since we only use it for the top-N fallback
+  const candidateIds = getCandidateSongIds(qTokens, qStems, []);
   const hits: SongHit[] = [];
 
   for (const songId of candidateIds) {
@@ -391,15 +461,15 @@ function runCandidateSearch(query: string, songs: Song[], limit: number): SongHi
     let titleScore = 0;
     const titleLower = data.titleLower;
 
-    if (titleLower === rawQueryLower || data.titleNorm === qn.flat) {
+    if (titleLower === rawQueryLower || data.titleNorm === qFlat) {
       titleScore = 1000;
-    } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qn.flat)) {
+    } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qFlat)) {
       titleScore = 750;
-    } else if (qn.tokens.length) {
-      const tTokens = data.titleNorm.split(/\s+/).filter((t) => t.length >= 2);
-      const { indices, scoreBonus } = getMatchIndices(tTokens, qn.tokens);
+    } else if (qTokens.length) {
+      // Use pre-computed titleNormTokens
+      const { indices, scoreBonus } = getMatchIndices(data.titleNormTokens, qTokens);
       if (indices.length > 0) {
-        titleScore = (indices.length / qn.tokens.length) * 200 + scoreBonus;
+        titleScore = (indices.length / qTokens.length) * 200 + scoreBonus;
       }
     }
 
@@ -416,24 +486,25 @@ function runCandidateSearch(query: string, songs: Song[], limit: number): SongHi
       let ls = 0;
       let indices: number[] = [];
 
-      const lineFlat = line.normalized.replace(/\s+/g, "");
+      // Use pre-computed lineFlat
+      const lineFlat = line.lineFlat;
 
-      if (lineFlat === qn.flat || line.text.toLowerCase() === rawQueryLower) {
+      if (lineFlat === qFlat || line.text.toLowerCase() === rawQueryLower) {
         ls = 600;
         indices = line.rawTokens.map((_, i) => i);
-      } else if (lineFlat.includes(qn.flat)) {
+      } else if (lineFlat.includes(qFlat)) {
         ls = 450;
-        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+        const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
-      } else if (qn.flat.includes(lineFlat) && lineFlat.length >= 4) {
+      } else if (qFlat.includes(lineFlat) && lineFlat.length >= 4) {
         ls = 350;
-        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+        const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
-      } else if (qn.tokens.length) {
-        const res = getMatchIndices(line.normTokens, qn.tokens, line.stemTokens, qs);
+      } else if (qTokens.length) {
+        const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
         if (indices.length > 0) {
-          ls = (indices.length / qn.tokens.length) * 150 + res.scoreBonus;
+          ls = (indices.length / qTokens.length) * 150 + res.scoreBonus;
         }
       }
 
@@ -478,7 +549,7 @@ function runCandidateSearch(query: string, songs: Song[], limit: number): SongHi
       }
 
       const finalHighlightTokens = Array.from(
-        new Set([...qRawTokens, ...qn.tokens, ...bestHighlightTokens]),
+        new Set([...qRawTokens, ...qTokens, ...bestHighlightTokens]),
       );
 
       hits.push({

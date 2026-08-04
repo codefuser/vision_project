@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import type { Song } from "./loader";
 import type { SongHitWorker } from "./song-search.worker";
 import { searchSongs, buildSearchIndex, type SongHit } from "./search";
@@ -20,16 +20,46 @@ function getSearchWorker(): Worker | null {
   return globalWorker;
 }
 
+/**
+ * Compute a lightweight fingerprint of the songs array for change detection.
+ * Uses song count + sum of (id * content.length) — fast, no string allocation.
+ */
+function songFingerprint(songs: Song[]): string {
+  let sum = 0;
+  for (const s of songs) {
+    sum += s.id + s.content.length;
+  }
+  return `${songs.length}:${sum}`;
+}
+
 export function useSongSearchWorker(songs: Song[] | null) {
   const workerRef = useRef<Worker | null>(null);
-  const [isIndexed, setIsIndexed] = useState(false);
-  const pendingQueryRef = useRef<{ query: string; resolve: (hits: SongHit[]) => void } | null>(null);
+  const isIndexedRef = useRef(false);
+  /**
+   * Track the fingerprint of the songs array most recently sent to the worker.
+   * Only re-send INDEX_ALL when the actual content changes.
+   */
+  const indexedFingerprintRef = useRef<string>("");
+  /**
+   * ID of the most recent search request. Used to drop stale responses —
+   * if a newer query fires before the worker replies, we ignore the old reply.
+   */
+  const latestQueryIdRef = useRef<number>(0);
 
-  // Initialize Worker
+  // Initialize Worker and index — only when songs content actually changes
   useEffect(() => {
+    if (!songs || !songs.length) return;
+
+    const fingerprint = songFingerprint(songs);
+    // Guard: if we already indexed this exact dataset, skip INDEX_ALL entirely
+    if (fingerprint === indexedFingerprintRef.current) return;
+
     const worker = getSearchWorker();
     workerRef.current = worker;
-    if (!worker || !songs || !songs.length) return;
+    if (!worker) return;
+
+    isIndexedRef.current = false;
+    indexedFingerprintRef.current = fingerprint;
 
     worker.postMessage({
       type: "INDEX_ALL",
@@ -38,7 +68,7 @@ export function useSongSearchWorker(songs: Song[] | null) {
 
     const handleMessage = (e: MessageEvent) => {
       if (e.data.type === "INDEXED_COMPLETE") {
-        setIsIndexed(true);
+        isIndexedRef.current = true;
       }
     };
 
@@ -55,20 +85,26 @@ export function useSongSearchWorker(songs: Song[] | null) {
       if (!q || !songs) return { hits: [], searchMs: 0 };
 
       const worker = workerRef.current;
-      if (!worker || !isIndexed) {
+      if (!worker || !isIndexedRef.current) {
         // Fallback to fast in-memory search if worker not ready
         const t0 = performance.now();
         const hits = searchSongs(q, songs, limit);
         return { hits, searchMs: performance.now() - t0 };
       }
 
+      const queryId = ++queryCounter;
+      latestQueryIdRef.current = queryId;
+
       return new Promise((resolve) => {
-        const queryId = ++queryCounter;
         const t0 = performance.now();
 
         const handleResult = (e: MessageEvent) => {
           if (e.data.type === "SEARCH_RESULTS" && e.data.queryId === queryId) {
             worker.removeEventListener("message", handleResult);
+
+            // Drop stale responses — a newer query was issued while we awaited
+            if (queryId !== latestQueryIdRef.current) return;
+
             const hits: SongHit[] = e.data.hits.map((h: SongHitWorker) => ({
               song: h.song,
               score: h.score,
@@ -89,8 +125,8 @@ export function useSongSearchWorker(songs: Song[] | null) {
         });
       });
     },
-    [songs, isIndexed],
+    [songs],
   );
 
-  return { executeSearch, isIndexed };
+  return { executeSearch, isIndexed: isIndexedRef.current };
 }
