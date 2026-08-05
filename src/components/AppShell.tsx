@@ -26,6 +26,7 @@ import { useWorkspace } from "@/features/workspace/workspace.store";
 import { cn } from "@/lib/utils";
 import { StartupScreen } from "@/components/StartupScreen";
 import { useSessionHistory } from "@/features/history/session-history.store";
+import { initBackupScheduler } from "@/lib/backup-scheduler";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
@@ -59,6 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
+    initBackupScheduler();
   }, [init]);
 
   const cycleTheme = () => {

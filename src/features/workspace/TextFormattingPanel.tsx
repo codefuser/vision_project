@@ -22,6 +22,7 @@ import {
 import { useFocusZone } from "./focus-manager";
 import { useWorkspace } from "./workspace.store";
 import { useTextFormat, type StyleGroup } from "@/lib/text-format/store";
+import { useSettings } from "@/stores/settings.store";
 import type { SectionStyle, TextStyle } from "@/lib/broadcast";
 import { cn } from "@/lib/utils";
 
@@ -74,11 +75,12 @@ export function TextFormattingPanel() {
 
   const style = groups[active];
 
-  // Auto-save history on field changes (debounced)
+  // Auto-save history on field changes (debounced) — gated by the Auto Save setting.
   const historyTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoSaveHistory = () => {
     if (historyTimer.current) clearTimeout(historyTimer.current);
     historyTimer.current = setTimeout(() => {
+      if (!useSettings.getState().settings.autoSave) return;
       pushHistory({
         reference: { ...groups.reference },
         tamil: { ...groups.tamil },

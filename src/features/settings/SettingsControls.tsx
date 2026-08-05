@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { type ReactNode, useId, useState } from "react";
+import { type ReactNode, useId } from "react";
 import { RotateCcw } from "lucide-react";
 import type { SettingDef } from "./settings-defs";
 import { DEFAULT_SETTINGS } from "@/db/schema";
@@ -7,9 +7,14 @@ import { DEFAULT_SETTINGS } from "@/db/schema";
 /* ───── SettingRow — generic reusable wrapper ───── */
 function SettingRow({ def, children, id }: { def: SettingDef; children: ReactNode; id?: string }) {
   return (
-    <div className="group flex items-start justify-between gap-4 rounded-md px-4 py-3 transition-colors hover:bg-accent/20">
+    <div
+      className={cn(
+        "group flex items-start justify-between gap-4 rounded-md px-4 py-3 transition-colors hover:bg-accent/20",
+        def.comingSoon && "opacity-80",
+      )}
+    >
       <div className="min-w-0 flex-1">
-        {id ? (
+        {id && !def.comingSoon ? (
           <label htmlFor={id} className="cursor-pointer text-[13px] font-medium text-foreground/90">
             {def.title}
           </label>
@@ -21,8 +26,13 @@ function SettingRow({ def, children, id }: { def: SettingDef; children: ReactNod
             {def.description}
           </p>
         )}
+        {def.comingSoon && (
+          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+            Coming Soon
+          </span>
+        )}
       </div>
-      <div className="flex items-center gap-2 shrink-0">{children}</div>
+      <div className="flex items-center gap-2.5 shrink-0">{children}</div>
     </div>
   );
 }
@@ -41,7 +51,19 @@ function ResetBtn({ show, onReset }: { show: boolean; onReset: () => void }) {
   );
 }
 
-/* ───── Premium Toggle (iOS / Figma quality) ───── */
+/* ───── Coming Soon badge (disabled control slot) ───── */
+function ComingSoonSlot() {
+  return (
+    <div className="h-5 w-9 shrink-0 rounded-full bg-muted/60 ring-1 ring-inset ring-border/50" />
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   Premium Toggle Switch — VersoLyn design system
+   Theme-aware (CSS variables only), smooth 200ms motion, explicit
+   hover / active / focus / disabled states. Keyboard + screen-reader
+   accessible via Radix Switch.
+   ═══════════════════════════════════════════════════════════════════ */
 export function SettingToggle({
   def,
   value,
@@ -53,47 +75,67 @@ export function SettingToggle({
 }) {
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as boolean;
-  const [pressed, setPressed] = useState(false);
+
+  if (def.comingSoon) {
+    return (
+      <SettingRow def={def} id={id}>
+        <ComingSoonSlot />
+      </SettingRow>
+    );
+  }
 
   return (
     <SettingRow def={def} id={id}>
       <ResetBtn show={value !== dv} onReset={() => onChange(dv)} />
       <button
         id={id}
+        type="button"
         role="switch"
         aria-checked={value}
+        aria-label={def.title}
+        disabled={def.comingSoon}
         onClick={() => onChange(!value)}
-        onMouseDown={() => setPressed(true)}
-        onMouseUp={() => setPressed(false)}
-        onMouseLeave={() => setPressed(false)}
-        style={{
-          transition: "all 250ms cubic-bezier(.22,.9,.33,1)",
-          transform: pressed ? "scale(0.95)" : "",
-          backgroundColor: value ? "var(--primary)" : "#2B3245",
-          boxShadow: value
-            ? "0 0 12px color-mix(in srgb, var(--primary) 50%, transparent)"
-            : "none",
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onChange(!value);
+          }
         }}
         className={cn(
-          "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-0 outline-none",
-          "focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-1 focus-visible:ring-offset-background",
-          "hover:scale-[1.03] active:scale-[0.95]",
+          // Track
+          "group relative inline-flex h-[22px] w-[38px] shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none",
+          "transition-all duration-200 ease-out",
+          value
+            ? "bg-primary shadow-[0_0_12px_color-mix(in_srgb,var(--primary)_45%,transparent)]"
+            : "bg-muted ring-1 ring-inset ring-border/60",
+          // Hover
+          "hover:scale-[1.03]",
+          !value && "hover:bg-muted/80 hover:ring-border",
+          // Active
+          "active:scale-[0.95]",
+          // Focus
+          "focus-visible:ring-2 focus-visible:ring-ring/60 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         )}
       >
         <span
-          style={{
-            transition: "all 250ms cubic-bezier(.22,.9,.33,1)",
-            backgroundColor: value ? "#ffffff" : "#7A859A",
-            transform: value ? "translateX(17px)" : "translateX(2px)",
-          }}
-          className="pointer-events-none inline-block h-[14px] w-[14px] rounded-full shadow-sm ring-0"
+          className={cn(
+            "pointer-events-none absolute h-[16px] w-[16px] rounded-full bg-background shadow-md",
+            "transition-transform duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
+            "group-active:scale-90",
+            value ? "translate-x-[18px]" : "translate-x-[2px]",
+          )}
+          style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.25), 0 0 0 0.5px rgba(0,0,0,0.08)" }}
         />
       </button>
     </SettingRow>
   );
 }
 
-/* ───── Premium Slider ───── */
+/* ═══════════════════════════════════════════════════════════════════
+   Premium Slider — VersoLyn design system
+   Animated gradient fill, custom ring thumb, live value pill, native
+   range keyboard support (arrows / Home / End) with a visible focus ring.
+   ═══════════════════════════════════════════════════════════════════ */
 export function SettingSlider({
   def,
   value,
@@ -108,39 +150,61 @@ export function SettingSlider({
   const min = def.min ?? 0;
   const max = def.max ?? 100;
   const step = def.step ?? 1;
-  const pct = ((value - min) / (max - min)) * 100;
+  const shown = def.mapFromSetting ? def.mapFromSetting(value) : value;
+  const pct = Math.min(100, Math.max(0, ((shown - min) / (max - min)) * 100));
+  const emit = (v: number) => onChange(def.mapToSetting ? def.mapToSetting(v) : v);
 
   return (
     <SettingRow def={def} id={id}>
       <ResetBtn show={value !== dv} onReset={() => onChange(dv)} />
-      <span className="w-10 text-right text-[12px] tabular-nums text-muted-foreground">
-        {value}
+      {/* Live value pill */}
+      <span className="inline-flex min-w-[2.75rem] items-center justify-end rounded-md bg-muted/70 px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-foreground/80 ring-1 ring-inset ring-border/40">
+        {formatValue(shown)}
         {def.unit ?? ""}
       </span>
-      <div className="relative h-5 w-24">
+      <div className="relative h-5 w-32 shrink-0">
         <input
           id={id}
           type="range"
           min={min}
           max={max}
           step={step}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className="absolute inset-0 z-10 cursor-pointer opacity-0"
+          value={shown}
+          onChange={(e) => emit(Number(e.target.value))}
+          aria-label={def.title}
+          aria-valuetext={`${formatValue(shown)}${def.unit ?? ""}`}
+          className="peer absolute inset-0 z-10 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0"
         />
-        <div className="pointer-events-none absolute inset-y-0 left-0 right-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-muted-foreground/12">
+        {/* Track */}
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-muted/70 ring-1 ring-inset ring-border/40">
           <div
-            className="h-full rounded-full bg-primary transition-all duration-75"
+            className="h-full rounded-full bg-gradient-to-r from-primary/70 to-primary shadow-[0_0_8px_color-mix(in_srgb,var(--primary)_35%,transparent)] transition-[width] duration-150 ease-out"
             style={{ width: `${pct}%` }}
           />
         </div>
+        {/* Thumb */}
         <div
-          className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white shadow-sm ring-1 ring-black/5"
-          style={{ left: `${pct}%` }}
+          className={cn(
+            "pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-background shadow-md",
+            "transition-[transform,box-shadow] duration-150 ease-out",
+            "peer-hover:scale-110 peer-hover:shadow-lg",
+            "peer-active:scale-125 peer-active:shadow-lg",
+            "peer-focus-visible:ring-2 peer-focus-visible:ring-ring/60",
+          )}
+          style={{
+            left: `${pct}%`,
+            border: "2px solid var(--primary)",
+          }}
         />
       </div>
     </SettingRow>
   );
+}
+
+function formatValue(v: number): string {
+  if (!Number.isFinite(v)) return "0";
+  if (Number.isInteger(v)) return String(v);
+  return String(Math.round(v * 100) / 100);
 }
 
 /* ───── Premium Select ───── */
@@ -163,7 +227,7 @@ export function SettingSelect({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="h-7 min-w-[120px] appearance-none rounded-md border border-border/40 bg-background/60 px-2.5 pr-6 text-[12px] font-medium text-foreground outline-none transition-all hover:border-border/70 hover:bg-background/80 focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/20"
+          className="h-8 min-w-[130px] appearance-none rounded-lg border border-border/40 bg-background/60 pl-2.5 pr-7 text-[12px] font-medium text-foreground shadow-xs outline-none transition-all hover:border-border/80 hover:bg-background/90 focus-visible:border-primary/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20"
         >
           {(def.options ?? []).map((o) => (
             <option key={o.value} value={o.value}>
@@ -172,7 +236,7 @@ export function SettingSelect({
           ))}
         </select>
         <svg
-          className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/35"
+          className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground/40"
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -210,7 +274,7 @@ export function SettingInput({
           step={def.step}
           placeholder={def.placeholder}
           onChange={(e) => onChange(e.target.value)}
-          className="h-7 w-28 rounded-md border border-border/40 bg-background/60 px-2.5 text-[12px] font-medium text-foreground outline-none transition-all hover:border-border/70 hover:bg-background/80 focus-visible:border-primary/40 focus-visible:ring-1 focus-visible:ring-primary/20"
+          className="h-8 w-28 rounded-lg border border-border/40 bg-background/60 px-2.5 text-[12px] font-medium text-foreground shadow-xs outline-none transition-all hover:border-border/80 hover:bg-background/90 focus-visible:border-primary/50 focus-visible:bg-background focus-visible:ring-2 focus-visible:ring-primary/20 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         {def.unit && <span className="text-[11px] text-muted-foreground/45">{def.unit}</span>}
       </div>
@@ -234,13 +298,13 @@ export function SettingColor({
     <SettingRow def={def} id={id}>
       <ResetBtn show={value !== dv} onReset={() => onChange(dv)} />
       <div className="flex items-center gap-2">
-        <div className="relative h-7 w-7 overflow-hidden rounded-md border border-border/40">
+        <div className="relative h-8 w-8 overflow-hidden rounded-lg border border-border/40 shadow-xs transition-all hover:border-border/80 focus-within:ring-2 focus-within:ring-primary/20">
           <input
             id={id}
             type="color"
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            className="absolute inset-0 cursor-pointer opacity-0"
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
           />
           <div
             className="h-full w-full ring-1 ring-inset ring-black/10"

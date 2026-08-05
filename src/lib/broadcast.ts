@@ -16,6 +16,8 @@ export interface TextStyle {
   shadow: boolean;
   shadowColor: string;
   shadowBlur: number; // px
+  /** 0..1 shadow alpha. Optional — legacy payloads fall back to 0.6. */
+  shadowOpacity?: number;
   outlineWidth: number; // px
   outlineColor: string;
   background: string; // CSS color
@@ -43,6 +45,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   shadow: true,
   shadowColor: "#000000",
   shadowBlur: 20,
+  shadowOpacity: 0.6,
   outlineWidth: 0,
   outlineColor: "#000000",
   background: "#000000",

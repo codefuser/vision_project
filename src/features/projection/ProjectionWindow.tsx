@@ -59,6 +59,13 @@ export function ProjectionWindow() {
   const urlsRef = useRef<string[]>([]);
   const idleHideTimer = useRef<number | null>(null);
   const [cursorHidden, setCursorHidden] = useState(false);
+  // Playback defaults read once from settings when the projector opens.
+  const runtimeRef = useRef({
+    autoTransition: false,
+    mediaLoop: false,
+    transitionDuration: 500,
+    blackScreen: false,
+  });
 
   // Cursor auto-hide
   useEffect(() => {
@@ -166,7 +173,7 @@ export function ProjectionWindow() {
     (cur: RuntimeItem | undefined) => {
       clearTimer();
       if (!cur || !playing) return;
-      if (cur.media.type === "image" && items.length > 1) {
+      if (cur.media.type === "image" && items.length > 1 && runtimeRef.current.autoTransition) {
         timerRef.current = window.setTimeout(() => goNext(), cur.durationMs);
       }
     },
@@ -174,21 +181,23 @@ export function ProjectionWindow() {
   );
 
   const goNext = useCallback(() => {
+    if (items.length === 0) return;
+    const isLast = index === items.length - 1;
+    if (!runtimeRef.current.mediaLoop && isLast) return; // hold on the final item
     setPrevItem(items[index] ?? null);
     setTransitioning(true);
-    setIndex((i) => {
-      if (items.length === 0) return 0;
-      const next = (i + 1) % items.length;
-      return next;
-    });
-    setTimeout(() => setTransitioning(false), 600);
+    setIndex((i) => (i + 1) % items.length);
+    setTimeout(() => setTransitioning(false), runtimeRef.current.transitionDuration + 100);
   }, [items, index]);
 
   const goPrev = useCallback(() => {
+    if (items.length === 0) return;
+    const isFirst = index === 0;
+    if (!runtimeRef.current.mediaLoop && isFirst) return; // hold on the first item
     setPrevItem(items[index] ?? null);
     setTransitioning(true);
-    setIndex((i) => (items.length === 0 ? 0 : (i - 1 + items.length) % items.length));
-    setTimeout(() => setTransitioning(false), 600);
+    setIndex((i) => (i - 1 + items.length) % items.length);
+    setTimeout(() => setTransitioning(false), runtimeRef.current.transitionDuration + 100);
   }, [items, index]);
 
   // When item changes, reschedule
@@ -198,9 +207,10 @@ export function ProjectionWindow() {
     return () => clearTimer();
   }, [index, items, scheduleAdvance]);
 
-  // Video ended -> advance
+  // Video ended -> advance (respect loop setting; restart the item when not looping)
   const onVideoEnded = () => {
-    if (items.length > 1) goNext();
+    const isLast = items.length > 0 && index === items.length - 1;
+    if (items.length > 1 && !(isLast && !runtimeRef.current.mediaLoop)) goNext();
     else if (videoRef.current) {
       videoRef.current.currentTime = 0;
       void videoRef.current.play();
@@ -379,10 +389,16 @@ export function ProjectionWindow() {
     }
   }, [volume, muted]);
 
-  // Initial settings: volume + scaling mode
+  // Initial settings: volume, mute, scaling mode + playback defaults
   useEffect(() => {
     (async () => {
       const s = await getSettings();
+      runtimeRef.current = {
+        autoTransition: s.autoTransition,
+        mediaLoop: s.mediaLoop,
+        transitionDuration: s.transitionDuration ?? 500,
+        blackScreen: s.blackScreen,
+      };
       setVolume(s.defaultVolume);
       setMuted(s.muteOnStart);
       setScalingMode(s.projectionScaling ?? "auto");
@@ -397,8 +413,9 @@ export function ProjectionWindow() {
       else if (e.key === " ") {
         e.preventDefault();
         setPlaying((p) => !p);
-      } else if (e.key.toLowerCase() === "b") setBlack((b) => !b);
-      else if (e.key === "Escape") window.close();
+      } else if (e.key.toLowerCase() === "b" && runtimeRef.current.blackScreen) {
+        setBlack((b) => !b);
+      } else if (e.key === "Escape") window.close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -417,8 +434,11 @@ export function ProjectionWindow() {
           key={"prev-" + prevItem.id}
           src={prevItem.blobUrl}
           alt=""
-          className="absolute inset-0 h-full w-full transition-opacity duration-500"
-          style={{ objectFit: getObjectFit(scalingMode) }}
+          className="absolute inset-0 h-full w-full transition-opacity"
+          style={{
+            objectFit: getObjectFit(scalingMode),
+            transitionDuration: `${runtimeRef.current.transitionDuration}ms`,
+          }}
         />
       )}
 
@@ -429,7 +449,10 @@ export function ProjectionWindow() {
           src={cur.blobUrl}
           alt=""
           className={`absolute inset-0 h-full w-full ${transitionClass(cur.transition)}`}
-          style={{ objectFit: getObjectFit(scalingMode) }}
+          style={{
+            objectFit: getObjectFit(scalingMode),
+            animationDuration: `${runtimeRef.current.transitionDuration}ms`,
+          }}
         />
       )}
 

@@ -4,6 +4,7 @@ import { shortcutManager } from "@/lib/shortcuts/manager";
 import { useShortcut } from "@/lib/shortcuts/use-shortcut";
 import { useWorkspace, type WorkspaceTab } from "@/features/workspace/workspace.store";
 import { useProjection } from "@/stores/projection.store";
+import { useSettings } from "@/stores/settings.store";
 
 /**
  * GlobalShortcuts — mounted once near the application root. Installs the
@@ -30,6 +31,7 @@ export function GlobalShortcuts() {
   const closeProjector = useProjection((s) => s.closeProjector);
   const send = useProjection((s) => s.send);
   const state = useProjection((s) => s.state);
+  const blackScreenShortcut = useSettings((s) => s.settings.blackScreen);
 
   useEffect(() => {
     shortcutManager.install();
@@ -517,7 +519,10 @@ export function GlobalShortcuts() {
     category: "projector",
     description: "Toggle the projector black/blank screen",
     keys: ["B"],
-    handler: () => send({ type: "BLACK", value: !state?.black }),
+    handler: () => {
+      if (!blackScreenShortcut) return false;
+      send({ type: "BLACK", value: !state?.black });
+    },
   });
   useShortcut({
     id: "projector.mute",
