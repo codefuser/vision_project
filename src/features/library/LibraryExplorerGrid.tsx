@@ -176,16 +176,24 @@ export function LibraryExplorerGrid({
   };
 
   const gap = 16;
-  let baseWidth = 220;
+  const padding = 32; // 16px left + 16px right from p-4
+  let baseWidth = 180;
   if (viewMode === "large-icons") baseWidth = 250;
   else if (viewMode === "medium-icons" || viewMode === "grid") baseWidth = 180;
   else if (viewMode === "small-icons") baseWidth = 130;
   else if (viewMode === "gallery") baseWidth = 240;
-  else if (viewMode === "list" || viewMode === "details") baseWidth = Math.max(300, containerWidth - gap * 2);
 
-  const itemWidth = Math.max(110, Math.floor(baseWidth * zoomLevel));
-  const effectiveContainerW = Math.max(400, containerWidth);
-  const itemsPerRow = viewMode === "list" || viewMode === "details" ? 1 : Math.max(1, Math.floor((effectiveContainerW + gap) / (itemWidth + gap)));
+  const itemWidth =
+    viewMode === "list" || viewMode === "details"
+      ? Math.max(300, containerWidth - padding)
+      : Math.max(80, Math.floor(baseWidth * zoomLevel));
+
+  const usableContainerW = Math.max(100, containerWidth - padding);
+  const itemsPerRow =
+    viewMode === "list" || viewMode === "details"
+      ? 1
+      : Math.max(1, Math.floor((usableContainerW + gap) / (itemWidth + gap)));
+
   const rowCount = Math.ceil(allNodes.length / itemsPerRow);
 
   const handleMouseUp = (e: React.MouseEvent) => {
@@ -204,7 +212,14 @@ export function LibraryExplorerGrid({
           const rowIndex = Math.floor(idx / itemsPerRow);
           const colIndex = idx % itemsPerRow;
 
-          const rowH = viewMode === "small-icons" ? 44 : viewMode === "list" || viewMode === "details" ? 40 : itemWidth * 0.625 + 75;
+          const rowH =
+            viewMode === "small-icons"
+              ? 44
+              : viewMode === "list" || viewMode === "details"
+              ? 40
+              : viewMode === "gallery"
+              ? itemWidth * 0.75
+              : itemWidth * 0.625 + 75;
           const top = rowIndex * (rowH + gap);
           const left = colIndex * (itemWidth + gap) + 16;
           const bottom = top + rowH;
@@ -276,6 +291,7 @@ export function LibraryExplorerGrid({
     estimateSize: (index) => {
       if (viewMode === "list" || viewMode === "details") return 40 + gap;
       if (viewMode === "small-icons") return 44 + gap;
+      if (viewMode === "gallery") return itemWidth * 0.75 + gap;
       return itemWidth * 0.625 + 75 + gap;
     },
     overscan: 5,
@@ -395,7 +411,7 @@ export function LibraryExplorerGrid({
                 flexDirection: viewMode === "details" || viewMode === "list" ? "column" : undefined,
                 gridTemplateColumns:
                   viewMode !== "details" && viewMode !== "list"
-                    ? `repeat(${itemsPerRow}, minmax(0, 1fr))`
+                    ? `repeat(${itemsPerRow}, ${itemWidth}px)`
                     : undefined,
                 gap: `${gap}px`,
               }}
