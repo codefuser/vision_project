@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+﻿import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
 import { db } from "@/db/schema";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import type { RendererProps } from "./index";
@@ -8,8 +9,10 @@ import { isVideoContent } from "../content.types";
  * Video renderer. In `preview` mode it is always muted regardless of
  * projection volume so the operator hears audio only from the projector
  * window. Volume/muted props are applied to the projector instance.
+ * The optional `objectFit` prop (default: "contain") maps to CSS object-fit
+ * so callers can adapt scaling to the active ProjectionScaling mode.
  */
-export function VideoRenderer({ content, mode, playing, muted, volume }: RendererProps) {
+export function VideoRenderer({ content, mode, playing, muted, volume, objectFit = "contain" }: RendererProps & { objectFit?: string }) {
   const [url, setUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
@@ -61,7 +64,8 @@ export function VideoRenderer({ content, mode, playing, muted, volume }: Rendere
     <video
       ref={videoRef}
       src={url}
-      className="absolute inset-0 h-full w-full object-contain"
+      className="absolute inset-0 h-full w-full"
+      style={{ objectFit: objectFit as CSSProperties["objectFit"] }}
       playsInline
       loop={mode === "preview" ? true : !!content.body.loop}
       autoPlay

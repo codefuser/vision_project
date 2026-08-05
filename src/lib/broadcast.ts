@@ -225,6 +225,7 @@ export type ProjectionCommand =
   | { type: "UPDATE_STYLES"; styles: GroupedStyles }
   | { type: "UPDATE_BACKGROUND"; background: BackgroundConfig }
   | { type: "UPDATE_LOGO"; logo: LogoBroadcast }
+  | { type: "UPDATE_SCALING"; mode: import("@/db/schema").ProjectionScaling }
   | { type: "PLAY" }
   | { type: "PAUSE" }
   | { type: "STOP" }
@@ -257,6 +258,7 @@ export type ProjectionState = {
   textStyle?: TextStyle | null;
   groupedStyles?: GroupedStyles | null;
   logo?: LogoBroadcast | null;
+  projectionScaling?: import("@/db/schema").ProjectionScaling;
 };
 
 const CHANNEL = "church-projection";

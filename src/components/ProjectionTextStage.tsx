@@ -22,6 +22,13 @@ interface ProjectionTextStageProps {
   groupedStyles?: GroupedStyles | null;
   logo?: LogoBroadcast | null;
   className?: string;
+  /**
+   * The aspect ratio of the output display (width / height).
+   * When provided, the letterbox container matches the real screen shape
+   * so black bars are symmetrical on any TV.
+   * Falls back to 16/9 when omitted (e.g., in-app preview panels).
+   */
+  screenAspect?: number;
 }
 
 export function ProjectionTextStage({
@@ -30,9 +37,13 @@ export function ProjectionTextStage({
   groupedStyles,
   logo,
   className,
+  screenAspect,
 }: ProjectionTextStageProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const size = useFittedStage(hostRef, STAGE_ASPECT);
+  // Use the actual screen aspect when available (projector popup) so the
+  // letterbox matches 4:3 / 16:10 / portrait displays exactly.
+  const aspect = screenAspect ?? STAGE_ASPECT;
+  const size = useFittedStage(hostRef, aspect);
   const effectiveGroups = groupedStyles ?? DEFAULT_GROUPED_STYLES;
   const scale = size ? size.width / STAGE_WIDTH : 1;
 

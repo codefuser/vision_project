@@ -165,6 +165,21 @@ const ALL: SettingDef[] = [
     max: 300,
     unit: "s",
   },
+  {
+    key: "projectionScaling",
+    title: "Projection Scaling",
+    description: "How content is scaled to fill the connected display. Auto (Fit) is recommended for all screen types.",
+    keywords: ["scaling", "aspect ratio", "letterbox", "pillarbox", "fit", "fill", "stretch", "original", "bars", "display", "tv", "projector", "widescreen", "4:3", "adapt"],
+    type: "select",
+    category: "projection",
+    options: [
+      { value: "auto", label: "Auto (Recommended) — Fit with black bars" },
+      { value: "fit", label: "Fit — Letterbox / pillarbox (black bars)" },
+      { value: "fill", label: "Fill — Crop to fill, no bars" },
+      { value: "stretch", label: "Stretch — Distort to fill screen" },
+      { value: "original", label: "Original Size — No scaling" },
+    ],
+  },
 
   // ════════════════ Playlist ════════════════
   {

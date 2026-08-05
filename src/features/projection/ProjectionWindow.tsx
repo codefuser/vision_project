@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { db } from "@/db/schema";
 import type { MediaRecord, PlaylistItem, PlaylistRecord, TransitionType } from "@/db/schema";
+import type { ProjectionScaling } from "@/db/schema";
 import { getMedia, getPlaylist, getSettings, touchMedia } from "@/db/repo";
 import {
   getChannel,
@@ -13,6 +14,7 @@ import {
   type TextOverlay,
   type TextStyle,
 } from "@/lib/broadcast";
+import { getObjectFit } from "@/lib/projection-scaling";
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import { LogoLayer } from "@/components/LogoLayer";
 
@@ -44,6 +46,13 @@ export function ProjectionWindow() {
   const [textStyle, setTextStyle] = useState<TextStyle>(DEFAULT_TEXT_STYLE);
   const [groupedStyles, setGroupedStyles] = useState<GroupedStyles>(DEFAULT_GROUPED_STYLES);
   const [logo, setLogo] = useState<LogoBroadcast | null>(null);
+  const [scalingMode, setScalingMode] = useState<ProjectionScaling>("auto");
+  // Derive the actual screen aspect ratio so text stages letterbox correctly
+  // on any display (4:3, 16:10, portrait, etc.).
+  const screenAspect =
+    typeof window !== "undefined" && window.screen.width > 0 && window.screen.height > 0
+      ? window.screen.width / window.screen.height
+      : 16 / 9;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<number | null>(null);
@@ -104,6 +113,7 @@ export function ProjectionWindow() {
       textStyle,
       groupedStyles,
       logo,
+      projectionScaling: scalingMode,
     };
     channelRef.current?.postMessage(state);
   }, [
@@ -121,6 +131,7 @@ export function ProjectionWindow() {
     textStyle,
     groupedStyles,
     logo,
+    scalingMode,
   ]);
 
   useEffect(() => {
@@ -300,6 +311,9 @@ export function ProjectionWindow() {
         case "UPDATE_LOGO":
           setLogo(cmd.logo);
           break;
+        case "UPDATE_SCALING":
+          setScalingMode(cmd.mode);
+          break;
 
         case "PLAY":
           setPlaying(true);
@@ -365,12 +379,13 @@ export function ProjectionWindow() {
     }
   }, [volume, muted]);
 
-  // Initial settings: volume
+  // Initial settings: volume + scaling mode
   useEffect(() => {
     (async () => {
       const s = await getSettings();
       setVolume(s.defaultVolume);
       setMuted(s.muteOnStart);
+      setScalingMode(s.projectionScaling ?? "auto");
     })();
   }, []);
 
@@ -402,8 +417,8 @@ export function ProjectionWindow() {
           key={"prev-" + prevItem.id}
           src={prevItem.blobUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-contain transition-opacity duration-500"
-          style={{ opacity: transitioning ? 0 : 1 }}
+          className="absolute inset-0 h-full w-full transition-opacity duration-500"
+          style={{ objectFit: getObjectFit(scalingMode) }}
         />
       )}
 
@@ -413,7 +428,8 @@ export function ProjectionWindow() {
           key={"cur-" + cur.id + "-" + index}
           src={cur.blobUrl}
           alt=""
-          className={`absolute inset-0 h-full w-full object-contain ${transitionClass(cur.transition)}`}
+          className={`absolute inset-0 h-full w-full ${transitionClass(cur.transition)}`}
+          style={{ objectFit: getObjectFit(scalingMode) }}
         />
       )}
 
@@ -447,7 +463,8 @@ export function ProjectionWindow() {
           }}
           onTimeUpdate={() => broadcastState()}
           onDurationChange={() => broadcastState()}
-          className="absolute inset-0 h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full"
+          style={{ objectFit: getObjectFit(scalingMode) }}
           playsInline
         />
       )}
@@ -459,6 +476,7 @@ export function ProjectionWindow() {
           textStyle={textStyle}
           groupedStyles={groupedStyles}
           logo={logo}
+          screenAspect={screenAspect}
         />
       )}
 

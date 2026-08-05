@@ -128,6 +128,8 @@ export type VerticalAlign = "top" | "middle" | "bottom";
 export type VerseSplit = "single" | "range" | "chapter";
 export type SongSearchMode = "title" | "lyrics" | "both";
 export type ScalingMode = "fill" | "fit" | "stretch" | "tile";
+/** How the projection window scales content to fit the connected display. */
+export type ProjectionScaling = "auto" | "fit" | "fill" | "stretch" | "original";
 export type AnimationPreset =
   | "none"
   | "light-rays"
@@ -163,6 +165,8 @@ export interface AppSettings {
   countdownSeconds: number;
   safeMargins: number;
   autoTransition: boolean;
+  /** Adaptive projection scaling mode applied to the projector window. */
+  projectionScaling: ProjectionScaling;
 
   // Text Formatting
   tamilFont: string;
@@ -266,6 +270,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   countdownSeconds: 10,
   safeMargins: 5,
   autoTransition: false,
+  projectionScaling: "auto",
 
   // Text Formatting
   tamilFont: "Noto Sans Tamil",
