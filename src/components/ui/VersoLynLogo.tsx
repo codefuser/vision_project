@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
-import darkLogo from "../../../new-logo/versolyn-dark-logo.png";
-import lightLogo from "../../../new-logo/versolyn-light-logo.png";
+import darkLogo from "@/assets/logo/versolyn-dark-logo.png";
+import lightLogo from "@/assets/logo/versolyn-light-logo.png";
 
 interface VersoLynLogoProps {
   className?: string;
@@ -13,12 +13,14 @@ export function VersoLynLogo({ className, alt = "VersoLyn" }: VersoLynLogoProps)
       <img
         src={darkLogo}
         alt={alt}
-        className={cn("hidden dark:block object-contain", className)}
+        decoding="async"
+        className={cn("hidden dark:block object-contain h-full w-full select-none", className)}
       />
       <img
         src={lightLogo}
         alt={alt}
-        className={cn("block dark:hidden object-contain", className)}
+        decoding="async"
+        className={cn("block dark:hidden object-contain h-full w-full select-none", className)}
       />
     </>
   );

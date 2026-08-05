@@ -99,14 +99,14 @@ export function AppShell({ children }: { children: ReactNode }) {
         className="flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-200 ease-out"
       >
         {/* Brand / toggle header — stable layout regardless of collapsed state */}
-        <div className="flex h-14 shrink-0 items-center gap-2 overflow-hidden border-b border-sidebar-border px-2.5">
+        <div className="flex h-14 shrink-0 items-center gap-2.5 overflow-hidden border-b border-sidebar-border px-2">
           <button
             type="button"
             onClick={collapsed ? () => setCollapsed(false) : undefined}
             aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
             title={collapsed ? "Expand sidebar" : "VersoLyn"}
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-md p-1 bg-primary/10 transition-transform overflow-hidden",
+              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg p-1 bg-primary/10 transition-transform overflow-hidden",
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
@@ -115,7 +115,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
           <div
             className={cn(
-              "min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold transition-opacity duration-200",
+              "min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sidebar-foreground transition-opacity duration-200",
               collapsed ? "pointer-events-none opacity-0" : "opacity-100",
             )}
           >
