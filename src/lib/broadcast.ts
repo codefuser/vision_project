@@ -16,6 +16,8 @@ export interface TextStyle {
   shadow: boolean;
   shadowColor: string;
   shadowBlur: number; // px
+  /** 0..1 shadow alpha. Optional — legacy payloads fall back to 0.6. */
+  shadowOpacity?: number;
   outlineWidth: number; // px
   outlineColor: string;
   background: string; // CSS color
@@ -43,6 +45,7 @@ export const DEFAULT_TEXT_STYLE: TextStyle = {
   shadow: true,
   shadowColor: "#000000",
   shadowBlur: 20,
+  shadowOpacity: 0.6,
   outlineWidth: 0,
   outlineColor: "#000000",
   background: "#000000",
@@ -225,6 +228,7 @@ export type ProjectionCommand =
   | { type: "UPDATE_STYLES"; styles: GroupedStyles }
   | { type: "UPDATE_BACKGROUND"; background: BackgroundConfig }
   | { type: "UPDATE_LOGO"; logo: LogoBroadcast }
+  | { type: "UPDATE_SCALING"; mode: import("@/db/schema").ProjectionScaling }
   | { type: "PLAY" }
   | { type: "PAUSE" }
   | { type: "STOP" }
@@ -257,6 +261,7 @@ export type ProjectionState = {
   textStyle?: TextStyle | null;
   groupedStyles?: GroupedStyles | null;
   logo?: LogoBroadcast | null;
+  projectionScaling?: import("@/db/schema").ProjectionScaling;
 };
 
 const CHANNEL = "church-projection";

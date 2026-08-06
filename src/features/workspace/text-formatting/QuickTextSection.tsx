@@ -1,36 +1,7 @@
 import { useTextFormat, type StyleGroup } from "@/lib/text-format/store";
 import { useWorkspace } from "../workspace.store";
 import { Toggle, Field, Row, NumberInput, Select, ColorInput } from "./shared";
-
-const FONT_FAMILIES = [
-  "Inter",
-  "Roboto",
-  "Georgia",
-  "Times New Roman",
-  "Arial",
-  "Verdana",
-  "Tahoma",
-  "Latha",
-  "Nirmala UI",
-  "Vijaya",
-  "Akshar Unicode",
-  "Noto Sans Tamil",
-  "Noto Serif Tamil",
-  "Noto Sans Tamil UI",
-  "Mukta Malar",
-  "Catamaran",
-  "Hind Madurai",
-  "Meera Inimai",
-  "Pavanam",
-  "Arima Madurai",
-  "Anek Tamil",
-  "Kavivanar",
-  "Pathway Gothic One",
-  "Tiro Tamil",
-  "Mukta",
-  "Baloo Thambi 2",
-  "Cousine",
-];
+import { FONT_OPTIONS } from "@/lib/fonts";
 
 const WEIGHTS = [
   { label: "Light 300", value: 300 },
@@ -59,7 +30,7 @@ export function QuickTextSection({ active }: Props) {
         <Select
           value={style.fontFamily}
           onChange={(v) => setField(active, "fontFamily", v)}
-          options={FONT_FAMILIES.map((f) => ({ label: f, value: f }))}
+          options={FONT_OPTIONS}
         />
       </Field>
 

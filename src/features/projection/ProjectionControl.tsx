@@ -16,10 +16,12 @@ import {
   AlertTriangle,
   CheckCircle2,
   Info,
+  Maximize2,
 } from "lucide-react";
 import { useProjection, type OpenProjectorResult } from "@/stores/projection.store";
 import { getMedia } from "@/db/repo";
 import type { MediaRecord } from "@/db/schema";
+import type { ProjectionScaling } from "@/db/schema";
 import { Thumb } from "@/components/Thumb";
 import {
   getDisplayDiagnostics,
@@ -28,6 +30,8 @@ import {
   type ScreenInfo,
 } from "@/lib/display/screen-manager";
 import { logger } from "@/lib/logger";
+import { useSettings } from "@/stores/settings.store";
+import { getObjectFit, SCALING_LABELS, SCALING_DESCRIPTIONS } from "@/lib/projection-scaling";
 
 const PREFERRED_SCREEN_KEY = "projector.preferredScreenId";
 
@@ -43,11 +47,31 @@ export function ProjectionControl() {
     text: string;
   } | null>(null);
   const [testInfo, setTestInfo] = useState<string | null>(null);
+  // Projection scaling — read from settings, send live UPDATE_SCALING on change.
+  const settingsScaling = useSettings((s) => s.settings.projectionScaling ?? "auto");
+  const updateSettings = useSettings((s) => s.update);
+  const [scalingMode, setScalingMode] = useState<ProjectionScaling>(settingsScaling);
 
   useEffect(() => {
     init();
     send({ type: "PING" });
   }, [init, send]);
+
+  // Keep local scaling in sync when settings change externally.
+  useEffect(() => {
+    setScalingMode(settingsScaling);
+  }, [settingsScaling]);
+
+  const handleScalingChange = useCallback(
+    async (mode: ProjectionScaling) => {
+      setScalingMode(mode);
+      // Broadcast immediately so the projector window updates without reload.
+      send({ type: "UPDATE_SCALING", mode });
+      // Persist for future sessions.
+      await updateSettings({ projectionScaling: mode });
+    },
+    [send, updateSettings],
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -290,6 +314,48 @@ h1{font-size:48px;margin:0 0 12px}p{margin:6px 0;opacity:.85}small{opacity:.6}</
           ) : (
             <div className="text-xs text-muted-foreground">Loading…</div>
           )}
+        </div>
+
+        {/* Projection Scaling */}
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <Maximize2 className="h-4 w-4 text-muted-foreground" />
+            <div className="text-sm font-medium">Projection Scaling</div>
+          </div>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Choose how content is scaled to fit the connected display. Changes take effect instantly.
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {([
+              "auto",
+              "fit",
+              "fill",
+              "stretch",
+              "original",
+            ] as ProjectionScaling[]).map((m) => (
+              <button
+                key={m}
+                onClick={() => handleScalingChange(m)}
+                className={`flex flex-col items-start gap-0.5 rounded-md border p-3 text-left text-xs transition-colors ${
+                  scalingMode === m
+                    ? "border-primary bg-primary/8 text-primary"
+                    : "border-border bg-background hover:bg-accent"
+                }`}
+              >
+                <span className="font-semibold">{SCALING_LABELS[m]}{m === "auto" ? " ★" : ""}</span>
+                <span className={scalingMode === m ? "text-primary/80" : "text-muted-foreground"}>
+                  {SCALING_DESCRIPTIONS[m]}
+                </span>
+              </button>
+            ))}
+          </div>
+          {/* Live preview pill showing the current objectFit */}
+          <div className="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
+            <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
+              object-fit: {getObjectFit(scalingMode)}
+            </span>
+            <span>applied to the projector window</span>
+          </div>
         </div>
 
         {/* Troubleshooting */}

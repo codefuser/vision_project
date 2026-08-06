@@ -241,7 +241,7 @@ function textCss(style: SectionStyle): React.CSSProperties {
   const strokeOn = s.textStrokeEnabled;
   const textShadow =
     style.shadow && shadowOn
-      ? `0 4px ${style.shadowBlur}px ${mixAlpha(style.shadowColor, 0.6)}`
+      ? `0 4px ${style.shadowBlur}px ${mixAlpha(style.shadowColor, style.shadowOpacity ?? 0.6)}`
       : "none";
 
   return {

@@ -168,6 +168,9 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
         case "UPDATE_LOGO":
           next = { ...cur, logo: cmd.logo };
           break;
+        case "UPDATE_SCALING":
+          next = { ...cur, projectionScaling: cmd.mode };
+          break;
         case "PLAY":
           next = { ...cur, playing: true };
           break;

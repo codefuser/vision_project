@@ -31,6 +31,8 @@ interface TextFormatStore {
   /** Legacy single-group setter (writes to english) — preserved for compatibility. */
   set: <K extends keyof TextStyle>(key: K, value: TextStyle[K]) => void;
   patchGroup: (group: StyleGroup, partial: Partial<SectionStyle>) => void;
+  /** Replace all groups in one atomic write + broadcast (used by Settings sync). */
+  setGroups: (groups: GroupedStyles) => void;
   setBackground: (partial: Partial<BackgroundConfig>) => void;
   reset: () => void;
   resetGroup: (group: StyleGroup) => void;
@@ -91,6 +93,10 @@ export const useTextFormat = create<TextFormatStore>()(
           };
           return { groups: next, style: stripSection(next.english) };
         });
+        broadcastSoon(get().groups);
+      },
+      setGroups: (groups) => {
+        set({ groups, style: stripSection(groups.english) });
         broadcastSoon(get().groups);
       },
       setBackground: (partial) => {

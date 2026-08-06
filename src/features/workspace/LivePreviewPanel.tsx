@@ -29,6 +29,8 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import { LogoLayer } from "@/components/LogoLayer";
 import { useLogo } from "@/stores/logo.store";
+import { useSettings } from "@/stores/settings.store";
+import { getObjectFit, SCALING_LABELS } from "@/lib/projection-scaling";
 import { cn } from "@/lib/utils";
 
 /**
@@ -52,6 +54,10 @@ export function LivePreviewPanel() {
   const logoCurrent = useLogo((s) => s.current);
   const logoSettings = useLogo((s) => s.settings);
   const localLogo = { enabled: logoEnabled, current: logoCurrent, settings: logoSettings };
+  // Derive objectFit from the persisted projectionScaling setting so the
+  // preview mirrors what the projector window actually renders.
+  const scalingMode = useSettings((s) => s.settings.projectionScaling ?? "auto");
+  const previewObjectFit = getObjectFit(scalingMode);
 
   // Resolve current media metadata
   useEffect(() => {
@@ -220,7 +226,8 @@ export function LivePreviewPanel() {
           <img
             src={url}
             alt=""
-            className="max-h-full max-w-full object-contain"
+            className="max-h-full max-w-full"
+            style={{ objectFit: previewObjectFit }}
             draggable={false}
           />
         )}
@@ -228,7 +235,8 @@ export function LivePreviewPanel() {
           <video
             ref={videoRef}
             src={url}
-            className="max-h-full max-w-full object-contain"
+            className="max-h-full max-w-full"
+            style={{ objectFit: previewObjectFit }}
             muted
             playsInline
             loop
@@ -273,6 +281,10 @@ export function LivePreviewPanel() {
             {state.index + 1} / {state.total}
           </div>
         )}
+        {/* Scaling mode badge */}
+        <div className="absolute bottom-2 right-2 rounded-md bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest text-white/70 backdrop-blur">
+          {SCALING_LABELS[scalingMode]}
+        </div>
       </div>
 
       {/* Timeline (video only) — with hover thumbnail + timestamp preview */}

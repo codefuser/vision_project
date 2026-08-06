@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { db } from "@/db/schema";
 import type { MediaRecord, PlaylistItem, PlaylistRecord, TransitionType } from "@/db/schema";
+import type { ProjectionScaling } from "@/db/schema";
 import { getMedia, getPlaylist, getSettings, touchMedia } from "@/db/repo";
 import {
   getChannel,
@@ -13,6 +14,7 @@ import {
   type TextOverlay,
   type TextStyle,
 } from "@/lib/broadcast";
+import { getObjectFit } from "@/lib/projection-scaling";
 import { ProjectionTextStage } from "@/components/ProjectionTextStage";
 import { LogoLayer } from "@/components/LogoLayer";
 
@@ -44,12 +46,26 @@ export function ProjectionWindow() {
   const [textStyle, setTextStyle] = useState<TextStyle>(DEFAULT_TEXT_STYLE);
   const [groupedStyles, setGroupedStyles] = useState<GroupedStyles>(DEFAULT_GROUPED_STYLES);
   const [logo, setLogo] = useState<LogoBroadcast | null>(null);
+  const [scalingMode, setScalingMode] = useState<ProjectionScaling>("auto");
+  // Derive the actual screen aspect ratio so text stages letterbox correctly
+  // on any display (4:3, 16:10, portrait, etc.).
+  const screenAspect =
+    typeof window !== "undefined" && window.screen.width > 0 && window.screen.height > 0
+      ? window.screen.width / window.screen.height
+      : 16 / 9;
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<number | null>(null);
   const urlsRef = useRef<string[]>([]);
   const idleHideTimer = useRef<number | null>(null);
   const [cursorHidden, setCursorHidden] = useState(false);
+  // Playback defaults read once from settings when the projector opens.
+  const runtimeRef = useRef({
+    autoTransition: false,
+    mediaLoop: false,
+    transitionDuration: 500,
+    blackScreen: false,
+  });
 
   // Cursor auto-hide
   useEffect(() => {
@@ -104,6 +120,7 @@ export function ProjectionWindow() {
       textStyle,
       groupedStyles,
       logo,
+      projectionScaling: scalingMode,
     };
     channelRef.current?.postMessage(state);
   }, [
@@ -121,6 +138,7 @@ export function ProjectionWindow() {
     textStyle,
     groupedStyles,
     logo,
+    scalingMode,
   ]);
 
   useEffect(() => {
@@ -155,7 +173,7 @@ export function ProjectionWindow() {
     (cur: RuntimeItem | undefined) => {
       clearTimer();
       if (!cur || !playing) return;
-      if (cur.media.type === "image" && items.length > 1) {
+      if (cur.media.type === "image" && items.length > 1 && runtimeRef.current.autoTransition) {
         timerRef.current = window.setTimeout(() => goNext(), cur.durationMs);
       }
     },
@@ -163,21 +181,23 @@ export function ProjectionWindow() {
   );
 
   const goNext = useCallback(() => {
+    if (items.length === 0) return;
+    const isLast = index === items.length - 1;
+    if (!runtimeRef.current.mediaLoop && isLast) return; // hold on the final item
     setPrevItem(items[index] ?? null);
     setTransitioning(true);
-    setIndex((i) => {
-      if (items.length === 0) return 0;
-      const next = (i + 1) % items.length;
-      return next;
-    });
-    setTimeout(() => setTransitioning(false), 600);
+    setIndex((i) => (i + 1) % items.length);
+    setTimeout(() => setTransitioning(false), runtimeRef.current.transitionDuration + 100);
   }, [items, index]);
 
   const goPrev = useCallback(() => {
+    if (items.length === 0) return;
+    const isFirst = index === 0;
+    if (!runtimeRef.current.mediaLoop && isFirst) return; // hold on the first item
     setPrevItem(items[index] ?? null);
     setTransitioning(true);
-    setIndex((i) => (items.length === 0 ? 0 : (i - 1 + items.length) % items.length));
-    setTimeout(() => setTransitioning(false), 600);
+    setIndex((i) => (i - 1 + items.length) % items.length);
+    setTimeout(() => setTransitioning(false), runtimeRef.current.transitionDuration + 100);
   }, [items, index]);
 
   // When item changes, reschedule
@@ -187,9 +207,10 @@ export function ProjectionWindow() {
     return () => clearTimer();
   }, [index, items, scheduleAdvance]);
 
-  // Video ended -> advance
+  // Video ended -> advance (respect loop setting; restart the item when not looping)
   const onVideoEnded = () => {
-    if (items.length > 1) goNext();
+    const isLast = items.length > 0 && index === items.length - 1;
+    if (items.length > 1 && !(isLast && !runtimeRef.current.mediaLoop)) goNext();
     else if (videoRef.current) {
       videoRef.current.currentTime = 0;
       void videoRef.current.play();
@@ -300,6 +321,9 @@ export function ProjectionWindow() {
         case "UPDATE_LOGO":
           setLogo(cmd.logo);
           break;
+        case "UPDATE_SCALING":
+          setScalingMode(cmd.mode);
+          break;
 
         case "PLAY":
           setPlaying(true);
@@ -365,12 +389,19 @@ export function ProjectionWindow() {
     }
   }, [volume, muted]);
 
-  // Initial settings: volume
+  // Initial settings: volume, mute, scaling mode + playback defaults
   useEffect(() => {
     (async () => {
       const s = await getSettings();
+      runtimeRef.current = {
+        autoTransition: s.autoTransition,
+        mediaLoop: s.mediaLoop,
+        transitionDuration: s.transitionDuration ?? 500,
+        blackScreen: s.blackScreen,
+      };
       setVolume(s.defaultVolume);
       setMuted(s.muteOnStart);
+      setScalingMode(s.projectionScaling ?? "auto");
     })();
   }, []);
 
@@ -382,8 +413,9 @@ export function ProjectionWindow() {
       else if (e.key === " ") {
         e.preventDefault();
         setPlaying((p) => !p);
-      } else if (e.key.toLowerCase() === "b") setBlack((b) => !b);
-      else if (e.key === "Escape") window.close();
+      } else if (e.key.toLowerCase() === "b" && runtimeRef.current.blackScreen) {
+        setBlack((b) => !b);
+      } else if (e.key === "Escape") window.close();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -402,8 +434,11 @@ export function ProjectionWindow() {
           key={"prev-" + prevItem.id}
           src={prevItem.blobUrl}
           alt=""
-          className="absolute inset-0 h-full w-full object-contain transition-opacity duration-500"
-          style={{ opacity: transitioning ? 0 : 1 }}
+          className="absolute inset-0 h-full w-full transition-opacity"
+          style={{
+            objectFit: getObjectFit(scalingMode),
+            transitionDuration: `${runtimeRef.current.transitionDuration}ms`,
+          }}
         />
       )}
 
@@ -413,7 +448,11 @@ export function ProjectionWindow() {
           key={"cur-" + cur.id + "-" + index}
           src={cur.blobUrl}
           alt=""
-          className={`absolute inset-0 h-full w-full object-contain ${transitionClass(cur.transition)}`}
+          className={`absolute inset-0 h-full w-full ${transitionClass(cur.transition)}`}
+          style={{
+            objectFit: getObjectFit(scalingMode),
+            animationDuration: `${runtimeRef.current.transitionDuration}ms`,
+          }}
         />
       )}
 
@@ -447,7 +486,8 @@ export function ProjectionWindow() {
           }}
           onTimeUpdate={() => broadcastState()}
           onDurationChange={() => broadcastState()}
-          className="absolute inset-0 h-full w-full object-contain"
+          className="absolute inset-0 h-full w-full"
+          style={{ objectFit: getObjectFit(scalingMode) }}
           playsInline
         />
       )}
@@ -459,6 +499,7 @@ export function ProjectionWindow() {
           textStyle={textStyle}
           groupedStyles={groupedStyles}
           logo={logo}
+          screenAspect={screenAspect}
         />
       )}
 

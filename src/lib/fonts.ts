@@ -1,0 +1,32 @@
+/** Font families available to projected text (system fonts, no webfont loading). */
+export const FONT_FAMILIES = [
+  "Inter",
+  "Roboto",
+  "Georgia",
+  "Times New Roman",
+  "Arial",
+  "Verdana",
+  "Tahoma",
+  "Latha",
+  "Nirmala UI",
+  "Vijaya",
+  "Akshar Unicode",
+  "Noto Sans Tamil",
+  "Noto Serif Tamil",
+  "Noto Sans Tamil UI",
+  "Mukta Malar",
+  "Catamaran",
+  "Hind Madurai",
+  "Meera Inimai",
+  "Pavanam",
+  "Arima Madurai",
+  "Anek Tamil",
+  "Kavivanar",
+  "Pathway Gothic One",
+  "Tiro Tamil",
+  "Mukta",
+  "Baloo Thambi 2",
+  "Cousine",
+] as const;
+
+export const FONT_OPTIONS = FONT_FAMILIES.map((f) => ({ label: f, value: f }));

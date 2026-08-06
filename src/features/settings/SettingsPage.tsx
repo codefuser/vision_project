@@ -6,28 +6,28 @@ import {
   Download,
   Upload,
   Keyboard,
-  Monitor,
-  Sun,
-  Moon,
   ChevronRight,
   X,
   Info,
+  ExternalLink,
 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/stores/settings.store";
-import { db, DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
+import { DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
 import { exportBackup, importBackup } from "@/features/backup/backup";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { SETTINGS, CATEGORY_META } from "./settings-defs";
 import type { SettingDef } from "./settings-defs";
+import { useRegisteredShortcuts } from "@/lib/shortcuts/use-shortcut";
+import { formatCombo } from "@/lib/shortcuts/manager";
 import {
   SettingToggle,
   SettingSlider,
   SettingSelect,
   SettingInput,
   SettingColor,
-  SettingCard,
 } from "./SettingsControls";
 
 /* ═══════════════════════════════════════════════════
@@ -138,20 +138,43 @@ export function SettingsPage() {
   }, [load, loaded]);
 
   /* ── Change handler ── */
+  const debounceRef = useRef<Map<keyof AppSettings, number>>(new Map());
   const handleChange = useCallback(
     (key: keyof AppSettings, value: unknown) => {
       if (savingRef.current) return;
-      savingRef.current = true;
-      setSaving(true);
-      update({ [key]: value } as Partial<AppSettings>)
-        .catch((e) => toast.error("Failed to save: " + (e as Error).message))
-        .finally(() => {
-          savingRef.current = false;
-          setSaving(false);
-        });
+      const def = SETTINGS.find((d) => d.key === key);
+      const isContinuous = def?.type === "slider" || def?.type === "color";
+      const persist = (k: keyof AppSettings, v: unknown) => {
+        savingRef.current = true;
+        setSaving(true);
+        update({ [k]: v } as Partial<AppSettings>)
+          .catch((e) => toast.error("Failed to save: " + (e as Error).message))
+          .finally(() => {
+            savingRef.current = false;
+            setSaving(false);
+          });
+      };
+      if (isContinuous) {
+        const prev = debounceRef.current.get(key);
+        if (prev) window.clearTimeout(prev);
+        debounceRef.current.set(
+          key,
+          window.setTimeout(() => persist(key, value), 120),
+        );
+      } else {
+        void persist(key, value);
+      }
     },
     [update],
   );
+
+  useEffect(() => {
+    const map = debounceRef.current;
+    return () => {
+      for (const t of map.values()) window.clearTimeout(t);
+      map.clear();
+    };
+  }, []);
 
   /* ── Reset section ── */
   const resetSection = useCallback(
@@ -178,6 +201,43 @@ export function SettingsPage() {
 
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importFilePending, setImportFilePending] = useState<File | null>(null);
+
+  /* ── Backup handlers ── */
+  const onExport = useCallback(async () => {
+    setBusy("export");
+    try {
+      const blob = await exportBackup();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded");
+    } catch (e) {
+      toast.error("Export failed: " + (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  const executeImport = useCallback(async (file: File, mode: "replace" | "merge") => {
+    setBusy("import");
+    try {
+      await importBackup(file, { mode });
+      toast.success("Backup restored – reloading…");
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e) {
+      toast.error("Import failed: " + (e as Error).message);
+      setBusy(null);
+    } finally {
+      setImportFilePending(null);
+    }
+  }, []);
+
+  const onImport = useCallback(async (file: File) => {
+    setImportFilePending(file);
+  }, []);
 
   /* ── Reset all ── */
   const executeResetAll = useCallback(async () => {
@@ -237,50 +297,13 @@ export function SettingsPage() {
     if (!search.trim()) return Object.entries(CATEGORY_META);
     const cats = new Set(searchHits.map((h) => h.def.category));
     return Object.entries(CATEGORY_META).filter(
-      ([id]) => cats.has(id) || id === "keyboard-shortcuts",
+      ([id]) => cats.has(id) || id === "keyboard-shortcuts" || id === "about",
     );
   }, [search, searchHits]);
 
   const onSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && searchHits.length > 0) scrollTo(searchHits[0].def.category);
   };
-
-  /* ── Backup handlers ── */
-  const onExport = useCallback(async () => {
-    setBusy("export");
-    try {
-      const blob = await exportBackup();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Backup downloaded");
-    } catch (e) {
-      toast.error("Export failed: " + (e as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }, []);
-
-  const executeImport = useCallback(async (file: File, mode: "replace" | "merge") => {
-    setBusy("import");
-    try {
-      await importBackup(file, { mode });
-      toast.success("Backup restored – reloading…");
-      setTimeout(() => window.location.reload(), 500);
-    } catch (e) {
-      toast.error("Import failed: " + (e as Error).message);
-      setBusy(null);
-    } finally {
-      setImportFilePending(null);
-    }
-  }, []);
-
-  const onImport = useCallback(async (file: File) => {
-    setImportFilePending(file);
-  }, []);
 
   /* ── Settings by category ── */
   const byCategory = useMemo(() => {
@@ -303,8 +326,6 @@ export function SettingsPage() {
       </div>
     );
   }
-
-  const themeIcon = settings.theme === "dark" ? Moon : settings.theme === "light" ? Sun : Monitor;
 
   /* ════════════════════════════════════════════
      RENDER
@@ -423,7 +444,6 @@ export function SettingsPage() {
             {/* Category sections */}
             {Object.entries(CATEGORY_META).map(([id, meta]) => {
               if (id === "keyboard-shortcuts") return null; // render separately
-              if (id === "backup") return null; // render separately
               if (id === "about") return null; // render separately
               const defs = byCategory.get(id) ?? [];
               const visible = defs.filter((d) => !hitKeys || hitKeys.has(d.key));
@@ -519,38 +539,50 @@ export function SettingsPage() {
 }
 
 /* ═══════════════════════════════════════════════════
-   Keyboard Shortcuts Section
+   Keyboard Shortcuts Section — driven by the real shortcut
+   registry (lib/shortcuts) so every listed binding is live.
    ═══════════════════════════════════════════════════ */
 
 function KeyboardShortcutsSection({ search }: { search: string }) {
+  const all = useRegisteredShortcuts();
   const [query, setQuery] = useState("");
-  const shortcuts = [
-    { id: "fullscreen", label: "Toggle Fullscreen", keys: "F11" },
-    { id: "black", label: "Black Screen", keys: "B" },
-    { id: "logo", label: "Logo Screen", keys: "L" },
-    { id: "countdown", label: "Start Countdown", keys: "C" },
-    { id: "next", label: "Next Item", keys: "→" },
-    { id: "prev", label: "Previous Item", keys: "←" },
-    { id: "play", label: "Play / Pause", keys: "Space" },
-    { id: "mute", label: "Toggle Mute", keys: "M" },
-    { id: "vol-up", label: "Volume Up", keys: "↑" },
-    { id: "vol-down", label: "Volume Down", keys: "↓" },
-    { id: "search", label: "Search", keys: "Ctrl+F" },
-    { id: "settings", label: "Open Settings", keys: "Ctrl+," },
-  ];
 
-  const filtered = shortcuts.filter(
-    (s) =>
-      !query.trim() ||
-      s.label.toLowerCase().includes(query.toLowerCase()) ||
-      s.keys.toLowerCase().includes(query.toLowerCase()),
-  );
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const list = all
+      .filter(
+        (s) =>
+          !q ||
+          s.label.toLowerCase().includes(q) ||
+          s.id.toLowerCase().includes(q) ||
+          (s.description ?? "").toLowerCase().includes(q) ||
+          s.keys.some((k) => formatCombo(k).toLowerCase().includes(q)),
+      )
+      .sort((a, b) => a.label.localeCompare(b.label));
+    const outer = search.trim().toLowerCase();
+    if (outer && !["keyboard", "shortcut"].some((k) => outer.includes(k))) {
+      return list.filter(
+        (s) =>
+          s.label.toLowerCase().includes(outer) ||
+          s.id.toLowerCase().includes(outer) ||
+          (s.description ?? "").toLowerCase().includes(outer),
+      );
+    }
+    return list;
+  }, [all, query, search]);
 
   return (
     <section id="section-keyboard-shortcuts" className="scroll-mt-12 mb-8">
       <div className="mb-3 flex items-center gap-2.5">
         <Keyboard className="h-4 w-4 text-primary" />
         <h2 className="text-sm font-semibold text-foreground">Keyboard Shortcuts</h2>
+        <Link
+          to="/shortcuts"
+          className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-primary transition-colors hover:bg-primary/10"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Open Shortcut Center
+        </Link>
       </div>
       <div className="rounded-lg border border-border/25 bg-card shadow-xs">
         <div className="border-b border-border/12 px-4 py-2">
@@ -564,13 +596,27 @@ function KeyboardShortcutsSection({ search }: { search: string }) {
             />
           </div>
         </div>
-        <div className="divide-y divide-border/6">
+        <div className="max-h-80 divide-y divide-border/6 overflow-y-auto">
           {filtered.map((s) => (
-            <div key={s.id} className="flex items-center justify-between px-4 py-2.5">
-              <span className="text-[13px] text-foreground/80">{s.label}</span>
-              <kbd className="rounded-md border border-border/25 bg-muted/25 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-xs">
-                {s.keys}
-              </kbd>
+            <div key={s.id} className="flex items-center justify-between gap-3 px-4 py-2.5">
+              <div className="min-w-0 flex-1">
+                <span className="text-[13px] text-foreground/80">{s.label}</span>
+                {s.description && (
+                  <span className="ml-2 hidden truncate text-[11px] text-muted-foreground/45 sm:inline">
+                    {s.description}
+                  </span>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center gap-1">
+                {s.keys.map((k) => (
+                  <kbd
+                    key={k}
+                    className="rounded-md border border-border/25 bg-muted/25 px-2 py-0.5 text-[11px] font-medium text-muted-foreground shadow-xs"
+                  >
+                    {formatCombo(k)}
+                  </kbd>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -624,17 +670,6 @@ function AboutSection() {
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 Stable
               </span>
-            </div>
-          </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <span className="text-[13px] font-medium text-foreground/90">Release Date</span>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
-                First public release
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[13px] text-muted-foreground">Q2 2026</span>
             </div>
           </div>
         </div>
@@ -712,3 +747,4 @@ function BackupSection({
     </section>
   );
 }
+
