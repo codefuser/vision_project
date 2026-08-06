@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import darkLogo from "@/assets/logo/versolyn-dark-logo.png";
 import lightLogo from "@/assets/logo/versolyn-light-logo.png";
@@ -8,14 +9,16 @@ interface VersoLynLogoProps {
 }
 
 export function VersoLynLogo({ className, alt = "VersoLyn" }: VersoLynLogoProps) {
+  const [darkSrc, setDarkSrc] = useState<string>(darkLogo);
+  const [lightSrc, setLightSrc] = useState<string>(lightLogo);
+
   return (
     <>
       <img
-        src={darkLogo || "/versolyn-logo-dark.png"}
-        onError={(e) => {
-          const target = e.currentTarget;
-          if (target.src !== location.origin + "/versolyn-logo-dark.png") {
-            target.src = "/versolyn-logo-dark.png";
+        src={darkSrc}
+        onError={() => {
+          if (darkSrc !== "/versolyn-logo-dark.png") {
+            setDarkSrc("/versolyn-logo-dark.png");
           }
         }}
         alt={alt}
@@ -23,11 +26,10 @@ export function VersoLynLogo({ className, alt = "VersoLyn" }: VersoLynLogoProps)
         className={cn("hidden dark:block object-contain h-full w-full select-none", className)}
       />
       <img
-        src={lightLogo || "/versolyn-logo-light.png"}
-        onError={(e) => {
-          const target = e.currentTarget;
-          if (target.src !== location.origin + "/versolyn-logo-light.png") {
-            target.src = "/versolyn-logo-light.png";
+        src={lightSrc}
+        onError={() => {
+          if (lightSrc !== "/versolyn-logo-light.png") {
+            setLightSrc("/versolyn-logo-light.png");
           }
         }}
         alt={alt}
