@@ -65,6 +65,7 @@ function Particles() {
 }
 
 function FeatureRow({ feature }: { feature: RoadmapFeature }) {
+  const isCompleted = feature.status === "completed";
   return (
     <div className="flex items-center justify-between gap-4 py-2.5 border-b border-border/30 last:border-0">
       <div className="min-w-0 flex-1">
@@ -73,9 +74,14 @@ function FeatureRow({ feature }: { feature: RoadmapFeature }) {
       </div>
       <Badge
         variant="outline"
-        className="shrink-0 text-[10px] font-medium px-2 py-0.5 border bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+        className={cn(
+          "shrink-0 text-[10px] font-medium px-2 py-0.5 border",
+          isCompleted
+            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+            : "bg-amber-500/10 text-amber-500 border-amber-500/20",
+        )}
       >
-        Completed
+        {isCompleted ? "Completed" : "In Progress"}
       </Badge>
     </div>
   );
@@ -109,7 +115,7 @@ function VersionCard({
                 </Badge>
               </div>
               <CardTitle className="devhub-gradient-text text-2xl md:text-3xl font-bold tracking-tight">
-                v{version.version}
+                {version.version}
               </CardTitle>
               <CardDescription className="text-base font-medium text-foreground/80 mt-1">
                 {version.title}
@@ -173,7 +179,7 @@ function VersionCard({
 }
 
 function VersionHistorySection() {
-  const currentVersion = VERSIONS.find((v) => v.version === CURRENT_VERSION);
+  const currentVersion = VERSIONS[0];
 
   return (
     <section id="version-history" className="py-20 px-6 bg-muted/30">
@@ -195,11 +201,11 @@ export function RoadmapPage() {
             <History className="w-8 h-8 text-primary" />
           </div>
           <h1 className="devhub-gradient-text text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            Version History
+            Development Status
           </h1>
-          <p className="text-lg md:text-xl text-muted-foreground font-medium">v{CURRENT_VERSION}</p>
+          <p className="text-lg md:text-xl text-muted-foreground font-medium">{CURRENT_VERSION}</p>
           <p className="text-md text-muted-foreground/80 max-w-2xl mx-auto leading-relaxed mt-4">
-            Track the evolution of VersoLyn — from initial release to latest updates.
+            Track the evolution and active progress of VersoLyn.
           </p>
           <div className="flex items-center justify-center gap-4 mt-8">
             <Button
@@ -210,7 +216,7 @@ export function RoadmapPage() {
               }
             >
               <History className="w-4 h-4" />
-              View Releases
+              View Active Status
             </Button>
           </div>
         </div>
@@ -222,14 +228,15 @@ export function RoadmapPage() {
         <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Route className="w-4 h-4 text-primary" />
-            <span className="font-medium">Version History</span>
-            <span className="text-muted-foreground/50">v{CURRENT_VERSION}</span>
+            <span className="font-medium">Development Status</span>
+            <span className="text-muted-foreground/50">({CURRENT_VERSION})</span>
           </div>
           <p className="text-xs text-muted-foreground/50">
-            VersoLyn &middot; First public release
+            VersoLyn &middot; In Active Development (Started June 6, 2026)
           </p>
         </div>
       </footer>
     </div>
   );
 }
+

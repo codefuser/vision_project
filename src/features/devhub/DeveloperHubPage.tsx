@@ -80,25 +80,37 @@ function AnimatedCounter({
   suffix = "",
   visible,
 }: {
-  value: number;
+  value: number | string;
   suffix?: string;
   visible: boolean;
 }) {
   const [count, setCount] = useState(0);
+  const isNumeric = typeof value === "number";
+
   useEffect(() => {
-    if (!visible) return;
+    if (!visible || !isNumeric) return;
     let frame: number;
     const start = performance.now();
     const duration = 1500;
     function animate(now: number) {
       const progress = Math.min((now - start) / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 3);
-      setCount(Math.floor(eased * value));
+      setCount(Math.floor(eased * (value as number)));
       if (progress < 1) frame = requestAnimationFrame(animate);
     }
     frame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(frame);
-  }, [value, visible]);
+  }, [value, visible, isNumeric]);
+
+  if (!isNumeric) {
+    return (
+      <>
+        {value}
+        {suffix}
+      </>
+    );
+  }
+
   return (
     <>
       {count}
@@ -117,7 +129,6 @@ const SECTION_IDS = [
   "gallery",
   "stats",
   "community",
-  "support",
   "contributors",
   "license",
 ] as const;
@@ -134,7 +145,6 @@ const SECTION_LABELS: Record<SectionId, string> = {
   gallery: "Gallery",
   stats: "Stats",
   community: "Community",
-  support: "Support",
   contributors: "Contributors",
   license: "License",
 };
@@ -246,8 +256,8 @@ function HeroSection() {
           visible && "visible",
         )}
       >
-        <div className="devhub-float inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 border border-primary/20 mb-8 shadow-lg shadow-primary/5 p-3 overflow-hidden">
-          <VersoLynLogo className="w-full h-full" />
+        <div className="devhub-float inline-flex items-center justify-center w-24 h-24 mb-6 select-none">
+          <VersoLynLogo className="w-full h-full object-contain" />
         </div>
         <h1 className="devhub-gradient-text text-5xl md:text-7xl font-bold tracking-tight mb-4">
           {PROJECT_INFO.name}
@@ -257,7 +267,7 @@ function HeroSection() {
         </p>
         <div className="flex flex-wrap items-center justify-center gap-3 mb-10">
           <Badge variant="secondary" className="text-sm px-3 py-1">
-            v{PROJECT_INFO.version}
+            {PROJECT_INFO.version}
           </Badge>
           {PROJECT_INFO.badges.map((badge, i) => (
             <Badge key={i} variant={badge.variant} className="text-sm px-3 py-1">
@@ -310,7 +320,7 @@ function AboutSection() {
     <section id="about" className="py-20 px-6">
       <SectionHeader
         title="About VersoLyn"
-        subtitle="A modern presentation tool built for the church, by the church."
+        subtitle="A modern web presentation tool built for the church, by the church."
       />
       <div
         ref={ref}
@@ -409,7 +419,7 @@ function Timeline({ events }: { events: { year: string; event: string }[] }) {
         <div key={i} className="relative pb-8 last:pb-0">
           <div className="absolute left-[-1.65rem] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background" />
           <div className="text-sm font-semibold text-primary mb-1">{item.year}</div>
-          <p className="text-muted-foreground">{item.event}</p>
+          <p className="text-muted-foreground text-sm">{item.event}</p>
         </div>
       ))}
     </div>
@@ -634,7 +644,7 @@ function FeaturesSection() {
     <section id="features" className="py-20 px-6 bg-muted/30">
       <SectionHeader
         title="Feature Showcase"
-        subtitle="Everything you need for beautiful, reliable presentations."
+        subtitle="Core modules designed for worship presentation."
       />
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {FEATURES.map((feature, i) => (
@@ -657,7 +667,7 @@ function ArchitectureDiagram() {
       <CardContent>
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2 justify-center">
-            {["Electron Shell", "React UI", "TanStack Router", "Zustand State"].map((layer) => (
+            {["React 19 UI", "TanStack Router & Start", "Zustand State Store"].map((layer) => (
               <div
                 key={layer}
                 className="px-4 py-2 rounded-lg bg-primary/10 border border-primary/20 text-sm font-medium text-primary"
@@ -674,7 +684,7 @@ function ArchitectureDiagram() {
             <span className="w-16 h-px bg-border" />
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
-            {["Dexie / SQLite", "IndexedDB", "File System"].map((layer) => (
+            {["Dexie.js (IndexedDB)", "Local Storage Cache", "Media Assets"].map((layer) => (
               <div
                 key={layer}
                 className="px-4 py-2 rounded-lg bg-chart-1/10 border border-chart-1/20 text-sm font-medium text-chart-1"
@@ -689,7 +699,7 @@ function ArchitectureDiagram() {
             <span className="w-16 h-px bg-border" />
           </div>
           <div className="flex flex-wrap gap-2 justify-center">
-            {["Windows", "macOS", "Linux"].map((platform) => (
+            {["Desktop & Laptop Browsers", "Dual Display Output"].map((platform) => (
               <div
                 key={platform}
                 className="px-4 py-2 rounded-lg bg-chart-2/10 border border-chart-2/20 text-sm font-medium text-chart-2"
@@ -738,7 +748,7 @@ function TechStackSection() {
     <section id="tech-stack" className="py-20 px-6">
       <SectionHeader
         title="Technology Stack"
-        subtitle="Modern tools powering a modern application."
+        subtitle="Modern web stack powering VersoLyn."
       />
       <div className="max-w-6xl mx-auto space-y-8">
         <ArchitectureDiagram />
@@ -753,42 +763,26 @@ function TechStackSection() {
 }
 
 function GallerySection() {
-  const items = [
-    { label: "Bible Projection", icon: BookOpen },
-    { label: "Song Lyrics", icon: Code2 },
-    { label: "Media Manager", icon: Layers },
-    { label: "Theme Editor", icon: Zap },
-    { label: "Service Flow", icon: Route },
-    { label: "Settings Panel", icon: MonitorPlay },
-  ];
   const { ref, visible } = useScrollReveal();
   return (
     <section id="gallery" className="py-20 px-6 bg-muted/30">
       <SectionHeader
         title="Screenshots"
-        subtitle="A visual preview of VersoLyn in action."
+        subtitle="A visual preview of VersoLyn."
       />
       <div
         ref={ref}
-        className={cn(
-          "devhub-reveal max-w-5xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6",
-          visible && "visible",
-        )}
+        className={cn("devhub-reveal max-w-2xl mx-auto text-center", visible && "visible")}
       >
-        {items.map((item) => (
-          <Card
-            key={item.label}
-            className="devhub-glass-strong devhub-card-hover border-border/50 overflow-hidden group"
-          >
-            <div className="aspect-video bg-gradient-to-br from-primary/5 via-accent/5 to-chart-1/5 flex items-center justify-center relative overflow-hidden">
-              <div className="devhub-shimmer absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-              <item.icon className="w-10 h-10 text-muted-foreground/30 group-hover:text-primary/40 transition-colors duration-300" />
-            </div>
-            <CardContent className="p-4">
-              <p className="text-sm font-medium text-center text-muted-foreground">{item.label}</p>
-            </CardContent>
-          </Card>
-        ))}
+        <Card className="devhub-glass-strong border-border/50 p-8 text-center">
+          <CardContent className="pt-6 pb-6">
+            <MonitorPlay className="w-12 h-12 text-primary mx-auto mb-4 opacity-80" />
+            <h3 className="text-xl font-bold mb-2">Screenshots Coming Soon</h3>
+            <p className="text-muted-foreground text-sm max-w-md mx-auto">
+              Official application screenshots will be published upon initial public release.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     </section>
   );
@@ -798,8 +792,8 @@ function StatsSection() {
   const { ref, visible } = useScrollReveal({ threshold: 0.2 });
   return (
     <section id="stats" className="py-20 px-6">
-      <SectionHeader title="By the Numbers" subtitle="VersoLyn in statistics." />
-      <div ref={ref} className="max-w-6xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <SectionHeader title="Project Facts" subtitle="VersoLyn project details." />
+      <div ref={ref} className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {STATISTICS.map((stat) => (
           <Card
             key={stat.label}
@@ -807,7 +801,7 @@ function StatsSection() {
           >
             <CardContent className="pt-6 pb-6">
               <stat.icon className="w-6 h-6 text-primary mx-auto mb-3" />
-              <div className="devhub-stat-number text-2xl md:text-3xl font-bold mb-1">
+              <div className="devhub-stat-number text-xl md:text-2xl font-bold mb-1">
                 <AnimatedCounter value={stat.value} suffix={stat.suffix ?? ""} visible={visible} />
               </div>
               <p className="text-xs text-muted-foreground font-medium">{stat.label}</p>
@@ -849,49 +843,12 @@ function CommunitySection() {
     <section id="community" className="py-20 px-6 bg-muted/30">
       <SectionHeader
         title="Join the Community"
-        subtitle="Connect with us and be part of the VersoLyn community."
+        subtitle="Connect with us on GitHub and LinkedIn."
       />
-      <div className="max-w-5xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="max-w-xl mx-auto grid grid-cols-1 sm:grid-cols-2 gap-4">
         {COMMUNITY_LINKS.map((link) => (
           <CommunityCard key={link.label} link={link} />
         ))}
-      </div>
-    </section>
-  );
-}
-
-function SupportSection() {
-  return (
-    <section id="support" className="py-20 px-6">
-      <SectionHeader
-        title="Support Development"
-        subtitle="Help keep VersoLyn free and open source."
-      />
-      <div className="max-w-4xl mx-auto grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {SUPPORT_LINKS.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Card
-              key={link.label}
-              className="devhub-glass-strong devhub-card-hover border-border/50"
-            >
-              <CardContent className="pt-6 text-center">
-                <div
-                  className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-3 ${link.color} bg-current/10`}
-                >
-                  <Icon className="w-7 h-7" />
-                </div>
-                <h3 className="text-sm font-semibold mb-3">{link.label}</h3>
-                <Button variant="default" size="sm" className="w-full gap-1.5 text-xs" asChild>
-                  <a href={link.url} target="_blank" rel="noopener noreferrer">
-                    Support Now
-                    <Heart className="w-3 h-3" />
-                  </a>
-                </Button>
-              </CardContent>
-            </Card>
-          );
-        })}
       </div>
     </section>
   );
@@ -943,9 +900,9 @@ function ContributorCard({
 
 function ContributorsSection() {
   return (
-    <section id="contributors" className="py-20 px-6 bg-muted/30">
-      <SectionHeader title="Contributors" subtitle="The people making VersoLyn possible." />
-      <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <section id="contributors" className="py-20 px-6">
+      <SectionHeader title="Project Contributors" subtitle="The team building VersoLyn." />
+      <div className="max-w-sm mx-auto">
         {CONTRIBUTORS.map((contributor, i) => (
           <ContributorCard key={`${contributor.name}-${i}`} contributor={contributor} index={i} />
         ))}
@@ -957,8 +914,8 @@ function ContributorsSection() {
 function LicenseSection() {
   const { ref, visible } = useScrollReveal();
   return (
-    <section id="license" className="py-20 px-6">
-      <SectionHeader title="License" subtitle="VersoLyn is free and open source." />
+    <section id="license" className="py-20 px-6 bg-muted/30">
+      <SectionHeader title="License" subtitle="VersoLyn is open-source under the MIT License." />
       <div ref={ref} className={cn("devhub-reveal max-w-3xl mx-auto", visible && "visible")}>
         <Card className="devhub-glass-strong devhub-card-hover border-border/50">
           <CardHeader>
@@ -971,7 +928,7 @@ function LicenseSection() {
           <CardContent className="space-y-6">
             <div>
               <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                Credits & Licenses
+                Credits & Open Source Dependencies
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {LICENSE_INFO.credits.map((credit) => (
@@ -1003,7 +960,7 @@ function LicenseSection() {
           <CardFooter>
             <Button variant="outline" size="sm" className="gap-1.5 text-xs" asChild>
               <a href={LICENSE_INFO.url} target="_blank" rel="noopener noreferrer">
-                View Full License
+                View Full MIT License
                 <ExternalLink className="w-3 h-3" />
               </a>
             </Button>
@@ -1021,10 +978,10 @@ function FooterSection() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <VersoLynLogo className="w-4 h-4" />
           <span className="font-medium">{PROJECT_INFO.name}</span>
-          <span className="text-muted-foreground/50">v{PROJECT_INFO.version}</span>
+          <span className="text-muted-foreground/50">({PROJECT_INFO.version})</span>
         </div>
         <div className="flex items-center gap-4">
-          {SOCIAL_LINKS.slice(0, 4).map((link) => {
+          {SOCIAL_LINKS.map((link) => {
             const Icon = link.icon;
             return (
               <a
@@ -1059,10 +1016,10 @@ export function DeveloperHubPage() {
       <GallerySection />
       <StatsSection />
       <CommunitySection />
-      <SupportSection />
       <ContributorsSection />
       <LicenseSection />
       <FooterSection />
     </div>
   );
 }
+

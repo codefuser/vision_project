@@ -27,101 +27,63 @@ export interface FutureVersion {
   estimatedProgress: number;
 }
 
-export const CURRENT_VERSION = "1.0.0";
-export const DEV_PROGRESS = 100;
+export const CURRENT_VERSION = "In Development";
+export const DEV_PROGRESS = 65;
 
 export const VERSIONS: RoadmapVersion[] = [
   {
-    version: "1.0.0",
-    releaseDate: "Q2 2026",
-    title: "Stable Release",
-    description: "First stable public release with complete feature set and production readiness.",
-    completed: true,
-    progress: 100,
+    version: "In Active Development",
+    releaseDate: "Unreleased",
+    title: "Initial Development Build",
+    description: "Core presentation web application features under active development.",
+    completed: false,
+    progress: 65,
     highlights: [
-      "Production-ready stability",
-      "Bible projection with Tamil and English support",
-      "Song lyrics management and projection",
-      "Media playback (images and videos)",
-      "Playlist creation and service flow management",
-      "Customizable themes and typography",
-      "Full-screen projection with multi-monitor support",
-      "Keyboard shortcuts for every action",
-      "Backup and restore functionality",
-      "Local storage & data privacy",
+      "Project started on June 6, 2026",
+      "Bible verse projection with Tamil and English support",
+      "Song lyrics management and Tanglish search",
+      "Media management and display background options",
+      "Ordered service playlist management",
+      "Customizable typography and theme controls",
+      "Dual display projection window",
+      "Open-source development under MIT License",
     ],
     features: [
       {
         title: "Bible projection",
         description: "Display Bible verses from Tamil and English translations",
-        status: "completed",
+        status: "in-progress",
         priority: "high",
       },
       {
-        title: "Song lyrics",
-        description: "Manage and project song lyrics with formatting",
-        status: "completed",
+        title: "Song lyrics & Tanglish search",
+        description: "Manage and project song lyrics with Tanglish search",
+        status: "in-progress",
         priority: "high",
       },
       {
         title: "Media library",
-        description: "Import and manage images and videos",
-        status: "completed",
+        description: "Manage background images and video presentation assets",
+        status: "in-progress",
         priority: "high",
       },
       {
         title: "Playlist system",
         description: "Create and organize service playlists",
-        status: "completed",
+        status: "in-progress",
         priority: "high",
       },
       {
         title: "Theme engine",
-        description: "Customizable themes with animations",
-        status: "completed",
+        description: "Customizable presentation themes and styling",
+        status: "in-progress",
         priority: "high",
       },
       {
-        title: "Projection engine",
-        description: "Full-screen multi-monitor projection",
-        status: "completed",
+        title: "Live projection display",
+        description: "Dual display output with live slide preview",
+        status: "in-progress",
         priority: "high",
-      },
-      {
-        title: "Keyboard shortcuts",
-        description: "Comprehensive keyboard shortcut system",
-        status: "completed",
-        priority: "medium",
-      },
-      {
-        title: "Backup & restore",
-        description: "Export and import data backups",
-        status: "completed",
-        priority: "high",
-      },
-      {
-        title: "Typography controls",
-        description: "Font, size, alignment, and text effects",
-        status: "completed",
-        priority: "medium",
-      },
-      {
-        title: "Developer Hub",
-        description: "Project information and community hub",
-        status: "completed",
-        priority: "medium",
-      },
-      {
-        title: "Contact system",
-        description: "Contact form and community support",
-        status: "completed",
-        priority: "medium",
-      },
-      {
-        title: "Version History",
-        description: "Release notes and version tracking",
-        status: "completed",
-        priority: "medium",
       },
     ],
   },
@@ -129,4 +91,5 @@ export const VERSIONS: RoadmapVersion[] = [
 
 export const FUTURE_VERSIONS: FutureVersion[] = [];
 
-export const MILESTONES = [{ version: "1.0.0", date: "Q2 2026", label: "Stable", completed: true }];
+export const MILESTONES = [{ version: "In Dev", date: "Started June 6, 2026", label: "Active Development", completed: false }];
+
