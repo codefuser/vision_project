@@ -148,7 +148,7 @@
     color: var(--color-foreground);
   }
 
-  /* Custom thin scrollbars â€” theme-aware, subtle, application-wide. */
+  /* Custom thin scrollbars — theme-aware, subtle, application-wide. */
   * {
     scrollbar-width: thin;
     scrollbar-color: color-mix(in oklab, var(--color-muted-foreground) 35%, transparent) transparent;
@@ -400,17 +400,14 @@
 
 .devhub-timeline-line {
   position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
+  top: 0.75rem;
+  bottom: 0.75rem;
   width: 2px;
   background: linear-gradient(
     180deg,
-    color-mix(in oklab, var(--color-primary) 30%, transparent) 0%,
-    var(--color-primary) 50%,
+    var(--color-primary) 0%,
     color-mix(in oklab, var(--color-primary) 30%, transparent) 100%
   );
-  transform: translateX(-50%);
 }
 
 .devhub-stat-number {
@@ -527,4 +524,3 @@
 .error-fade-in {
   animation: error-fade-in 0.3s ease-out both;
 }
-

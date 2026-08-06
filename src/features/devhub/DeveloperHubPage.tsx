@@ -22,6 +22,8 @@ import {
   Zap,
   Check,
   UserPlus,
+  Calendar,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -412,16 +414,32 @@ function AboutSection() {
 }
 
 function Timeline({ events }: { events: { year: string; event: string }[] }) {
+  const icons = [Lightbulb, Calendar, Rocket, Sparkles];
+
   return (
-    <div className="relative pl-8">
-      <div className="devhub-timeline-line absolute left-3 top-2 bottom-2 w-px bg-border" />
-      {events.map((item, i) => (
-        <div key={i} className="relative pb-8 last:pb-0">
-          <div className="absolute left-[-1.65rem] top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-background" />
-          <div className="text-sm font-semibold text-primary mb-1">{item.year}</div>
-          <p className="text-muted-foreground text-sm">{item.event}</p>
-        </div>
-      ))}
+    <div className="relative pl-2 space-y-6">
+      <div className="devhub-timeline-line absolute left-[15px] top-3 bottom-3 w-[2px]" />
+      {events.map((item, i) => {
+        const IconComponent = icons[i % icons.length] || Sparkles;
+        return (
+          <div key={i} className="relative flex items-start gap-4 group">
+            <div className="relative z-10 flex items-center justify-center w-8 h-8 rounded-full bg-background border-2 border-primary text-primary shadow-sm shadow-primary/20 shrink-0 group-hover:scale-110 group-hover:bg-primary group-hover:text-primary-foreground transition-all duration-300">
+              <IconComponent className="w-3.5 h-3.5" />
+            </div>
+
+            <div className="flex-1 p-3.5 rounded-xl bg-card/60 border border-border/40 hover:border-primary/30 transition-all duration-300 shadow-sm">
+              <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                <Badge variant="secondary" className="text-xs font-semibold px-2.5 py-0.5 text-primary bg-primary/10 border-primary/20">
+                  {item.year}
+                </Badge>
+              </div>
+              <p className="text-sm text-foreground/90 font-medium leading-relaxed">
+                {item.event}
+              </p>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
