@@ -1,5 +1,6 @@
 import { supabase } from "../supabase";
 import { get, set } from "idb-keyval";
+import { logger } from "@/lib/logger";
 
 export type BibleLang = "en" | "ta";
 export type BibleData = string[][][];
@@ -38,7 +39,7 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
       if (cachedData && cachedData.length > 0) {
         cache[lang] = cachedData;
         delete inflight[lang];
-        console.log(`[Bible] Loaded ${lang.toUpperCase()} Bible instantly from IndexedDB`);
+        logger.info(`[Bible] Loaded ${lang.toUpperCase()} Bible instantly from IndexedDB`);
         return cachedData;
       }
 
@@ -47,7 +48,7 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
       await set(cacheKey, bibleData);
       cache[lang] = bibleData;
       delete inflight[lang];
-      console.log(`[Bible] Persisted ${lang.toUpperCase()} Bible to IndexedDB`);
+      logger.info(`[Bible] Persisted ${lang.toUpperCase()} Bible to IndexedDB`);
       return bibleData;
     } catch (e) {
       delete inflight[lang];
@@ -61,7 +62,7 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
 
 async function fetchBibleFromSupabase(lang: BibleLang): Promise<BibleData> {
   const tableName = lang === "en" ? "english_bible" : "tamil_bible";
-  console.log(`[Bible] Initial download of ${lang.toUpperCase()} Bible from Supabase…`);
+  logger.info(`[Bible] Initial download of ${lang.toUpperCase()} Bible from Supabase…`);
 
   const allRows: any[] = [];
   let start = 0;

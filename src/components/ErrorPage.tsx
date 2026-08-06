@@ -289,7 +289,7 @@ export function ErrorPage({
     a.href = blobUrl;
     a.download = `versolyn-error-${errorCode.toLowerCase().replace(/[^a-z0-9]/g, "-")}-${Date.now()}.png`;
     a.click();
-    URL.revokeObjectURL(blobUrl);
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
     toast.success("Screenshot saved");
   }, [errorCode, title, message, sessionId, timestamp, url, version]);
 

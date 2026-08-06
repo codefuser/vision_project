@@ -1,4 +1,5 @@
 import type { Song } from "./loader";
+import { logger } from "@/lib/logger";
 import {
   songStem,
   tanglishNorm,
@@ -243,7 +244,7 @@ export function buildSearchIndex(songs: Song[]) {
   tokensDirty = true;
   indexVersion++;
   lastBuiltVersion = indexVersion;
-  console.log(
+  logger.info(
     `[Songs Search] Built Inverted Candidate Index: ${searchIndex.size} songs, ${totalLines} lines`,
   );
 }

@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
 import { ErrorPage } from "@/components/ErrorPage";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -16,7 +17,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error("[GlobalErrorBoundary]", error, info.componentStack);
+    logger.error("[GlobalErrorBoundary]", { error: error.message, stack: info.componentStack });
   }
 
   handleRetry = () => {

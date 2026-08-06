@@ -153,6 +153,11 @@ export function ProjectionWindow() {
     return () => clearInterval(id);
   }, [items, index, broadcastState]);
 
+  const revokeOldUrls = () => {
+    urlsRef.current.forEach((u) => URL.revokeObjectURL(u));
+    urlsRef.current = [];
+  };
+
   const loadMediaUrl = async (m: MediaRecord): Promise<string> => {
     const rec = await db().blobs.get(m.blobId);
     if (!rec) throw new Error("Missing blob");
@@ -207,6 +212,13 @@ export function ProjectionWindow() {
     return () => clearTimer();
   }, [index, items, scheduleAdvance]);
 
+  // Clean up ObjectURLs on unmount
+  useEffect(() => {
+    return () => {
+      revokeOldUrls();
+    };
+  }, []);
+
   // Video ended -> advance (respect loop setting; restart the item when not looping)
   const onVideoEnded = () => {
     const isLast = items.length > 0 && index === items.length - 1;
@@ -220,6 +232,7 @@ export function ProjectionWindow() {
   const loadSingle = async (mediaId: string) => {
     const m = await getMedia(mediaId);
     if (!m) return;
+    revokeOldUrls();
     const settings = await getSettings();
     const url = await loadMediaUrl(m);
     setPrevItem(items[index] ?? null);
@@ -243,6 +256,7 @@ export function ProjectionWindow() {
   const loadPlaylist = async (playlistId: string, startIndex = 0) => {
     const p: PlaylistRecord | undefined = await getPlaylist(playlistId);
     if (!p || p.items.length === 0) return;
+    revokeOldUrls();
     const settings = await getSettings();
     const runtime: RuntimeItem[] = [];
     for (const it of p.items as PlaylistItem[]) {

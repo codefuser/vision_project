@@ -6,6 +6,7 @@
  * store for a persistent table — the public API below will not change.
  */
 import type { ProjectionContent } from "./content.types";
+import { logger } from "@/lib/logger";
 
 export interface FavoriteEntry {
   contentId: string;
@@ -66,7 +67,7 @@ class FavoritesStore {
       try {
         fn(snapshot);
       } catch (err) {
-        console.error("[favorites] subscriber error", err);
+        logger.error("[favorites] subscriber error", err);
       }
     }
   }

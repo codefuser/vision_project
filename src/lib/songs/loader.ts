@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import { songStem, songLower } from "./normalize";
 import { get, set } from "idb-keyval";
+import { logger } from "@/lib/logger";
 
 export interface RawSong {
   id: number;
@@ -108,7 +109,7 @@ export async function loadSongs(): Promise<Song[]> {
       if (cachedRaw && cachedRaw.length > 0) {
         cache = cachedRaw.map(buildFromRaw);
         inflight = null;
-        console.log(`[Songs] Loaded ${cache.length} songs instantly from IndexedDB`);
+        logger.info(`[Songs] Loaded ${cache.length} songs instantly from IndexedDB`);
 
         // Build candidate search index immediately
         import("./search").then(({ buildSearchIndex }) => {
@@ -118,7 +119,7 @@ export async function loadSongs(): Promise<Song[]> {
 
         // 2. Trigger lightweight background delta sync (0 downloads if unchanged)
         backgroundDeltaSync().catch((err) =>
-          console.warn("[Songs] Delta sync check error:", err),
+          logger.warn("[Songs] Delta sync check error:", err),
         );
 
         return cache;
@@ -137,7 +138,7 @@ export async function loadSongs(): Promise<Song[]> {
 }
 
 async function fullFetchFromSupabase(): Promise<Song[]> {
-  console.log("[Songs] Initial dataset download from Supabase…");
+  logger.info("[Songs] Initial dataset download from Supabase…");
   const allRows: RawSong[] = [];
   let start = 0;
   const limit = 1000;
@@ -168,7 +169,7 @@ async function fullFetchFromSupabase(): Promise<Song[]> {
     if (combined) buildSearchIndex(combined);
   });
 
-  console.log(`[Songs] Dataset stored in IndexedDB: ${cache.length} songs`);
+  logger.info(`[Songs] Dataset stored in IndexedDB: ${cache.length} songs`);
   return cache;
 }
 
@@ -194,11 +195,11 @@ async function backgroundDeltaSync(): Promise<void> {
 
   // If local timestamp matches remote latest, 0 bytes downloaded!
   if (lastSync && remoteLatest <= lastSync) {
-    console.log("[Songs] Cache is up to date — 0 bytes downloaded.");
+    logger.info("[Songs] Cache is up to date — 0 bytes downloaded.");
     return;
   }
 
-  console.log(`[Songs] Delta update detected (${remoteLatest} > ${lastSync}). Syncing delta…`);
+  logger.info(`[Songs] Delta update detected (${remoteLatest} > ${lastSync}). Syncing delta…`);
 
   // Fetch ONLY changed rows since lastSync
   let query = supabase.from("songs").select("id, title, content, scale, updated_at");
@@ -229,5 +230,5 @@ async function backgroundDeltaSync(): Promise<void> {
     if (combined) buildSearchIndex(combined);
   });
 
-  console.log(`[Songs] Merged ${changedRows.length} changed songs into IndexedDB`);
+  logger.info(`[Songs] Merged ${changedRows.length} changed songs into IndexedDB`);
 }

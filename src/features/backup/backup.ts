@@ -72,7 +72,10 @@ export async function exportBackup(): Promise<Blob> {
   const zipped: Uint8Array = await new Promise((resolve, reject) => {
     zip(files, { level: 6 }, (err, data) => (err ? reject(err) : resolve(data)));
   });
-  return new Blob([zipped.buffer as ArrayBuffer], { type: "application/zip" });
+  return new Blob(
+    [zipped.buffer.slice(zipped.byteOffset, zipped.byteOffset + zipped.byteLength) as ArrayBuffer],
+    { type: "application/zip" },
+  );
 }
 
 export async function importBackup(file: Blob, opts: { mode: "merge" | "replace" }): Promise<void> {
@@ -106,7 +109,10 @@ export async function importBackup(file: Blob, opts: { mode: "merge" | "replace"
           const u8 = entries[m.blobFile];
           await db().blobs.put({
             id: m.blobId,
-            blob: new Blob([u8.buffer as ArrayBuffer], { type: m.mime }),
+            blob: new Blob(
+              [u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer],
+              { type: m.mime },
+            ),
             kind: "original",
           });
         }
@@ -114,7 +120,10 @@ export async function importBackup(file: Blob, opts: { mode: "merge" | "replace"
           const u8 = entries[m.thumbFile];
           await db().blobs.put({
             id: m.thumbBlobId,
-            blob: new Blob([u8.buffer as ArrayBuffer], { type: "image/webp" }),
+            blob: new Blob(
+              [u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer],
+              { type: "image/webp" },
+            ),
             kind: "thumb",
           });
         }

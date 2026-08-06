@@ -8,6 +8,7 @@
 import { uid } from "@/lib/uid";
 import type { HistoryEntry, ProjectionContent } from "./content.types";
 import { projectionEvents } from "./event-bus";
+import { logger } from "@/lib/logger";
 
 const MAX_ENTRIES = 200;
 
@@ -55,7 +56,7 @@ class HistoryBuffer {
       try {
         fn(this.entries);
       } catch (err) {
-        console.error("[history] subscriber error", err);
+        logger.error("[history] subscriber error", err);
       }
     }
   }
