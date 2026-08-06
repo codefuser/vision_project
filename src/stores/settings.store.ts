@@ -4,6 +4,7 @@ import { getSettings, saveSettings } from "@/db/repo";
 import { useTextFormat } from "@/lib/text-format/store";
 import { useBackground } from "@/stores/background.store";
 import { useLogo } from "@/stores/logo.store";
+import { useProjection } from "@/stores/projection.store";
 import { applyTemplate } from "@/lib/templates/apply";
 
 interface SettingsStore {
@@ -40,7 +41,7 @@ export function applyTheme(mode: AppSettings["theme"]) {
 
 /* ═══════════════════════════════════════════════════════════════════
    Effect sync — every setting below immediately drives the running
-   application (projection engine, preview, theme, logo, motion).
+   application (projection engine, preview, theme, logo).
    The text-format store broadcasts to the projector + Live Preview so
    changes appear instantly with zero reload.
    ═══════════════════════════════════════════════════════════════════ */
@@ -123,8 +124,20 @@ function applySettingsEffects(next: AppSettings, patch: Partial<AppSettings>) {
     applyTemplate(next.defaultThemeId);
   }
 
+  // ── Projection scaling & volume live sync ──
+  if (patchKeys.includes("projectionScaling")) {
+    useProjection.getState().send({ type: "UPDATE_SCALING", mode: next.projectionScaling });
+  }
+  if (patchKeys.includes("defaultVolume")) {
+    useProjection.getState().send({ type: "VOLUME", value: next.defaultVolume });
+  }
+  if (patchKeys.includes("muteOnStart")) {
+    useProjection.getState().send({ type: "MUTE", value: next.muteOnStart });
+  }
+
   // ── Logo overlay master ──
   if (patchKeys.includes("logoScreen")) {
     useLogo.getState().setEnabled(next.logoScreen);
   }
 }
+

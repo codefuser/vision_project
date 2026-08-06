@@ -7,14 +7,9 @@ import { DEFAULT_SETTINGS } from "@/db/schema";
 /* ───── SettingRow — generic reusable wrapper ───── */
 function SettingRow({ def, children, id }: { def: SettingDef; children: ReactNode; id?: string }) {
   return (
-    <div
-      className={cn(
-        "group flex items-start justify-between gap-4 rounded-md px-4 py-3 transition-colors hover:bg-accent/20",
-        def.comingSoon && "opacity-80",
-      )}
-    >
+    <div className="group flex items-start justify-between gap-4 rounded-md px-4 py-3 transition-colors hover:bg-accent/20">
       <div className="min-w-0 flex-1">
-        {id && !def.comingSoon ? (
+        {id ? (
           <label htmlFor={id} className="cursor-pointer text-[13px] font-medium text-foreground/90">
             {def.title}
           </label>
@@ -25,11 +20,6 @@ function SettingRow({ def, children, id }: { def: SettingDef; children: ReactNod
           <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
             {def.description}
           </p>
-        )}
-        {def.comingSoon && (
-          <span className="mt-1.5 inline-flex items-center gap-1 rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
-            Coming Soon
-          </span>
         )}
       </div>
       <div className="flex items-center gap-2.5 shrink-0">{children}</div>
@@ -51,13 +41,6 @@ function ResetBtn({ show, onReset }: { show: boolean; onReset: () => void }) {
   );
 }
 
-/* ───── Coming Soon badge (disabled control slot) ───── */
-function ComingSoonSlot() {
-  return (
-    <div className="h-5 w-9 shrink-0 rounded-full bg-muted/60 ring-1 ring-inset ring-border/50" />
-  );
-}
-
 /* ═══════════════════════════════════════════════════════════════════
    Premium Toggle Switch — VersoLyn design system
    Theme-aware (CSS variables only), smooth 200ms motion, explicit
@@ -76,14 +59,6 @@ export function SettingToggle({
   const id = useId();
   const dv = DEFAULT_SETTINGS[def.key] as boolean;
 
-  if (def.comingSoon) {
-    return (
-      <SettingRow def={def} id={id}>
-        <ComingSoonSlot />
-      </SettingRow>
-    );
-  }
-
   return (
     <SettingRow def={def} id={id}>
       <ResetBtn show={value !== dv} onReset={() => onChange(dv)} />
@@ -93,7 +68,6 @@ export function SettingToggle({
         role="switch"
         aria-checked={value}
         aria-label={def.title}
-        disabled={def.comingSoon}
         onClick={() => onChange(!value)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {

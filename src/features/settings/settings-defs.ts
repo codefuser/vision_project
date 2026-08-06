@@ -4,9 +4,8 @@ import {
   MonitorPlay,
   Type,
   Sparkles,
-  ListVideo,
-  Download,
   Keyboard,
+  Download,
   Info,
   type LucideIcon,
 } from "lucide-react";
@@ -26,8 +25,6 @@ export interface SettingDef {
   step?: number;
   unit?: string;
   placeholder?: string;
-  /** Show a disabled control with a "Coming Soon" badge instead of a live one. */
-  comingSoon?: boolean;
   /** Transform the stored setting value into the slider's display range. */
   mapFromSetting?: (v: number) => number;
   /** Transform the slider's display value back into the stored setting. */
@@ -70,15 +67,6 @@ const ALL: SettingDef[] = [
     ],
   },
   {
-    key: "startupBehavior",
-    title: "Restore Last Session",
-    description: "Reopen the previous workspace and projector state on launch",
-    keywords: ["restore", "session", "launch", "startup", "remember", "previous"],
-    type: "toggle",
-    category: "general",
-    comingSoon: true,
-  },
-  {
     key: "autoSave",
     title: "Auto Save",
     description: "Automatically record formatting changes to the undo history as you work",
@@ -94,6 +82,29 @@ const ALL: SettingDef[] = [
     description: "Background color used for projected output (applies instantly)",
     keywords: ["background", "color", "default", "empty", "idle", "black", "bg"],
     type: "color",
+    category: "projection",
+  },
+  {
+    key: "projectionScaling",
+    title: "Projection Scaling",
+    description: "How content is scaled to fill the connected display. Auto (Fit) is recommended for all screen types.",
+    keywords: ["scaling", "aspect ratio", "letterbox", "pillarbox", "fit", "fill", "stretch", "original", "bars", "display", "tv", "projector", "widescreen", "4:3", "adapt"],
+    type: "select",
+    category: "projection",
+    options: [
+      { value: "auto", label: "Auto (Recommended) — Fit with black bars" },
+      { value: "fit", label: "Fit — Letterbox / pillarbox (black bars)" },
+      { value: "fill", label: "Fill — Crop to fill, no bars" },
+      { value: "stretch", label: "Stretch — Distort to fill screen" },
+      { value: "original", label: "Original Size — No scaling" },
+    ],
+  },
+  {
+    key: "logoScreen",
+    title: "Logo Overlay",
+    description: "Show the logo overlay on projected output (enables the logo layer)",
+    keywords: ["logo", "brand", "overlay", "idle", "watermark", "splash"],
+    type: "toggle",
     category: "projection",
   },
   {
@@ -117,94 +128,6 @@ const ALL: SettingDef[] = [
     keywords: ["mute", "muted", "silent", "start", "audio", "volume"],
     type: "toggle",
     category: "projection",
-  },
-  {
-    key: "blackScreen",
-    title: "Black Screen Shortcut",
-    description: "Enable the B key to blank the projector screen between items",
-    keywords: ["black", "screen", "blank", "shortcut", "key", "toggle"],
-    type: "toggle",
-    category: "projection",
-  },
-  {
-    key: "logoScreen",
-    title: "Logo Overlay",
-    description: "Show the logo overlay on projected output (enables the logo layer)",
-    keywords: ["logo", "brand", "overlay", "idle", "watermark", "splash"],
-    type: "toggle",
-    category: "projection",
-  },
-  {
-    key: "projectionScaling",
-    title: "Projection Scaling",
-    description: "How content is scaled to fill the connected display. Auto (Fit) is recommended for all screen types.",
-    keywords: ["scaling", "aspect ratio", "letterbox", "pillarbox", "fit", "fill", "stretch", "original", "bars", "display", "tv", "projector", "widescreen", "4:3", "adapt"],
-    type: "select",
-    category: "projection",
-    options: [
-      { value: "auto", label: "Auto (Recommended) — Fit with black bars" },
-      { value: "fit", label: "Fit — Letterbox / pillarbox (black bars)" },
-      { value: "fill", label: "Fill — Crop to fill, no bars" },
-      { value: "stretch", label: "Stretch — Distort to fill screen" },
-      { value: "original", label: "Original Size — No scaling" },
-    ],
-  },
-
-  // ════════════════ Playlist ════════════════
-  {
-    key: "autoTransition",
-    title: "Auto Advance",
-    description: "Automatically advance to the next item when a slide's duration ends",
-    keywords: ["auto", "transition", "advance", "next", "automatic", "play"],
-    type: "toggle",
-    category: "playlist",
-  },
-  {
-    key: "mediaLoop",
-    title: "Loop Playlist",
-    description: "Restart from the first item after the last item ends",
-    keywords: ["loop", "repeat", "playlist", "cycle", "continuous"],
-    type: "toggle",
-    category: "playlist",
-  },
-  {
-    key: "defaultImageDurationMs",
-    title: "Slide Duration",
-    description: "Default display duration for images in milliseconds",
-    keywords: ["image", "duration", "time", "photo", "slide", "seconds", "milliseconds"],
-    type: "number",
-    category: "playlist",
-    min: 1000,
-    max: 60000,
-    step: 500,
-    unit: "ms",
-  },
-  {
-    key: "defaultTransition",
-    title: "Transition Type",
-    description: "Default transition effect between playlist items",
-    keywords: ["transition", "effect", "animation", "crossfade", "fade", "zoom", "dissolve"],
-    type: "select",
-    category: "playlist",
-    options: [
-      { value: "fade", label: "Fade" },
-      { value: "crossfade", label: "Crossfade" },
-      { value: "zoom", label: "Zoom" },
-      { value: "dissolve", label: "Dissolve" },
-      { value: "none", label: "None" },
-    ],
-  },
-  {
-    key: "transitionDuration",
-    title: "Transition Duration",
-    description: "Duration of transitions between playlist items in milliseconds",
-    keywords: ["transition", "duration", "speed", "animation", "time", "crossfade"],
-    type: "slider",
-    category: "playlist",
-    min: 100,
-    max: 3000,
-    step: 100,
-    unit: "ms",
   },
 
   // ════════════════ Typography ════════════════
@@ -404,7 +327,7 @@ const ALL: SettingDef[] = [
     unit: "%",
   },
 
-  // ════════════════ Theme ════════════════
+  // ════════════════ Theme Presets & Styling ════════════════
   {
     key: "defaultThemeId",
     title: "Default Theme",
@@ -435,7 +358,7 @@ const ALL: SettingDef[] = [
     unit: "%",
   },
 
-  // ════════════════ Backup ════════════════
+  // ════════════════ Backup & Restore ════════════════
   {
     key: "automaticBackup",
     title: "Automatic Backup",
@@ -463,10 +386,11 @@ export const CATEGORIES: string[] = [...new Set(ALL.map((s) => s.category))];
 export const CATEGORY_META: Record<string, { title: string; icon: LucideIcon }> = {
   general: { title: "General", icon: Settings },
   projection: { title: "Projection", icon: MonitorPlay },
-  playlist: { title: "Playlist", icon: ListVideo },
   typography: { title: "Typography", icon: Type },
   theme: { title: "Theme", icon: Sparkles },
   "keyboard-shortcuts": { title: "Keyboard Shortcuts", icon: Keyboard },
   backup: { title: "Backup & Restore", icon: Download },
   about: { title: "About", icon: Info },
 };
+
+

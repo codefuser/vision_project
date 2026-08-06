@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/stores/settings.store";
-import { db, DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
+import { DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
 import { exportBackup, importBackup } from "@/features/backup/backup";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,6 @@ import {
   SettingSelect,
   SettingInput,
   SettingColor,
-  SettingCard,
 } from "./SettingsControls";
 
 /* ═══════════════════════════════════════════════════
@@ -203,6 +202,43 @@ export function SettingsPage() {
   const [showResetConfirm, setShowResetConfirm] = useState(false);
   const [importFilePending, setImportFilePending] = useState<File | null>(null);
 
+  /* ── Backup handlers ── */
+  const onExport = useCallback(async () => {
+    setBusy("export");
+    try {
+      const blob = await exportBackup();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded");
+    } catch (e) {
+      toast.error("Export failed: " + (e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }, []);
+
+  const executeImport = useCallback(async (file: File, mode: "replace" | "merge") => {
+    setBusy("import");
+    try {
+      await importBackup(file, { mode });
+      toast.success("Backup restored – reloading…");
+      setTimeout(() => window.location.reload(), 500);
+    } catch (e) {
+      toast.error("Import failed: " + (e as Error).message);
+      setBusy(null);
+    } finally {
+      setImportFilePending(null);
+    }
+  }, []);
+
+  const onImport = useCallback(async (file: File) => {
+    setImportFilePending(file);
+  }, []);
+
   /* ── Reset all ── */
   const executeResetAll = useCallback(async () => {
     setSaving(true);
@@ -261,50 +297,13 @@ export function SettingsPage() {
     if (!search.trim()) return Object.entries(CATEGORY_META);
     const cats = new Set(searchHits.map((h) => h.def.category));
     return Object.entries(CATEGORY_META).filter(
-      ([id]) => cats.has(id) || id === "keyboard-shortcuts",
+      ([id]) => cats.has(id) || id === "keyboard-shortcuts" || id === "about",
     );
   }, [search, searchHits]);
 
   const onSearchKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && searchHits.length > 0) scrollTo(searchHits[0].def.category);
   };
-
-  /* ── Backup handlers ── */
-  const onExport = useCallback(async () => {
-    setBusy("export");
-    try {
-      const blob = await exportBackup();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Backup downloaded");
-    } catch (e) {
-      toast.error("Export failed: " + (e as Error).message);
-    } finally {
-      setBusy(null);
-    }
-  }, []);
-
-  const executeImport = useCallback(async (file: File, mode: "replace" | "merge") => {
-    setBusy("import");
-    try {
-      await importBackup(file, { mode });
-      toast.success("Backup restored – reloading…");
-      setTimeout(() => window.location.reload(), 500);
-    } catch (e) {
-      toast.error("Import failed: " + (e as Error).message);
-      setBusy(null);
-    } finally {
-      setImportFilePending(null);
-    }
-  }, []);
-
-  const onImport = useCallback(async (file: File) => {
-    setImportFilePending(file);
-  }, []);
 
   /* ── Settings by category ── */
   const byCategory = useMemo(() => {
@@ -445,7 +444,6 @@ export function SettingsPage() {
             {/* Category sections */}
             {Object.entries(CATEGORY_META).map(([id, meta]) => {
               if (id === "keyboard-shortcuts") return null; // render separately
-              if (id === "backup") return null; // render separately
               if (id === "about") return null; // render separately
               const defs = byCategory.get(id) ?? [];
               const visible = defs.filter((d) => !hitKeys || hitKeys.has(d.key));
@@ -674,17 +672,6 @@ function AboutSection() {
               </span>
             </div>
           </div>
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="min-w-0 flex-1">
-              <span className="text-[13px] font-medium text-foreground/90">Release Date</span>
-              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
-                First public release
-              </p>
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              <span className="text-[13px] text-muted-foreground">Q2 2026</span>
-            </div>
-          </div>
         </div>
       </div>
     </section>
@@ -760,3 +747,4 @@ function BackupSection({
     </section>
   );
 }
+
