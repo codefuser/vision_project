@@ -110,19 +110,19 @@ export function StartupScreen({ onReady, children }: { onReady: () => void; chil
         <div className="relative flex items-center justify-center">
           {/* Subtle soft ambient outer glow behind logo */}
           <div
-            className={`absolute h-36 w-36 rounded-full blur-2xl transition-opacity duration-700 pointer-events-none ${
-              complete ? "opacity-0" : "opacity-35 dark:opacity-45"
+            className={`absolute h-48 w-48 rounded-full blur-2xl transition-opacity duration-700 pointer-events-none ${
+              complete ? "opacity-0" : "opacity-40 dark:opacity-50"
             }`}
             style={{
               background:
-                "radial-gradient(circle, rgba(79,140,255,0.45) 0%, rgba(124,92,255,0.35) 50%, transparent 75%)",
+                "radial-gradient(circle, rgba(79,140,255,0.5) 0%, rgba(124,92,255,0.4) 50%, transparent 75%)",
             }}
           />
           <div
             className="relative flex items-center justify-center transition-transform duration-300"
             style={{ animation: "startup-logo-breath 3.5s ease-in-out infinite" }}
           >
-            <VersoLynLogo className="h-32 w-32 md:h-40 md:w-40 object-contain transition-transform duration-300 select-none" />
+            <VersoLynLogo className="h-44 w-44 md:h-56 md:w-56 object-contain transition-transform duration-300 select-none rounded-full drop-shadow-[0_0_24px_rgba(59,130,246,0.45)] dark:drop-shadow-[0_0_24px_rgba(147,197,253,0.35)]" />
           </div>
         </div>
 

@@ -58,7 +58,7 @@ export const PROJECT_INFO = {
     { label: "Web Platform", variant: "outline" as const },
     { label: "MIT License", variant: "secondary" as const },
   ],
-  description: `VersoLyn is a free and open-source church presentation web application designed for modern worship services. Built to solve real church projection challenges, VersoLyn provides an accessible, beautiful, and intuitive presentation experience without subscription fees or proprietary locks.
+  description: `VersoLyn is a free and open-source church presentation web application designed for modern worship services. Built and tested while serving at IRM (India Revival Ministry), Kuruvankootai, Tirunelveli, Tamil Nadu, VersoLyn provides an accessible, beautiful, and intuitive presentation experience without subscription fees or proprietary locks.
 
 Whether you are projecting Bible verses in Tamil or English, displaying song lyrics, managing worship media, or organizing service flows, VersoLyn provides a fast, reliable tool built specifically to serve congregations worldwide.`,
   whoItIsFor:
@@ -73,11 +73,11 @@ Whether you are projecting Bible verses in Tamil or English, displaying song lyr
   problemsItSolves: [
     "Eliminates expensive software subscription fees for church presentation tools",
     "Solves native Tamil script rendering and Tanglish search issues in traditional tools",
-    "Simplifies complex service workflows with an intuitive, clean interface",
+    "Resolves display scaling and aspect ratio issues across different TV screens",
     "Removes lock-in by offering a 100% free and open-source web application",
   ],
   whyDifferent: [
-    "Born out of real church projection challenges during actual worship services",
+    "Born out of real church projection challenges during actual worship services at IRM, Kuruvankootai",
     "First-class native Tamil and Tanglish search support built from day one",
     "Completely free and open source under the MIT License — no hidden tiers",
     "Modern tech stack powered by React 19, TypeScript, and TailwindCSS v4",
@@ -93,19 +93,38 @@ export const DEVELOPER_INFO = {
   photoUrl: "",
   coverUrl: "",
   biography:
-    "Full Stack Developer and founder of VersoLyn. Driven by a passion for worship technology and open-source software, Joseph created VersoLyn to solve real projection and language difficulties faced by churches in daily ministry.",
+    "Full Stack Developer and founder of VersoLyn. Driven by a passion for worship technology and open-source software, Joseph created VersoLyn to solve real projection and language difficulties faced during church services in daily ministry.",
   mission:
     "To equip every church with free, modern, and beautiful presentation tools for worship in Tamil and English.",
   vision:
     "A world where every congregation, regardless of size or budget, can present the Gospel with clarity, beauty, and technical excellence.",
-  story:
-    "The idea for VersoLyn was born in late May 2026 from real projection difficulties experienced during church services — specifically surrounding language support, ease of use, and accessibility. On June 6, 2026, official development commenced to build a clean, open-source web application tailored for churches, designed to make worship projection effortless and accessible to all.",
+  story: `The idea for VersoLyn came after experiencing real presentation problems during worship services at IRM (India Revival Ministry), Kuruvankootai, Tirunelveli, Tamil Nadu, India.
+
+Common problems experienced:
+• Existing presentation software was difficult to use.
+• Tamil support was not satisfactory.
+• Projection scaling problems occurred on different TVs.
+• Some displays showed white bars because every church used different aspect ratios.
+• Need for a simple, modern and open-source presentation platform.
+
+Development officially started on June 6, 2026.`,
   timeline: [
-    { year: "Late May 2026", event: "Concept born from real church projection challenges during service" },
-    { year: "June 6, 2026", event: "Official project start & core web application development initiated" },
-    { year: "2026 (Present)", event: "Active development of Tamil & English Bible and song projection features" },
+    {
+      year: "Late May 2026",
+      event:
+        "Idea born while solving real projection problems during church services at IRM (India Revival Ministry), Kuruvankootai, Tirunelveli.",
+    },
+    {
+      year: "June 6, 2026",
+      event: "Official development started.",
+    },
+    {
+      year: "Present",
+      event:
+        "Active development of VersoLyn continues with Bible, Songs, Media, Projection and Church workflow improvements.",
+    },
   ],
-  education: "Computer Science & Engineering",
+  education: "Electronics & Communication Engineering (ECE)",
   skills: [
     "React 19 / TypeScript",
     "TailwindCSS v4 / Web UI Architecture",
@@ -299,21 +318,28 @@ export const LICENSE_INFO = {
   description:
     "VersoLyn is released under the open-source MIT License, allowing you to freely use, modify, and distribute the software.",
   url: "https://github.com/codefuser/vision-projector/blob/main/LICENSE",
-  credits: [
-    "React — MIT License",
-    "TypeScript — Apache-2.0 License",
-    "TanStack Router — MIT License",
-    "TailwindCSS — MIT License",
-    "Radix UI — MIT License",
-    "Lucide Icons — ISC License",
-    "Dexie.js — Apache-2.0 License",
-    "Zustand — MIT License",
+};
+
+export const CUSTOM_SERVICES_INFO = {
+  title: "Need a Custom Software?",
+  description:
+    "Need software for your church, ministry, company, shop or organization? We build modern custom web applications tailored to your needs.",
+  examples: [
+    "Church Management",
+    "Church Presentation",
+    "School Software",
+    "Company Dashboard",
+    "Inventory System",
+    "Billing",
+    "ERP",
+    "CRM",
+    "Custom Web Applications",
   ],
-  acknowledgements: [
-    "Open source software maintainers and contributors",
-    "The church community for valuable feedback during development",
-    "All future contributors who will help expand VersoLyn",
-  ],
+  contact: {
+    name: "Joseph",
+    email: "josephsamuvel1310@gmail.com",
+    phone: "+91 6369589486",
+  },
 };
 
 export const FAQ_ITEMS = [

@@ -108,11 +108,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
             title={collapsed ? "Expand sidebar" : "VersoLyn"}
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg p-1 bg-primary/10 transition-transform overflow-hidden",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0 bg-transparent transition-transform overflow-hidden",
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
-            <VersoLynLogo className="h-full w-full" />
+            <VersoLynLogo className="h-full w-full rounded-full" />
           </button>
 
           <div
