@@ -7,6 +7,8 @@ import type { ProjectTextInput } from "@/projection/adapters/text.adapter";
 
 export type RemoteSessionStatus = "idle" | "waiting" | "connected" | "ended";
 
+export type ActiveRemoteTab = "verse" | "song" | "lyric" | "media" | "text";
+
 export interface RemoteDevice {
   id: string;
   name: string;
@@ -25,18 +27,40 @@ export interface RemoteSession {
   connectedDevices: RemoteDevice[];
 }
 
+export interface RemoteRecentItem {
+  id: string;
+  title: string;
+  type: string;
+  projectedAt: number;
+  metadata?: Record<string, any>;
+}
+
 export interface RemoteHostSyncState {
+  activeTab: ActiveRemoteTab;
+  searchQuery: {
+    verse: string;
+    song: string;
+    lyric: string;
+    media: string;
+    text: string;
+  };
+  selectedSongId: number | null;
+  selectedTextId: string | null;
   currentLive: {
+    id?: string;
     title: string;
     type: string;
     details?: string;
+    metadata?: Record<string, any>;
   } | null;
   blackScreen: boolean;
+  recentHistory: RemoteRecentItem[];
   mediaList: Array<{
     id: string;
     name: string;
     type: "image" | "video";
     durationMs?: number;
+    thumbnailUrl?: string;
   }>;
   textList: Array<{
     id: string;
@@ -72,6 +96,12 @@ export interface RemoteStateSyncPayload {
   syncState: RemoteHostSyncState;
 }
 
+export interface RemoteStateDeltaPayload {
+  type: "STATE_DELTA";
+  origin: "host" | "remote";
+  delta: Partial<RemoteHostSyncState>;
+}
+
 export interface RemoteSessionEndedPayload {
   type: "SESSION_ENDED";
   reason?: string;
@@ -103,6 +133,27 @@ export type RemoteCommandAction =
       action: "TRANSPORT";
       subAction: "BLACK" | "CLEAR" | "PLAY" | "PAUSE" | "NEXT" | "PREV";
       value?: boolean | number;
+    }
+  | {
+      action: "SYNC_TAB";
+      tab: ActiveRemoteTab;
+    }
+  | {
+      action: "SYNC_SEARCH";
+      tab: ActiveRemoteTab;
+      query: string;
+    }
+  | {
+      action: "SYNC_SELECT_SONG";
+      songId: number | null;
+    }
+  | {
+      action: "SYNC_SELECT_TEXT";
+      textId: string | null;
+    }
+  | {
+      action: "REPROJECT_HISTORY";
+      item: RemoteRecentItem;
     };
 
 export interface RemoteCommandPayload {
@@ -123,6 +174,7 @@ export type RemoteBroadcastMessage =
   | RemoteAuthRequestPayload
   | RemoteAuthResponsePayload
   | RemoteStateSyncPayload
+  | RemoteStateDeltaPayload
   | RemoteSessionEndedPayload
   | RemoteCommandPayload
   | RemoteHeartbeatPayload;

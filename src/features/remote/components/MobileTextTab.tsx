@@ -1,14 +1,14 @@
 import { useState } from "react";
-import { Send, Type, Search, Check, Sparkles } from "lucide-react";
+import { Send, Type, Search, Sparkles } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
 
 export function MobileTextTab() {
-  const { textList, sendCommand, currentLive } = useRemoteClient();
+  const { textList, sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
 
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
-  const [searchQuery, setSearchQuery] = useState("");
+  const search = searchQuery.text || "";
 
   const handleProjectCustom = () => {
     const textToProject = content.trim();
@@ -41,8 +41,8 @@ export function MobileTextTab() {
 
   const filteredSaved = textList.filter(
     (t) =>
-      t.title.toLowerCase().includes(searchQuery.trim().toLowerCase()) ||
-      t.content.toLowerCase().includes(searchQuery.trim().toLowerCase()),
+      t.title.toLowerCase().includes(search.trim().toLowerCase()) ||
+      t.content.toLowerCase().includes(search.trim().toLowerCase()),
   );
 
   return (
@@ -89,16 +89,25 @@ export function MobileTextTab() {
           <span className="text-[10px] text-muted-foreground">{textList.length} items</span>
         </div>
 
-        {textList.length > 5 && (
+        {textList.length > 3 && (
           <div className="relative">
             <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
             <input
               type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              value={search}
+              onChange={(e) => setSearchQuery("text", e.target.value)}
               placeholder="Search saved text items..."
               className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none"
             />
+            {search && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("text", "")}
+                className="absolute right-2 top-1.5 text-xs text-muted-foreground hover:text-foreground"
+              >
+                Clear
+              </button>
+            )}
           </div>
         )}
 
@@ -110,7 +119,9 @@ export function MobileTextTab() {
           ) : (
             filteredSaved.map((item) => {
               const isLive =
-                currentLive?.type === "live_text" && currentLive.title.includes(item.title);
+                currentLive?.type === "live_text" &&
+                (currentLive.metadata?.itemId === item.id ||
+                  currentLive.title.includes(item.title));
 
               return (
                 <div

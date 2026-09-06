@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, FileText, Check } from "lucide-react";
+import { Search, FileText } from "lucide-react";
 import { loadSongs, getSongs, type Song } from "@/lib/songs/loader";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
@@ -12,9 +12,9 @@ interface LyricSlideMatch {
 }
 
 export function MobileLyricTab() {
-  const { sendCommand, currentLive } = useRemoteClient();
+  const { sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
 
-  const [query, setQuery] = useState("");
+  const query = searchQuery.lyric || "";
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -53,7 +53,6 @@ export function MobileLyricTab() {
         const lower = slideText.toLowerCase();
 
         if (lower.includes(q)) {
-          // Find exact matching line
           const lines = slideText.split(/\n/);
           const matchedLine = lines.find((l) => l.toLowerCase().includes(q)) || lines[0] || "";
 
@@ -95,14 +94,14 @@ export function MobileLyricTab() {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setSearchQuery("lyric", e.target.value)}
             placeholder="Search lyrics phrase (e.g. உம்மைத்தான், holy)..."
             className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
           {query && (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => setSearchQuery("lyric", "")}
               className="absolute right-2.5 top-2.5 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
               Clear
@@ -135,8 +134,10 @@ export function MobileLyricTab() {
           matches.map((m, idx) => {
             const isLive =
               currentLive?.type === "song_slide" &&
-              currentLive.title.includes(m.song.title) &&
-              currentLive.details?.includes(m.matchedLine);
+              ((currentLive.metadata?.songId === m.song.id &&
+                currentLive.metadata?.slideIndex === m.slideIndex) ||
+                (currentLive.title.includes(m.song.title) &&
+                  currentLive.title.includes(`slide ${m.slideIndex + 1}`)));
 
             return (
               <div

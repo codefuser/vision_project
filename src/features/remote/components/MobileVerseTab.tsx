@@ -1,15 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, BookOpen, Check, Layers, ChevronRight } from "lucide-react";
+import { Search, BookOpen } from "lucide-react";
 import { BIBLE_BOOKS, type BibleBookMeta } from "@/lib/bible/books";
-import { loadBible, getBible, type BibleData, type BibleLang } from "@/lib/bible/loader";
+import { loadBible, getBible, type BibleLang } from "@/lib/bible/loader";
 import { search, getChapterVerses, type VerseHit } from "@/lib/bible/search";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
 
 export function MobileVerseTab() {
-  const { sendCommand, currentLive } = useRemoteClient();
+  const { sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
 
-  const [query, setQuery] = useState("");
+  const query = searchQuery.verse || "";
   const [lang, setLang] = useState<BibleLang>("ta");
   const [loadingBible, setLoadingBible] = useState(false);
   const [activeBook, setActiveBook] = useState<BibleBookMeta | null>(null);
@@ -76,14 +76,14 @@ export function MobileVerseTab() {
             <input
               type="text"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => setSearchQuery("verse", e.target.value)}
               placeholder="Search verse (e.g. John 3:16, ps 23)..."
               className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
             {query && (
               <button
                 type="button"
-                onClick={() => setQuery("")}
+                onClick={() => setSearchQuery("verse", "")}
                 className="absolute right-2.5 top-2.5 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
               >
                 Clear
@@ -167,7 +167,10 @@ export function MobileVerseTab() {
           results.map((hit) => {
             const isLive =
               currentLive?.type === "bible_verse" &&
-              currentLive.title.includes(`${hit.chapter}:${hit.verse}`);
+              ((currentLive.metadata?.book === hit.book &&
+                currentLive.metadata?.chapter === hit.chapter &&
+                currentLive.metadata?.verse === hit.verse) ||
+                currentLive.title.includes(`${hit.chapter}:${hit.verse}`));
 
             return (
               <div
@@ -190,7 +193,7 @@ export function MobileVerseTab() {
                       LIVE
                     </span>
                   ) : (
-                    <span className="text-[11px] text-muted-foreground/70 font-medium group-hover:text-primary">
+                    <span className="text-[11px] text-muted-foreground/70 font-medium">
                       Tap to Project
                     </span>
                   )}
@@ -257,7 +260,7 @@ export function MobileVerseTab() {
                   onClick={() => {
                     setActiveBook(book);
                     setActiveChapter(1);
-                    setQuery("");
+                    setSearchQuery("verse", "");
                     setShowBookPicker(false);
                   }}
                   className={cn(

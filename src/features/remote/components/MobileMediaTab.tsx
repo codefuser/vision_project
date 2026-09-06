@@ -1,13 +1,14 @@
 import { useState, useMemo } from "react";
-import { Search, Image as ImageIcon, Video, Film, Check } from "lucide-react";
+import { Search, Image as ImageIcon, Video, Film, AlertCircle } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
 
 export function MobileMediaTab() {
-  const { mediaList, sendCommand, currentLive } = useRemoteClient();
+  const { mediaList, sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
 
-  const [query, setQuery] = useState("");
+  const query = searchQuery.media || "";
   const [filterType, setFilterType] = useState<"all" | "image" | "video">("all");
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   const filtered = useMemo(() => {
     return mediaList.filter((item) => {
@@ -24,6 +25,10 @@ export function MobileMediaTab() {
     });
   };
 
+  const handleImageError = (id: string) => {
+    setImageErrors((prev) => ({ ...prev, [id]: true }));
+  };
+
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
       {/* Search & Filter Header */}
@@ -33,14 +38,14 @@ export function MobileMediaTab() {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setSearchQuery("media", e.target.value)}
             placeholder="Search media files..."
             className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
           {query && (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => setSearchQuery("media", "")}
               className="absolute right-2.5 top-2.5 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
               Clear
@@ -90,7 +95,7 @@ export function MobileMediaTab() {
       </div>
 
       {/* Media Cards Grid */}
-      <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-2.5 pb-24 content-start">
+      <div className="flex-1 overflow-y-auto p-3 grid grid-cols-2 gap-3 pb-24 content-start">
         {filtered.length === 0 ? (
           <div className="col-span-2 text-center py-12 text-muted-foreground text-xs space-y-1">
             <Film className="w-8 h-8 mx-auto opacity-30 mb-2" />
@@ -105,47 +110,77 @@ export function MobileMediaTab() {
           filtered.map((item) => {
             const isLive =
               (currentLive?.type === "image" || currentLive?.type === "video") &&
-              currentLive.title === item.name;
+              (currentLive.title === item.name ||
+                currentLive.id === `media:${item.id}` ||
+                currentLive.metadata?.mediaId === item.id);
+
+            const hasPreview = item.thumbnailUrl && !imageErrors[item.id];
 
             return (
               <div
                 key={item.id}
                 onClick={() => handleProject(item.id)}
                 className={cn(
-                  "p-3 rounded-xl border flex flex-col justify-between transition cursor-pointer select-none active:scale-[0.98] text-left min-h-[110px]",
+                  "rounded-xl border overflow-hidden flex flex-col transition cursor-pointer select-none active:scale-[0.98] text-left relative bg-card shadow-sm",
                   isLive
-                    ? "bg-primary/10 border-primary ring-1 ring-primary/40 shadow-sm"
-                    : "bg-card border-border hover:border-primary/40",
+                    ? "border-primary ring-2 ring-primary/60 shadow-md"
+                    : "border-border hover:border-primary/40",
                 )}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="p-2 rounded-lg bg-muted flex items-center justify-center text-primary">
-                    {item.type === "video" ? (
-                      <Video className="w-4 h-4" />
-                    ) : (
-                      <ImageIcon className="w-4 h-4" />
-                    )}
+                {/* Image Preview Container (16:9 aspect ratio) */}
+                <div className="relative w-full aspect-video bg-muted/60 flex items-center justify-center overflow-hidden">
+                  {hasPreview ? (
+                    <img
+                      src={item.thumbnailUrl}
+                      alt={item.name}
+                      onError={() => handleImageError(item.id)}
+                      className="w-full h-full object-cover transition duration-300 hover:scale-105"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-1">
+                      {item.type === "video" ? (
+                        <Video className="w-6 h-6 text-primary/70" />
+                      ) : (
+                        <ImageIcon className="w-6 h-6 text-primary/70" />
+                      )}
+                      <span className="text-[9px] uppercase font-mono tracking-wider opacity-60">
+                        {item.type}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Type Badge on Top-Right */}
+                  <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[9px] font-mono text-white/90 uppercase tracking-wider">
+                    {item.type}
                   </div>
 
-                  {isLive ? (
-                    <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  {/* LIVE Badge on Media Preview */}
+                  {isLive && (
+                    <div className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded-full bg-emerald-500 text-black text-[10px] font-black uppercase tracking-wider flex items-center gap-1 shadow-md">
+                      <span className="w-1.5 h-1.5 rounded-full bg-black animate-ping" />
                       LIVE
-                    </span>
-                  ) : (
-                    <span className="text-[10px] text-muted-foreground uppercase font-mono tracking-wider">
-                      {item.type}
-                    </span>
+                    </div>
                   )}
                 </div>
 
-                <div>
-                  <span className="font-semibold text-xs text-foreground line-clamp-2 leading-tight block mb-0.5">
+                {/* Card Info Footer */}
+                <div className="p-2.5 space-y-1 bg-card">
+                  <span className="font-semibold text-xs text-foreground line-clamp-1 leading-tight block">
                     {item.name}
                   </span>
-                  <span className="text-[10px] text-muted-foreground/70 block">
-                    Tap to Project
-                  </span>
+
+                  <div className="flex items-center justify-between">
+                    {isLive ? (
+                      <span className="text-[10px] font-bold text-emerald-400">
+                        Projecting Now
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-muted-foreground/70">
+                        Tap to Project
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             );
