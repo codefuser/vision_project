@@ -112,11 +112,20 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   textList: [],
 
   setSessionCredentials: (sessionId, salt) => {
-    set({ sessionId: sessionId.trim(), salt: salt.trim(), errorMessage: null });
+    set({
+      sessionId: (sessionId || "").trim().toLowerCase(),
+      salt: (salt || "").trim(),
+      errorMessage: null,
+    });
   },
 
   authenticate: async (password: string): Promise<boolean> => {
-    const { sessionId, salt, clientId } = get();
+    const rawSessionId = get().sessionId || "";
+    const rawSalt = get().salt || "";
+    const sessionId = rawSessionId.trim().toLowerCase();
+    const salt = rawSalt.trim();
+    const { clientId } = get();
+
     if (!sessionId || !salt) {
       set({ status: "error", errorMessage: "Missing session ID or salt. Please re-scan QR." });
       return false;
@@ -127,7 +136,11 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
     // Clean up any existing channel
     const prevChannel = get().channel;
     if (prevChannel) {
-      await supabase.removeChannel(prevChannel);
+      try {
+        await supabase.removeChannel(prevChannel);
+      } catch (e) {
+        logger.warn("Error removing previous channel on client", e);
+      }
     }
 
     const channelName = `${CHANNEL_PREFIX}${sessionId}`;
@@ -142,7 +155,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
     return new Promise<boolean>((resolve) => {
       let resolved = false;
 
-      // Timeout handler: 10s
+      // Timeout handler: 15s
       const timeout = setTimeout(() => {
         if (!resolved) {
           resolved = true;
@@ -152,7 +165,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           });
           resolve(false);
         }
-      }, 10000);
+      }, 15000);
 
       // Listen for host messages
       channel.on("broadcast", { event: "msg" }, (payload) => {
@@ -251,10 +264,11 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
       });
 
       // Subscribe and send auth request once connected
-      channel.subscribe(async (subStatus) => {
+      channel.subscribe(async (subStatus, err) => {
+        logger.info(`Client channel [${channelName}] status: ${subStatus}`);
         if (subStatus === "SUBSCRIBED") {
           try {
-            await channel.send({
+            const sendRes = await channel.send({
               type: "broadcast",
               event: "msg",
               payload: {
@@ -268,8 +282,20 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 },
               },
             });
-          } catch (err) {
-            logger.error("Failed to send auth request", err);
+            logger.info(`AUTH_REQUEST send result: ${sendRes}`);
+          } catch (sendErr) {
+            logger.error("Failed to send auth request", sendErr);
+          }
+        } else if (subStatus === "CHANNEL_ERROR" || subStatus === "TIMED_OUT") {
+          logger.warn(`Channel subscription error: ${subStatus}`, err);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeout);
+            set({
+              status: "error",
+              errorMessage: `Network error (${subStatus}). Check internet connection and verify laptop session is active.`,
+            });
+            resolve(false);
           }
         }
       });
@@ -367,8 +393,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
         const parsed = JSON.parse(raw);
         if (parsed?.sessionId && parsed?.salt && parsed?.sessionToken) {
           set({
-            sessionId: parsed.sessionId,
-            salt: parsed.salt,
+            sessionId: String(parsed.sessionId).trim().toLowerCase(),
+            salt: String(parsed.salt).trim(),
             sessionToken: parsed.sessionToken,
           });
         }

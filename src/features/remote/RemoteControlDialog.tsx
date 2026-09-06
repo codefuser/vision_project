@@ -32,7 +32,7 @@ export function RemoteControlDialog() {
   const [customHost, setCustomHost] = useState("");
   const [copied, setCopied] = useState(false);
   const [starting, setStarting] = useState(false);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
   // Auto-init password placeholder when opening if no session
   useEffect(() => {
@@ -49,15 +49,17 @@ export function RemoteControlDialog() {
     ? `${effectiveOrigin}/remote?s=${encodeURIComponent(session.sessionId)}&salt=${encodeURIComponent(session.salt)}`
     : "";
 
-  // Render QR Code onto canvas whenever URL or session changes
+  // Render QR Code as a reliable Data URL whenever URL or session changes
   useEffect(() => {
-    if (!canvasRef.current || !remoteUrl) return;
+    if (!remoteUrl) {
+      setQrDataUrl("");
+      return;
+    }
 
-    QRCode.toCanvas(
-      canvasRef.current,
+    QRCode.toDataURL(
       remoteUrl,
       {
-        width: 220,
+        width: 260,
         margin: 2,
         color: {
           dark: "#0f172a", // slate-900
@@ -65,8 +67,12 @@ export function RemoteControlDialog() {
         },
         errorCorrectionLevel: "M",
       },
-      (err) => {
-        if (err) console.error("QR render error:", err);
+      (err, url) => {
+        if (err) {
+          console.error("QR render error:", err);
+        } else if (url) {
+          setQrDataUrl(url);
+        }
       },
     );
   }, [remoteUrl]);
@@ -180,9 +186,19 @@ export function RemoteControlDialog() {
               </span>
             </div>
 
-            {/* QR Code Canvas */}
-            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-border shadow-sm">
-              <canvas ref={canvasRef} className="rounded" />
+            {/* QR Code */}
+            <div className="flex flex-col items-center justify-center p-3 rounded-xl bg-white border border-border shadow-sm min-h-[250px]">
+              {qrDataUrl ? (
+                <img
+                  src={qrDataUrl}
+                  alt="Remote QR Code"
+                  className="w-[220px] h-[220px] object-contain rounded"
+                />
+              ) : (
+                <div className="w-[220px] h-[220px] flex items-center justify-center text-slate-400 text-xs font-medium">
+                  Generating QR Code...
+                </div>
+              )}
               <div className="mt-2 text-center">
                 <p className="text-xs font-semibold text-slate-900">Scan with Phone Camera</p>
                 <p className="text-[10px] text-slate-500">
