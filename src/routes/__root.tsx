@@ -29,6 +29,7 @@ const KNOWN_ROUTE_PREFIXES = [
   "/roadmap",
   "/developer-hub",
   "/remote",
+  "/live",
 ];
 
 function isKnownRoute(pathname: string): boolean {
@@ -134,9 +135,10 @@ function RootComponent() {
   const isProjectorPopup =
     typeof window !== "undefined" && window.opener != null && window.name === "church-projector";
 
-  // Detect mobile remote page
+  // Detect mobile remote page & live viewer page
   const isRemote = pathname === "/remote" || pathname.startsWith("/remote/");
-  const isIsolated = isProjectorPopup || isRemote;
+  const isLive = pathname === "/live" || pathname.startsWith("/live/");
+  const isIsolated = isProjectorPopup || isRemote || isLive;
 
   return (
     <QueryClientProvider client={queryClient}>

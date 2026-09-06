@@ -15,6 +15,7 @@ import {
   Mail,
   History,
   Smartphone,
+  Radio,
 } from "lucide-react";
 import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
@@ -30,6 +31,8 @@ import { useSessionHistory } from "@/features/history/session-history.store";
 import { initBackupScheduler } from "@/lib/backup-scheduler";
 import { useHostRemote } from "@/features/remote/remote-host.store";
 import { RemoteControlDialog } from "@/features/remote/RemoteControlDialog";
+import { useHostLiveQr } from "@/features/live-qr/live-qr-host.store";
+import { LiveQrDialog } from "@/features/live-qr/components/LiveQrDialog";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
@@ -61,6 +64,13 @@ export function AppShell({ children }: { children: ReactNode }) {
   const errorPageMode = useWorkspace((s) => s.errorPageMode);
   const activeSessionId = useSessionHistory((s) => s.activeSessionId);
   const { session, setDialogOpen } = useHostRemote();
+  const {
+    session: liveQrSession,
+    isExpired: isLiveQrExpired,
+    remainingTime: liveQrRemainingTime,
+    setDialogOpen: setLiveQrDialogOpen,
+  } = useHostLiveQr();
+  const isLiveQrActive = Boolean(liveQrSession && !isLiveQrExpired);
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
@@ -208,6 +218,32 @@ export function AppShell({ children }: { children: ReactNode }) {
               ) : null}
             </button>
             <RemoteControlDialog />
+
+            {/* Live Projection QR button (View-Only livestream) */}
+            <button
+              onClick={() => setLiveQrDialogOpen(true)}
+              className={cn(
+                "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
+                isLiveQrActive
+                  ? "bg-sky-500/15 text-sky-400 border border-sky-500/30 hover:bg-sky-500/25"
+                  : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
+              title={
+                isLiveQrActive
+                  ? `Live QR active (${liveQrRemainingTime} remaining) - Click to view/share`
+                  : "Live Projection QR (View-Only)"
+              }
+            >
+              <Radio className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {isLiveQrActive ? "Live QR Active" : "Live QR"}
+              </span>
+              {isLiveQrActive ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-400 animate-pulse" />
+              ) : null}
+            </button>
+            <LiveQrDialog />
+
             <ProjectorToggleButton
               projectorOpen={projectorOpen}
               onToggle={projectorOpen ? closeProjector : openProjector}
