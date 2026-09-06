@@ -170,7 +170,7 @@ const INITIAL_FORM: FormData = {
 };
 
 function generateTicketId(): string {
-  return "VP-" + Math.random().toString(36).substring(2, 10).toUpperCase();
+  return "VL-" + Math.random().toString(36).substring(2, 10).toUpperCase();
 }
 
 function formatTimestamp(): string {

@@ -38,7 +38,7 @@ async function runBackup() {
     a.href = url;
     a.download = `versolyn-autobackup-${new Date().toISOString().slice(0, 10)}.zip`;
     a.click();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     toast.success("Automatic backup created");
   } catch (e) {
     logger.error("Automatic backup failed", e);

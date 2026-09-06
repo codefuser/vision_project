@@ -163,7 +163,7 @@ export function NotFoundPage() {
     a.href = url2;
     a.download = `versolyn-404-${Date.now()}.png`;
     a.click();
-    URL.revokeObjectURL(url2);
+    setTimeout(() => URL.revokeObjectURL(url2), 1000);
     showNotification("Screenshot saved");
   }, [showNotification]);
 

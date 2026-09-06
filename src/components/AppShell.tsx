@@ -14,6 +14,7 @@ import {
   Route,
   Mail,
   History,
+  Smartphone,
 } from "lucide-react";
 import { memo, type ReactNode, useEffect } from "react";
 import { useSettings } from "@/stores/settings.store";
@@ -27,6 +28,8 @@ import { cn } from "@/lib/utils";
 import { StartupScreen } from "@/components/StartupScreen";
 import { useSessionHistory } from "@/features/history/session-history.store";
 import { initBackupScheduler } from "@/lib/backup-scheduler";
+import { useHostRemote } from "@/features/remote/remote-host.store";
+import { RemoteControlDialog } from "@/features/remote/RemoteControlDialog";
 
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
@@ -57,6 +60,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const setCollapsed = useWorkspace((s) => s.setSidebarCollapsed);
   const errorPageMode = useWorkspace((s) => s.errorPageMode);
   const activeSessionId = useSessionHistory((s) => s.activeSessionId);
+  const { session, setDialogOpen } = useHostRemote();
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
@@ -108,11 +112,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
             title={collapsed ? "Expand sidebar" : "VersoLyn"}
             className={cn(
-              "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg p-1 bg-primary/10 transition-transform overflow-hidden",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0 bg-transparent transition-transform overflow-hidden",
               collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
             )}
           >
-            <VersoLynLogo className="h-full w-full" />
+            <VersoLynLogo className="h-full w-full rounded-full" />
           </button>
 
           <div
@@ -177,6 +181,33 @@ export function AppShell({ children }: { children: ReactNode }) {
         <AppStartupProvider>
           {/* Integrated top bar — projector + favorites + theme controls. Compact, anchored, not floating. */}
           <header className="flex h-10 shrink-0 items-center justify-end gap-2 border-b border-border bg-background px-3 select-none">
+            <button
+              onClick={() => setDialogOpen(true)}
+              className={cn(
+                "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
+                session?.connectedDevices.length
+                  ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25"
+                  : session
+                    ? "bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25"
+                    : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
+              )}
+              title={
+                session?.connectedDevices.length
+                  ? `${session.connectedDevices.length} phone(s) connected`
+                  : session
+                    ? "Remote session active - waiting for device"
+                    : "Remote Control via Mobile"
+              }
+            >
+              <Smartphone className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">
+                {session?.connectedDevices.length ? "Remote Connected" : "Remote Control"}
+              </span>
+              {session?.connectedDevices.length ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              ) : null}
+            </button>
+            <RemoteControlDialog />
             <ProjectorToggleButton
               projectorOpen={projectorOpen}
               onToggle={projectorOpen ? closeProjector : openProjector}

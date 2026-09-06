@@ -186,7 +186,7 @@ function exportJSON(shortcuts: ShortcutDef[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "vision-projector-shortcuts.json";
+  a.download = "versolyn-shortcuts.json";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -210,7 +210,7 @@ function exportCSV(shortcuts: ShortcutDef[]) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "vision-projector-shortcuts.csv";
+  a.download = "versolyn-shortcuts.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();

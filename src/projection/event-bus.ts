@@ -8,6 +8,8 @@
  */
 import type { ProjectionContent, HistoryEntry } from "./content.types";
 
+import { logger } from "@/lib/logger";
+
 export type ProjectionEvent =
   | { type: "CONTENT_PROJECTED"; content: ProjectionContent; previous: ProjectionContent | null }
   | { type: "CONTENT_UPDATED"; content: ProjectionContent }
@@ -61,8 +63,7 @@ export class ProjectionEventBus {
           fn(event);
         } catch (err) {
           // Never let one bad listener break the rest of the system.
-
-          console.error("[projection] listener error for", event.type, err);
+          logger.error(`[projection] listener error for ${event.type}`, err);
         }
       }
     }
@@ -70,7 +71,7 @@ export class ProjectionEventBus {
       try {
         fn(event);
       } catch (err) {
-        console.error("[projection] anyListener error for", event.type, err);
+        logger.error(`[projection] anyListener error for ${event.type}`, err);
       }
     }
   }

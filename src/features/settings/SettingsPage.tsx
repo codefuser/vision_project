@@ -212,7 +212,7 @@ export function SettingsPage() {
       a.href = url;
       a.download = `versolyn-backup-${new Date().toISOString().slice(0, 10)}.zip`;
       a.click();
-      URL.revokeObjectURL(url);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
       toast.success("Backup downloaded");
     } catch (e) {
       toast.error("Export failed: " + (e as Error).message);

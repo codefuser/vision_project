@@ -3,6 +3,7 @@ import {
   Outlet,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -27,6 +28,7 @@ const KNOWN_ROUTE_PREFIXES = [
   "/contact",
   "/roadmap",
   "/developer-hub",
+  "/remote",
 ];
 
 function isKnownRoute(pathname: string): boolean {
@@ -84,6 +86,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     ],
     links: [
       { rel: "icon", href: "/favicon.ico" },
+      { rel: "icon", type: "image/png", sizes: "128x128", href: "/favicon-128x128.png" },
+      { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon-64x64.png" },
+      { rel: "icon", type: "image/png", sizes: "48x48", href: "/favicon-48x48.png" },
       { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32x32.png" },
       { rel: "icon", type: "image/png", sizes: "16x16", href: "/favicon-16x16.png" },
       { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
@@ -123,18 +128,23 @@ import { CommandPalette } from "@/components/CommandPalette";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Detect projector popup
   const isProjectorPopup =
     typeof window !== "undefined" && window.opener != null && window.name === "church-projector";
 
+  // Detect mobile remote page
+  const isRemote = pathname === "/remote" || pathname.startsWith("/remote/");
+  const isIsolated = isProjectorPopup || isRemote;
+
   return (
     <QueryClientProvider client={queryClient}>
       <GlobalErrorBoundary>
-        {!isProjectorPopup && <GlobalShortcuts />}
-        {!isProjectorPopup && <ShortcutsDialog />}
-        {!isProjectorPopup && <CommandPalette />}
-        {isProjectorPopup ? (
+        {!isIsolated && <GlobalShortcuts />}
+        {!isIsolated && <ShortcutsDialog />}
+        {!isIsolated && <CommandPalette />}
+        {isIsolated ? (
           <Outlet />
         ) : (
           <AppShell>

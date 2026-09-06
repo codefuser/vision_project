@@ -4,6 +4,7 @@ import { useMediaFavorites } from "@/stores/media-favorites.store";
 import { useFileManagerLayoutStore } from "@/stores/file-manager-layout.store";
 import { createFolder, renameFolder, moveFolder, deleteFolderDeep, moveMedia, duplicateMedia, deleteMedia, renameMedia } from "@/db/repo";
 import type { FolderRecord } from "@/db/schema";
+import { logger } from "@/lib/logger";
 import { LibraryToolbar } from "./LibraryToolbar";
 import { LibraryTreeNav } from "./LibraryTreeNav";
 import { LibraryExplorerGrid } from "./LibraryExplorerGrid";
@@ -132,7 +133,7 @@ export function LibraryShell() {
       } catch (err) {
         toast.dismiss(toastId);
         toast.error("Failed to upload files");
-        console.error(err);
+        logger.error("Failed to upload files", err);
       }
     },
     [currentFolderId, refreshMedia],
@@ -866,7 +867,7 @@ export function LibraryShell() {
           await refreshMedia();
         }
       } catch (err) {
-        console.error(err);
+        logger.error("Failed to rename item", err);
         toast.error("Failed to rename item");
       } finally {
         setInlineEditingId(null);

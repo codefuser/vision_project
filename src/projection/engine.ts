@@ -33,6 +33,7 @@ class ProjectionEngineImpl {
   private state: EngineRuntimeState = { current: null, queue: [], index: 0 };
   private bootstrapped = false;
   private projectorWasOpen = false;
+  private pendingWireTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /** Idempotent. Wires the engine to the underlying broadcast store. */
   bootstrap(): void {
@@ -119,6 +120,10 @@ class ProjectionEngineImpl {
   }
 
   clear(): void {
+    if (this.pendingWireTimeout) {
+      clearTimeout(this.pendingWireTimeout);
+      this.pendingWireTimeout = null;
+    }
     const previous = this.state.current;
     this.state = { current: null, queue: [], index: 0 };
     useProjection.getState().send({ type: "STOP" });
@@ -218,8 +223,19 @@ class ProjectionEngineImpl {
     // dispatch for those types is a no-op — they will light up automatically
     // when the projector window gains the matching renderer in a later phase.
     if (cmd) {
-      if (delay === 0) store.send(cmd);
-      else setTimeout(() => useProjection.getState().send(cmd!), delay);
+      if (this.pendingWireTimeout) {
+        clearTimeout(this.pendingWireTimeout);
+        this.pendingWireTimeout = null;
+      }
+      if (delay === 0) {
+        store.send(cmd);
+      } else {
+        const targetCmd = cmd;
+        this.pendingWireTimeout = setTimeout(() => {
+          this.pendingWireTimeout = null;
+          useProjection.getState().send(targetCmd);
+        }, delay);
+      }
     }
   }
 }

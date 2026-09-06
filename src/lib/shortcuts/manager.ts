@@ -342,7 +342,11 @@ export const shortcutManager = new ShortcutManagerImpl();
 
 /** Pretty-print a combo for the help dialog. */
 export function formatCombo(combo: string): string {
-  const isMac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  const isMac =
+    typeof navigator !== "undefined" &&
+    (/Mac|iPhone|iPad/.test((navigator as any).userAgentData?.platform ?? "") ||
+      /Mac|iPhone|iPad/.test(navigator.userAgent ?? "") ||
+      /Mac|iPhone|iPad/.test(navigator.platform ?? ""));
   return combo
     .split("+")
     .map((p) => {
