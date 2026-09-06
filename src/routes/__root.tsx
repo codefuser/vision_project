@@ -3,6 +3,7 @@ import {
   Outlet,
   createRootRouteWithContext,
   useRouter,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
@@ -27,6 +28,7 @@ const KNOWN_ROUTE_PREFIXES = [
   "/contact",
   "/roadmap",
   "/developer-hub",
+  "/remote",
 ];
 
 function isKnownRoute(pathname: string): boolean {
@@ -126,18 +128,23 @@ import { CommandPalette } from "@/components/CommandPalette";
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Detect projector popup
   const isProjectorPopup =
     typeof window !== "undefined" && window.opener != null && window.name === "church-projector";
 
+  // Detect mobile remote page
+  const isRemote = pathname === "/remote" || pathname.startsWith("/remote/");
+  const isIsolated = isProjectorPopup || isRemote;
+
   return (
     <QueryClientProvider client={queryClient}>
       <GlobalErrorBoundary>
-        {!isProjectorPopup && <GlobalShortcuts />}
-        {!isProjectorPopup && <ShortcutsDialog />}
-        {!isProjectorPopup && <CommandPalette />}
-        {isProjectorPopup ? (
+        {!isIsolated && <GlobalShortcuts />}
+        {!isIsolated && <ShortcutsDialog />}
+        {!isIsolated && <CommandPalette />}
+        {isIsolated ? (
           <Outlet />
         ) : (
           <AppShell>

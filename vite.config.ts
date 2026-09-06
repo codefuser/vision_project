@@ -15,6 +15,8 @@ export default defineConfig({
     react(),
     tsconfigPaths(),
   ],
-  server: {},
+  server: {
+    host: true,
+  },
 });
 
