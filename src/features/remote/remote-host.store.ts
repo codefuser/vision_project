@@ -59,7 +59,6 @@ export function mapRemoteToLaptopTab(t: ActiveRemoteTab): WorkspaceTab {
     case "verse":
       return "bible";
     case "song":
-    case "lyric":
       return "songs";
     case "media":
       return "media";
@@ -67,6 +66,83 @@ export function mapRemoteToLaptopTab(t: ActiveRemoteTab): WorkspaceTab {
       return "text";
     default:
       return "bible";
+  }
+}
+
+// In-memory cache for base64 thumbnail URLs
+const thumbDataCache = new Map<string, string>();
+
+async function getThumbnailBase64(thumbBlobId?: string | null): Promise<string | undefined> {
+  if (!thumbBlobId) return undefined;
+  if (thumbDataCache.has(thumbBlobId)) return thumbDataCache.get(thumbBlobId);
+
+  try {
+    const rec = await db().blobs.get(thumbBlobId);
+    if (!rec?.blob || rec.kind !== "thumb") return undefined;
+    if (rec.blob.size > 60000) return undefined;
+
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        thumbDataCache.set(thumbBlobId, result);
+        resolve(result);
+      };
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(rec.blob);
+    });
+  } catch {
+    return undefined;
+  }
+}
+
+export async function broadcastMediaThumbnails(): Promise<void> {
+  const { session, channel } = useHostRemote.getState();
+  if (!session || !channel) return;
+
+  try {
+    const records = await db().media.orderBy("createdAt").reverse().limit(60).toArray();
+    const batchSize = 4;
+    let currentBatch: Record<string, string> = {};
+    let count = 0;
+
+    for (const m of records) {
+      if (!m.thumbBlobId) continue;
+      const dataUrl = await getThumbnailBase64(m.thumbBlobId);
+      if (dataUrl) {
+        currentBatch[m.id] = dataUrl;
+        count++;
+
+        if (count >= batchSize) {
+          await channel.send({
+            type: "broadcast",
+            event: "msg",
+            payload: {
+              type: "STATE_DELTA",
+              origin: "host",
+              delta: { mediaThumbnails: currentBatch },
+            },
+          });
+          currentBatch = {};
+          count = 0;
+          await new Promise((r) => setTimeout(r, 60));
+        }
+      }
+    }
+
+    if (Object.keys(currentBatch).length > 0) {
+      await channel.send({
+        type: "broadcast",
+        event: "msg",
+        payload: {
+          type: "STATE_DELTA",
+          origin: "host",
+          delta: { mediaThumbnails: currentBatch },
+        },
+      });
+    }
+  } catch (err) {
+    logger.warn("Failed to broadcast media thumbnails", err);
   }
 }
 
@@ -200,6 +276,11 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                 },
               });
               logger.info(`AUTH_RESPONSE broadcast status: ${sendRes}`);
+
+              // Progressive media thumbnails delivery in background without blocking auth
+              setTimeout(() => {
+                void broadcastMediaThumbnails();
+              }, 250);
             } catch (sendErr) {
               logger.error("Failed to send AUTH_RESPONSE", sendErr);
             }
@@ -242,45 +323,27 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
           try {
             switch (command.action) {
               case "SYNC_TAB": {
-                const targetLaptopTab = mapRemoteToLaptopTab(command.tab);
-                if (useWorkspace.getState().activeTab !== targetLaptopTab) {
-                  isApplyingRemoteSync = true;
-                  useWorkspace.getState().setActiveTab(targetLaptopTab);
-                  isApplyingRemoteSync = false;
-                }
+                // Independent tabs: do not change laptop active tab
                 break;
               }
 
               case "SYNC_SEARCH": {
-                isApplyingRemoteSync = true;
-                const { tab, query } = command;
-                if (tab === "verse") {
-                  useWorkspace.getState().setBibleSearch({ query });
-                  useBibleStore.getState().setQuery(query);
-                } else if (tab === "song" || tab === "lyric") {
-                  useWorkspace.getState().setSongsSearch({ query });
-                  useSongsStore.getState().setQuery(query);
-                } else if (tab === "media") {
-                  useWorkspace.getState().setMediaSearch({ query });
-                } else if (tab === "text") {
-                  useWorkspace.getState().setTextSearch({ query });
-                }
-                isApplyingRemoteSync = false;
+                // Independent search: do not change laptop search query
                 break;
               }
 
               case "SYNC_SELECT_SONG": {
-                isApplyingRemoteSync = true;
-                useWorkspace.getState().setSelectedSongId(command.songId);
-                useSongsStore.getState().selectSong(command.songId);
-                isApplyingRemoteSync = false;
+                // Independent browsing: do not force laptop UI
                 break;
               }
 
               case "SYNC_SELECT_TEXT": {
-                isApplyingRemoteSync = true;
-                useWorkspace.getState().setSelectedTextId(command.textId);
-                isApplyingRemoteSync = false;
+                // Independent browsing
+                break;
+              }
+
+              case "REQUEST_MEDIA_THUMBS": {
+                void broadcastMediaThumbnails();
                 break;
               }
 
@@ -513,8 +576,6 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
   }));
 
   return {
-    activeTab,
-    searchQuery,
     selectedSongId: ws.selectedSongId,
     selectedTextId: ws.selectedTextId,
     currentLive,
@@ -528,11 +589,6 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
 // ── Workspace State Subscriptions (Laptop User -> Mobile Remote) ───────────────
 
 if (typeof window !== "undefined") {
-  let prevTab = useWorkspace.getState().activeTab;
-  let prevSongsQuery = useWorkspace.getState().songsSearch.query;
-  let prevBibleQuery = useWorkspace.getState().bibleSearch.query;
-  let prevMediaQuery = useWorkspace.getState().mediaSearch.query;
-  let prevTextQuery = useWorkspace.getState().textSearch.query;
   let prevSelectedSongId = useWorkspace.getState().selectedSongId;
 
   useWorkspace.subscribe((state) => {
@@ -540,67 +596,7 @@ if (typeof window !== "undefined") {
     const { session, channel, broadcastDelta } = useHostRemote.getState();
     if (!session || !channel) return;
 
-    // 1. Tab changed on laptop
-    if (state.activeTab !== prevTab) {
-      prevTab = state.activeTab;
-      const remoteTab = mapLaptopToRemoteTab(state.activeTab);
-      void broadcastDelta({ activeTab: remoteTab });
-    }
-
-    // 2. Search query changed on laptop
-    if (state.songsSearch.query !== prevSongsQuery) {
-      prevSongsQuery = state.songsSearch.query;
-      void broadcastDelta({
-        searchQuery: {
-          verse: prevBibleQuery,
-          song: prevSongsQuery,
-          lyric: "",
-          media: prevMediaQuery,
-          text: prevTextQuery,
-        },
-      });
-    }
-
-    if (state.bibleSearch.query !== prevBibleQuery) {
-      prevBibleQuery = state.bibleSearch.query;
-      void broadcastDelta({
-        searchQuery: {
-          verse: prevBibleQuery,
-          song: prevSongsQuery,
-          lyric: "",
-          media: prevMediaQuery,
-          text: prevTextQuery,
-        },
-      });
-    }
-
-    if (state.mediaSearch.query !== prevMediaQuery) {
-      prevMediaQuery = state.mediaSearch.query;
-      void broadcastDelta({
-        searchQuery: {
-          verse: prevBibleQuery,
-          song: prevSongsQuery,
-          lyric: "",
-          media: prevMediaQuery,
-          text: prevTextQuery,
-        },
-      });
-    }
-
-    if (state.textSearch.query !== prevTextQuery) {
-      prevTextQuery = state.textSearch.query;
-      void broadcastDelta({
-        searchQuery: {
-          verse: prevBibleQuery,
-          song: prevSongsQuery,
-          lyric: "",
-          media: prevMediaQuery,
-          text: prevTextQuery,
-        },
-      });
-    }
-
-    // 3. Selected song changed on laptop
+    // Selected song changed on laptop (shared song context for remote browsing)
     if (state.selectedSongId !== prevSelectedSongId) {
       prevSelectedSongId = state.selectedSongId;
       void broadcastDelta({ selectedSongId: state.selectedSongId });

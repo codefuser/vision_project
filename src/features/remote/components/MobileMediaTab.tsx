@@ -1,14 +1,26 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Search, Image as ImageIcon, Video, Film, AlertCircle } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
 
 export function MobileMediaTab() {
-  const { mediaList, sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
+  const {
+    mediaList,
+    mediaThumbnails,
+    sendCommand,
+    currentLive,
+    searchQuery,
+    setSearchQuery,
+    requestMediaThumbnails,
+  } = useRemoteClient();
 
   const query = searchQuery.media || "";
   const [filterType, setFilterType] = useState<"all" | "image" | "video">("all");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    requestMediaThumbnails();
+  }, [requestMediaThumbnails]);
 
   const filtered = useMemo(() => {
     return mediaList.filter((item) => {
@@ -114,7 +126,8 @@ export function MobileMediaTab() {
                 currentLive.id === `media:${item.id}` ||
                 currentLive.metadata?.mediaId === item.id);
 
-            const hasPreview = item.thumbnailUrl && !imageErrors[item.id];
+            const thumbSrc = mediaThumbnails[item.id] || item.thumbnailUrl;
+            const hasPreview = Boolean(thumbSrc) && !imageErrors[item.id];
 
             return (
               <div
@@ -131,7 +144,7 @@ export function MobileMediaTab() {
                 <div className="relative w-full aspect-video bg-muted/60 flex items-center justify-center overflow-hidden">
                   {hasPreview ? (
                     <img
-                      src={item.thumbnailUrl}
+                      src={thumbSrc}
                       alt={item.name}
                       onError={() => handleImageError(item.id)}
                       className="w-full h-full object-cover transition duration-300 hover:scale-105"

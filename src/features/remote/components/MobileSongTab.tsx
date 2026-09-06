@@ -47,13 +47,30 @@ export function MobileSongTab() {
     return songs.find((s) => s.id === selectedSongId) ?? null;
   }, [songs, selectedSongId]);
 
+  // Context song from laptop (either currently live song or laptop selected song)
+  const contextSong = useMemo(() => {
+    if (currentLive?.type === "song_slide" && currentLive.metadata?.songId) {
+      const match = songs.find((s) => s.id === currentLive.metadata?.songId);
+      if (match) return match;
+    }
+    if (selectedSongId) {
+      return songs.find((s) => s.id === selectedSongId) ?? null;
+    }
+    return null;
+  }, [songs, currentLive, selectedSongId]);
+
   const filteredSongs = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return songs.slice(0, 60);
+    if (!q) return songs.slice(0, 80);
 
     return songs
-      .filter((s) => s.titleLower.includes(q) || s.id.toString() === q)
-      .slice(0, 60);
+      .filter(
+        (s) =>
+          s.titleLower.includes(q) ||
+          s.id.toString() === q ||
+          s.contentLower.includes(q),
+      )
+      .slice(0, 80);
   }, [songs, query]);
 
   const handleProjectSlide = (song: Song, slideIdx: number) => {
@@ -183,7 +200,7 @@ export function MobileSongTab() {
             type="text"
             value={query}
             onChange={(e) => setSearchQuery("song", e.target.value)}
-            placeholder="Search song title or number..."
+            placeholder="Search songs or lyrics..."
             className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
           {query && (
@@ -204,6 +221,37 @@ export function MobileSongTab() {
 
       {/* Songs List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2 pb-24">
+        {/* Current Song on Laptop context banner */}
+        {contextSong && !query && (
+          <div
+            onClick={() => {
+              setSelectedSongId(contextSong.id);
+              setActiveSlideIndex(
+                currentLive?.metadata?.slideIndex !== undefined
+                  ? (currentLive.metadata.slideIndex as number)
+                  : 0,
+              );
+            }}
+            className="p-3 rounded-xl border border-primary/40 bg-primary/10 shadow-xs flex items-center justify-between cursor-pointer active:scale-[0.98] transition mb-3"
+          >
+            <div className="min-w-0 flex-1 pr-3">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+                  {currentLive?.metadata?.songId === contextSong.id
+                    ? "Currently Projecting"
+                    : "Selected on Laptop"}
+                </span>
+              </div>
+              <p className="font-bold text-sm text-foreground truncate">{contextSong.title}</p>
+              <p className="text-xs text-muted-foreground truncate">{contextSong.slides[0]}</p>
+            </div>
+            <div className="px-2.5 py-1 rounded-lg bg-primary text-primary-foreground text-xs font-semibold shrink-0 shadow-xs">
+              View Slides
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div className="text-center py-12 text-muted-foreground text-xs">
             Loading songs library...

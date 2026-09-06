@@ -14,6 +14,7 @@ import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DeveloperHubRouteImport } from './routes/developer-hub'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as LibraryRouteImport } from './routes/library'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as PlaylistsRouteImport } from './routes/playlists'
 import { Route as ProjectRouteImport } from './routes/project'
 import { Route as RemoteRouteImport } from './routes/remote'
@@ -48,6 +49,11 @@ const HistoryRoute = HistoryRouteImport.update({
 const LibraryRoute = LibraryRouteImport.update({
   id: '/library',
   path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PlaylistsRoute = PlaylistsRouteImport.update({
@@ -107,6 +113,7 @@ export interface FileRoutesByFullPath {
   '/developer-hub': typeof DeveloperHubRoute
   '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
+  '/live': typeof LiveRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
@@ -123,6 +130,7 @@ export interface FileRoutesByTo {
   '/contact': typeof ContactRoute
   '/developer-hub': typeof DeveloperHubRoute
   '/library': typeof LibraryRoute
+  '/live': typeof LiveRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
@@ -141,6 +149,7 @@ export interface FileRoutesById {
   '/developer-hub': typeof DeveloperHubRoute
   '/history': typeof HistoryRouteWithChildren
   '/library': typeof LibraryRoute
+  '/live': typeof LiveRoute
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/developer-hub'
     | '/history'
     | '/library'
+    | '/live'
     | '/playlists'
     | '/project'
     | '/remote'
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/contact'
     | '/developer-hub'
     | '/library'
+    | '/live'
     | '/playlists'
     | '/project'
     | '/remote'
@@ -193,6 +204,7 @@ export interface FileRouteTypes {
     | '/developer-hub'
     | '/history'
     | '/library'
+    | '/live'
     | '/playlists'
     | '/project'
     | '/remote'
@@ -211,6 +223,7 @@ export interface RootRouteChildren {
   DeveloperHubRoute: typeof DeveloperHubRoute
   HistoryRoute: typeof HistoryRouteWithChildren
   LibraryRoute: typeof LibraryRoute
+  LiveRoute: typeof LiveRoute
   PlaylistsRoute: typeof PlaylistsRouteWithChildren
   ProjectRoute: typeof ProjectRoute
   RemoteRoute: typeof RemoteRoute
@@ -255,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/library'
       fullPath: '/library'
       preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/playlists': {
@@ -361,6 +381,7 @@ const rootRouteChildren: RootRouteChildren = {
   DeveloperHubRoute: DeveloperHubRoute,
   HistoryRoute: HistoryRouteWithChildren,
   LibraryRoute: LibraryRoute,
+  LiveRoute: LiveRoute,
   PlaylistsRoute: PlaylistsRouteWithChildren,
   ProjectRoute: ProjectRoute,
   RemoteRoute: RemoteRoute,

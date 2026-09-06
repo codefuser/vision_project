@@ -120,6 +120,7 @@ const KNOWN_ROUTE_PREFIXES = [
   "/roadmap",
   "/developer-hub",
   "/remote",
+  "/live",
   "/assets",
   "/_build",
   "/_tanstack",

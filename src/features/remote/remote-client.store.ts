@@ -57,21 +57,24 @@ interface RemoteClientState {
   channel: RealtimeChannel | null;
   clientId: string;
 
-  // Synced from host
+  // Device-local UI state (independent on mobile phone)
   activeTab: ActiveRemoteTab;
   searchQuery: {
     verse: string;
     song: string;
-    lyric: string;
     media: string;
     text: string;
   };
+  isLiveModalOpen: boolean;
+
+  // Globally synchronized state from host
   selectedSongId: number | null;
   selectedTextId: string | null;
   currentLive: RemoteHostSyncState["currentLive"];
   blackScreen: boolean;
   recentHistory: RemoteRecentItem[];
   mediaList: RemoteHostSyncState["mediaList"];
+  mediaThumbnails: Record<string, string>;
   textList: RemoteHostSyncState["textList"];
 
   // Actions
@@ -80,10 +83,12 @@ interface RemoteClientState {
   setActiveTab: (tab: ActiveRemoteTab) => void;
   setSearchQuery: (tab: ActiveRemoteTab, query: string) => void;
   setSelectedSongId: (songId: number | null) => void;
+  setLiveModalOpen: (open: boolean) => void;
   reprojectHistory: (item: RemoteRecentItem) => void;
   sendCommand: (action: RemoteCommandAction) => Promise<void>;
   disconnect: () => void;
   restoreSavedSession: () => void;
+  requestMediaThumbnails: () => void;
 }
 
 export const useRemoteClient = create<RemoteClientState>((set, get) => ({
@@ -99,16 +104,18 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   searchQuery: {
     verse: "",
     song: "",
-    lyric: "",
     media: "",
     text: "",
   },
+  isLiveModalOpen: false,
+
   selectedSongId: null,
   selectedTextId: null,
   currentLive: null,
   blackScreen: false,
   recentHistory: [],
   mediaList: [],
+  mediaThumbnails: {},
   textList: [],
 
   setSessionCredentials: (sessionId, salt) => {
@@ -184,20 +191,14 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 status: "connected",
                 sessionToken: res.sessionToken,
                 errorMessage: null,
-                activeTab: sync?.activeTab ?? "verse",
-                searchQuery: sync?.searchQuery ?? {
-                  verse: "",
-                  song: "",
-                  lyric: "",
-                  media: "",
-                  text: "",
-                },
+                // Tab and search are independent: do not overwrite local activeTab or searchQuery
                 selectedSongId: sync?.selectedSongId ?? null,
                 selectedTextId: sync?.selectedTextId ?? null,
                 currentLive: sync?.currentLive ?? null,
                 blackScreen: Boolean(sync?.blackScreen),
                 recentHistory: sync?.recentHistory ?? [],
                 mediaList: sync?.mediaList ?? [],
+                mediaThumbnails: sync?.mediaThumbnails ?? {},
                 textList: sync?.textList ?? [],
               });
 
@@ -225,26 +226,27 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           }
         } else if (msg.type === "STATE_SYNC") {
           const sync = msg.syncState;
-          set({
-            activeTab: sync.activeTab ?? get().activeTab,
-            searchQuery: sync.searchQuery ?? get().searchQuery,
-            selectedSongId: sync.selectedSongId ?? get().selectedSongId,
-            selectedTextId: sync.selectedTextId ?? get().selectedTextId,
+          set((s) => ({
+            // Tab and search are independent: do not overwrite local activeTab or searchQuery
+            selectedSongId:
+              sync.selectedSongId !== undefined ? sync.selectedSongId : s.selectedSongId,
+            selectedTextId:
+              sync.selectedTextId !== undefined ? sync.selectedTextId : s.selectedTextId,
             currentLive: sync.currentLive,
             blackScreen: sync.blackScreen,
-            recentHistory: sync.recentHistory ?? get().recentHistory,
-            mediaList: sync.mediaList ?? get().mediaList,
-            textList: sync.textList ?? get().textList,
-          });
+            recentHistory: sync.recentHistory ?? s.recentHistory,
+            mediaList: sync.mediaList ?? s.mediaList,
+            mediaThumbnails: sync.mediaThumbnails
+              ? { ...s.mediaThumbnails, ...sync.mediaThumbnails }
+              : s.mediaThumbnails,
+            textList: sync.textList ?? s.textList,
+          }));
         } else if (msg.type === "STATE_DELTA") {
           // Delta received from host
           if (msg.origin === "host") {
             const delta = msg.delta;
             set((s) => ({
-              activeTab: delta.activeTab ?? s.activeTab,
-              searchQuery: delta.searchQuery
-                ? { ...s.searchQuery, ...delta.searchQuery }
-                : s.searchQuery,
+              // Tab and search are independent: do not overwrite local activeTab or searchQuery
               selectedSongId:
                 delta.selectedSongId !== undefined ? delta.selectedSongId : s.selectedSongId,
               selectedTextId:
@@ -252,6 +254,11 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,
+              mediaThumbnails: delta.mediaThumbnails
+                ? { ...s.mediaThumbnails, ...delta.mediaThumbnails }
+                : s.mediaThumbnails,
+              mediaList: delta.mediaList ?? s.mediaList,
+              textList: delta.textList ?? s.textList,
             }));
           }
         } else if (msg.type === "SESSION_ENDED") {
@@ -305,23 +312,31 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   },
 
   setActiveTab: (tab: ActiveRemoteTab) => {
+    // Independent tab navigation on mobile: only update local active tab!
     set({ activeTab: tab });
-    void get().sendCommand({ action: "SYNC_TAB", tab });
   },
 
   setSearchQuery: (tab: ActiveRemoteTab, query: string) => {
+    // Independent search on mobile: only update local search query!
     set((s) => ({
       searchQuery: {
         ...s.searchQuery,
         [tab]: query,
       },
     }));
-    void get().sendCommand({ action: "SYNC_SEARCH", tab, query });
   },
 
   setSelectedSongId: (songId: number | null) => {
+    // Local browsing selection
     set({ selectedSongId: songId });
-    void get().sendCommand({ action: "SYNC_SELECT_SONG", songId });
+  },
+
+  setLiveModalOpen: (open: boolean) => {
+    set({ isLiveModalOpen: open });
+  },
+
+  requestMediaThumbnails: () => {
+    void get().sendCommand({ action: "REQUEST_MEDIA_THUMBS" });
   },
 
   reprojectHistory: (item: RemoteRecentItem) => {
