@@ -259,6 +259,28 @@ function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: str
     }
   }
 
+  // 3b. Fuzzy token match for typos (edit distance <= 1) if candidates are few (< 30)
+  if (candidates.size < 30 && qTokens.length > 0) {
+    if (tokensDirty) buildSortedTokens();
+    for (const qt of qTokens) {
+      if (qt.length < 3) continue;
+      for (let i = 0; i < sortedTokens.length; i++) {
+        const tok = sortedTokens[i];
+        if (Math.abs(tok.length - qt.length) <= 1) {
+          if (damerauLevenshtein(tok, qt) <= 1) {
+            const ids = tokenInvertedIndex.get(tok);
+            if (ids) {
+              for (const id of ids) {
+                candidates.add(id);
+                if (candidates.size >= MAX_CANDIDATES) return candidates;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // 4. Trigrams ONLY if candidates are still very few (< 15) — strictly capped
   if (candidates.size < 15 && qTrigrams.length > 0) {
     for (const tri of qTrigrams) {
@@ -421,32 +443,30 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
       const lineFlat = line.lineFlat;
 
       if (lineFlat === qFlat || line.text.toLowerCase() === rawQueryLower) {
-        ls = 600;
+        ls = 950;
         indices = line.rawTokens.map((_, i) => i);
       } else if (lineFlat.includes(qFlat)) {
-        ls = 450;
+        ls = 750;
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
       } else if (qFlat.includes(lineFlat) && lineFlat.length >= 4) {
-        ls = 350;
+        ls = 600;
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
       } else if (qTokens.length) {
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
         if (indices.length > 0) {
-          ls = (indices.length / qTokens.length) * 150 + res.scoreBonus;
+          ls = (indices.length / qTokens.length) * 550 + res.scoreBonus;
         }
       }
 
-      // Line Position Ranking Bonuses
+      // Fair line ranking (slight bonus for early lines, but quality of match dominates)
       if (ls > 0) {
         if (li === 0) {
-          ls += 250;
-        } else if (li === totalLines - 1) {
-          ls += 100;
-        } else {
-          ls += 150;
+          ls += 30;
+        } else if (li < 4) {
+          ls += 20;
         }
       }
 
@@ -464,17 +484,26 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
       let matchedText = data.firstLine;
       const contextLines: { text: string; isMatch: boolean }[] = [];
 
-      if (bestLine && bestLineIndex >= 0) {
-        matchedText = bestLine.text;
-        const startIdx = Math.max(0, bestLineIndex - 1);
-        const endIdx = Math.min(totalLines - 1, bestLineIndex + 1);
+      if (totalLines > 0) {
+        const matchIdx = bestLineIndex >= 0 ? bestLineIndex : 0;
+        const isTitleMatchOnly = bestLineIndex < 0;
+
+        // 4-line contextual preview window centered on the match:
+        // 1 line before, matched line, 2 lines after (or closest available 4 lines)
+        let startIdx = matchIdx - 1;
+        if (startIdx < 0) startIdx = 0;
+        if (startIdx + 4 > totalLines) {
+          startIdx = Math.max(0, totalLines - 4);
+        }
+        const endIdx = Math.min(totalLines - 1, startIdx + 3);
 
         for (let i = startIdx; i <= endIdx; i++) {
           contextLines.push({
             text: data.lines[i].text,
-            isMatch: i === bestLineIndex,
+            isMatch: !isTitleMatchOnly && i === matchIdx,
           });
         }
+        matchedText = data.lines[matchIdx]?.text || data.firstLine;
       } else {
         contextLines.push({ text: data.firstLine, isMatch: true });
       }
