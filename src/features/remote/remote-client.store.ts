@@ -2,17 +2,19 @@
  * Mobile Remote Client Store.
  * Connects to the host laptop's Supabase Realtime channel,
  * handles cryptographic authentication challenge-response,
- * dispatches touch commands, and syncs live projector state.
+ * dispatches touch commands, and syncs live application state bidirectionally.
  */
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
 import type {
+  ActiveRemoteTab,
   RemoteAuthResponsePayload,
   RemoteBroadcastMessage,
   RemoteCommandAction,
   RemoteHostSyncState,
+  RemoteRecentItem,
 } from "./types";
 import { computeAuthProof, generateRandomId } from "./remote-crypto";
 
@@ -56,14 +58,29 @@ interface RemoteClientState {
   clientId: string;
 
   // Synced from host
+  activeTab: ActiveRemoteTab;
+  searchQuery: {
+    verse: string;
+    song: string;
+    lyric: string;
+    media: string;
+    text: string;
+  };
+  selectedSongId: number | null;
+  selectedTextId: string | null;
   currentLive: RemoteHostSyncState["currentLive"];
   blackScreen: boolean;
+  recentHistory: RemoteRecentItem[];
   mediaList: RemoteHostSyncState["mediaList"];
   textList: RemoteHostSyncState["textList"];
 
   // Actions
   setSessionCredentials: (sessionId: string, salt: string) => void;
   authenticate: (password: string) => Promise<boolean>;
+  setActiveTab: (tab: ActiveRemoteTab) => void;
+  setSearchQuery: (tab: ActiveRemoteTab, query: string) => void;
+  setSelectedSongId: (songId: number | null) => void;
+  reprojectHistory: (item: RemoteRecentItem) => void;
   sendCommand: (action: RemoteCommandAction) => Promise<void>;
   disconnect: () => void;
   restoreSavedSession: () => void;
@@ -78,8 +95,19 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   channel: null,
   clientId: getOrCreateClientId(),
 
+  activeTab: "verse",
+  searchQuery: {
+    verse: "",
+    song: "",
+    lyric: "",
+    media: "",
+    text: "",
+  },
+  selectedSongId: null,
+  selectedTextId: null,
   currentLive: null,
   blackScreen: false,
+  recentHistory: [],
   mediaList: [],
   textList: [],
 
@@ -126,7 +154,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
         }
       }, 10000);
 
-      // Listen for host responses
+      // Listen for host messages
       channel.on("broadcast", { event: "msg" }, (payload) => {
         const msg = payload.payload as RemoteBroadcastMessage;
         if (!msg) return;
@@ -138,17 +166,28 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
 
             const res = msg as RemoteAuthResponsePayload;
             if (res.success && res.sessionToken) {
+              const sync = res.syncState;
               set({
                 status: "connected",
                 sessionToken: res.sessionToken,
                 errorMessage: null,
-                currentLive: res.syncState?.currentLive ?? null,
-                blackScreen: Boolean(res.syncState?.blackScreen),
-                mediaList: res.syncState?.mediaList ?? [],
-                textList: res.syncState?.textList ?? [],
+                activeTab: sync?.activeTab ?? "verse",
+                searchQuery: sync?.searchQuery ?? {
+                  verse: "",
+                  song: "",
+                  lyric: "",
+                  media: "",
+                  text: "",
+                },
+                selectedSongId: sync?.selectedSongId ?? null,
+                selectedTextId: sync?.selectedTextId ?? null,
+                currentLive: sync?.currentLive ?? null,
+                blackScreen: Boolean(sync?.blackScreen),
+                recentHistory: sync?.recentHistory ?? [],
+                mediaList: sync?.mediaList ?? [],
+                textList: sync?.textList ?? [],
               });
 
-              // Save session to sessionStorage for automatic page reload recovery
               try {
                 sessionStorage.setItem(
                   SAVED_SESSION_KEY,
@@ -159,7 +198,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                   }),
                 );
               } catch {
-                // Ignore storage quota
+                // Ignore quota
               }
 
               resolve(true);
@@ -172,12 +211,36 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             }
           }
         } else if (msg.type === "STATE_SYNC") {
+          const sync = msg.syncState;
           set({
-            currentLive: msg.syncState.currentLive,
-            blackScreen: msg.syncState.blackScreen,
-            mediaList: msg.syncState.mediaList,
-            textList: msg.syncState.textList,
+            activeTab: sync.activeTab ?? get().activeTab,
+            searchQuery: sync.searchQuery ?? get().searchQuery,
+            selectedSongId: sync.selectedSongId ?? get().selectedSongId,
+            selectedTextId: sync.selectedTextId ?? get().selectedTextId,
+            currentLive: sync.currentLive,
+            blackScreen: sync.blackScreen,
+            recentHistory: sync.recentHistory ?? get().recentHistory,
+            mediaList: sync.mediaList ?? get().mediaList,
+            textList: sync.textList ?? get().textList,
           });
+        } else if (msg.type === "STATE_DELTA") {
+          // Delta received from host
+          if (msg.origin === "host") {
+            const delta = msg.delta;
+            set((s) => ({
+              activeTab: delta.activeTab ?? s.activeTab,
+              searchQuery: delta.searchQuery
+                ? { ...s.searchQuery, ...delta.searchQuery }
+                : s.searchQuery,
+              selectedSongId:
+                delta.selectedSongId !== undefined ? delta.selectedSongId : s.selectedSongId,
+              selectedTextId:
+                delta.selectedTextId !== undefined ? delta.selectedTextId : s.selectedTextId,
+              currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
+              blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
+              recentHistory: delta.recentHistory ?? s.recentHistory,
+            }));
+          }
         } else if (msg.type === "SESSION_ENDED") {
           get().disconnect();
           set({
@@ -215,6 +278,30 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
     });
   },
 
+  setActiveTab: (tab: ActiveRemoteTab) => {
+    set({ activeTab: tab });
+    void get().sendCommand({ action: "SYNC_TAB", tab });
+  },
+
+  setSearchQuery: (tab: ActiveRemoteTab, query: string) => {
+    set((s) => ({
+      searchQuery: {
+        ...s.searchQuery,
+        [tab]: query,
+      },
+    }));
+    void get().sendCommand({ action: "SYNC_SEARCH", tab, query });
+  },
+
+  setSelectedSongId: (songId: number | null) => {
+    set({ selectedSongId: songId });
+    void get().sendCommand({ action: "SYNC_SELECT_SONG", songId });
+  },
+
+  reprojectHistory: (item: RemoteRecentItem) => {
+    void get().sendCommand({ action: "REPROJECT_HISTORY", item });
+  },
+
   sendCommand: async (action: RemoteCommandAction) => {
     const { channel, sessionId, sessionToken, clientId, status } = get();
     if (status !== "connected" || !channel || !sessionToken) {
@@ -227,7 +314,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
       try {
         navigator.vibrate(35);
       } catch {
-        // Ignore unsupported vibrate
+        // Ignore
       }
     }
 

@@ -1,16 +1,22 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, Music, ArrowLeft, ChevronRight, Play, SkipBack, SkipForward } from "lucide-react";
+import { Search, Music, ArrowLeft, ChevronRight, SkipBack, SkipForward } from "lucide-react";
 import { loadSongs, getSongs, type Song } from "@/lib/songs/loader";
 import { useRemoteClient } from "../remote-client.store";
 import { cn } from "@/lib/utils";
 
 export function MobileSongTab() {
-  const { sendCommand, currentLive } = useRemoteClient();
+  const {
+    sendCommand,
+    currentLive,
+    searchQuery,
+    setSearchQuery,
+    selectedSongId,
+    setSelectedSongId,
+  } = useRemoteClient();
 
-  const [query, setQuery] = useState("");
+  const query = searchQuery.song || "";
   const [songs, setSongs] = useState<Song[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedSong, setSelectedSong] = useState<Song | null>(null);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
 
   useEffect(() => {
@@ -34,6 +40,12 @@ export function MobileSongTab() {
       active = false;
     };
   }, []);
+
+  // Synchronized selected song from store or local
+  const selectedSong = useMemo(() => {
+    if (!selectedSongId) return null;
+    return songs.find((s) => s.id === selectedSongId) ?? null;
+  }, [songs, selectedSongId]);
 
   const filteredSongs = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -79,8 +91,8 @@ export function MobileSongTab() {
         <div className="p-3 border-b border-border flex items-center justify-between bg-card/70 backdrop-blur shrink-0">
           <button
             type="button"
-            onClick={() => setSelectedSong(null)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium py-1 px-2 rounded-lg bg-muted/60"
+            onClick={() => setSelectedSongId(null)}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium py-1 px-2 rounded-lg bg-muted/60 cursor-pointer"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Songs
           </button>
@@ -94,8 +106,10 @@ export function MobileSongTab() {
           {selectedSong.slides.map((slideText, idx) => {
             const isLive =
               currentLive?.type === "song_slide" &&
-              currentLive.title.includes(selectedSong.title) &&
-              activeSlideIndex === idx;
+              ((currentLive.metadata?.songId === selectedSong.id &&
+                currentLive.metadata?.slideIndex === idx) ||
+                (currentLive.title.includes(selectedSong.title) &&
+                  currentLive.title.includes(`slide ${idx + 1}`)));
 
             return (
               <div
@@ -168,14 +182,14 @@ export function MobileSongTab() {
           <input
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setSearchQuery("song", e.target.value)}
             placeholder="Search song title or number..."
             className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
           {query && (
             <button
               type="button"
-              onClick={() => setQuery("")}
+              onClick={() => setSearchQuery("song", "")}
               className="absolute right-2.5 top-2.5 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
             >
               Clear
@@ -203,19 +217,20 @@ export function MobileSongTab() {
         ) : (
           filteredSongs.map((song) => {
             const isLive =
-              currentLive?.type === "song_slide" && currentLive.title.includes(song.title);
+              currentLive?.type === "song_slide" &&
+              (currentLive.metadata?.songId === song.id || currentLive.title.includes(song.title));
 
             return (
               <div
                 key={song.id}
                 onClick={() => {
-                  setSelectedSong(song);
+                  setSelectedSongId(song.id);
                   setActiveSlideIndex(0);
                 }}
                 className={cn(
                   "p-3 rounded-xl border transition cursor-pointer select-none active:scale-[0.98] flex items-center justify-between text-left",
                   isLive
-                    ? "bg-primary/10 border-primary"
+                    ? "bg-primary/10 border-primary shadow-sm"
                     : "bg-card border-border hover:border-primary/40",
                 )}
               >
@@ -225,7 +240,9 @@ export function MobileSongTab() {
                       {song.title}
                     </span>
                     {isLive && (
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0 animate-pulse" />
+                      <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded border border-emerald-500/30 shrink-0">
+                        LIVE
+                      </span>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">

@@ -13,7 +13,7 @@ import {
   Square,
   LogOut,
   RefreshCw,
-  Sparkles,
+  History,
 } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { MobileQrScanner } from "./MobileQrScanner";
@@ -22,21 +22,22 @@ import { MobileSongTab } from "./MobileSongTab";
 import { MobileLyricTab } from "./MobileLyricTab";
 import { MobileMediaTab } from "./MobileMediaTab";
 import { MobileTextTab } from "./MobileTextTab";
+import { MobileRecentSheet } from "./MobileRecentSheet";
 import { cn } from "@/lib/utils";
-
-type ActiveTab = "verse" | "song" | "lyric" | "media" | "text";
 
 export function MobileRemoteApp() {
   const {
     status,
     sessionId,
     salt,
-    sessionToken,
     errorMessage,
     currentLive,
     blackScreen,
+    activeTab,
+    recentHistory,
     setSessionCredentials,
     authenticate,
+    setActiveTab,
     sendCommand,
     disconnect,
     restoreSavedSession,
@@ -46,7 +47,7 @@ export function MobileRemoteApp() {
   const [manualSession, setManualSession] = useState("");
   const [manualSalt, setManualSalt] = useState("");
   const [showScanner, setShowScanner] = useState(false);
-  const [activeTab, setActiveTab] = useState<ActiveTab>("verse");
+  const [showRecentSheet, setShowRecentSheet] = useState(false);
   const [authenticating, setAuthenticating] = useState(false);
 
   // Parse URL query parameters on mount
@@ -99,7 +100,6 @@ export function MobileRemoteApp() {
         )}
 
         <div className="w-full max-w-sm space-y-6 text-center">
-          {/* Logo / Badge */}
           <div className="space-y-2">
             <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 mx-auto flex items-center justify-center shadow-lg">
               <Smartphone className="w-8 h-8" />
@@ -108,7 +108,6 @@ export function MobileRemoteApp() {
             <p className="text-xs text-muted-foreground">Mobile Remote Controller</p>
           </div>
 
-          {/* Scan QR Button */}
           <div className="p-5 rounded-2xl border border-border bg-card/70 backdrop-blur shadow-sm space-y-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
               Scan the QR code displayed on the laptop screen to connect to live church projection.
@@ -123,7 +122,6 @@ export function MobileRemoteApp() {
             </button>
           </div>
 
-          {/* Manual Entry Fallback */}
           <form
             onSubmit={handleManualSessionSubmit}
             className="p-4 rounded-xl border border-border/70 bg-muted/30 text-left space-y-3 text-xs"
@@ -139,7 +137,7 @@ export function MobileRemoteApp() {
             <button
               type="submit"
               disabled={!manualSession.trim()}
-              className="w-full h-8 rounded-lg bg-secondary text-secondary-foreground font-medium text-xs disabled:opacity-40"
+              className="w-full h-8 rounded-lg bg-secondary text-secondary-foreground font-medium text-xs disabled:opacity-40 cursor-pointer"
             >
               Continue
             </button>
@@ -220,9 +218,14 @@ export function MobileRemoteApp() {
   // ── STATE 3: AUTHENTICATED REMOTE CONTROLLER ────────────────────────────────
   return (
     <div className="fixed inset-0 flex flex-col bg-background text-foreground overflow-hidden select-none">
+      {/* Recent History Sheet Drawer */}
+      {showRecentSheet && (
+        <MobileRecentSheet onClose={() => setShowRecentSheet(false)} />
+      )}
+
       {/* Top Header Bar */}
       <header className="h-12 px-3 border-b border-border bg-card/80 backdrop-blur flex items-center justify-between shrink-0 z-20">
-        {/* Status indicator */}
+        {/* Status & Live Ticker */}
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
           <div className="min-w-0 truncate">
@@ -238,7 +241,23 @@ export function MobileRemoteApp() {
 
         {/* Quick actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {/* Black toggle */}
+          {/* Recent history button */}
+          <button
+            type="button"
+            onClick={() => setShowRecentSheet(true)}
+            className="h-8 px-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs flex items-center gap-1 cursor-pointer"
+            title="Recent Projections"
+          >
+            <History className="w-3.5 h-3.5 text-primary" />
+            <span className="text-[11px] hidden sm:inline">Recent</span>
+            {recentHistory.length > 0 && (
+              <span className="text-[9px] bg-primary/20 text-primary font-mono px-1 rounded">
+                {recentHistory.length}
+              </span>
+            )}
+          </button>
+
+          {/* Black screen toggle */}
           <button
             type="button"
             onClick={() =>
@@ -279,7 +298,7 @@ export function MobileRemoteApp() {
         </div>
       </header>
 
-      {/* 5 Category Navigation Tabs */}
+      {/* 5 Category Navigation Tabs — Synchronized with Laptop */}
       <nav className="h-11 px-2 border-b border-border bg-muted/40 flex items-center justify-around shrink-0 text-xs font-medium z-10">
         <button
           type="button"

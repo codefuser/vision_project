@@ -1,7 +1,7 @@
 /**
  * Host (Laptop) Remote Control Store.
  * Manages active session lifecycle, Supabase Realtime channel,
- * phone authentication verification, and command execution into existing projection adapters.
+ * phone authentication verification, and bidirectional live application state synchronization.
  */
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
@@ -12,15 +12,21 @@ import { db } from "@/db/schema";
 import { useTextItems } from "@/stores/text-items.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection/engine";
+import { projectionHistory } from "@/projection/history";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { projectVerseAt } from "@/lib/bible/project-ref";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
 import { projectMediaById } from "@/projection/adapters/media.adapter";
 import { projectTextSlide } from "@/projection/adapters/text.adapter";
+import { useWorkspace, type WorkspaceTab } from "@/features/workspace/workspace.store";
+import { useBibleStore } from "@/lib/bible/store";
+import { useSongsStore } from "@/lib/songs/store";
 import type {
+  ActiveRemoteTab,
   RemoteBroadcastMessage,
   RemoteDevice,
   RemoteHostSyncState,
+  RemoteRecentItem,
   RemoteSession,
 } from "./types";
 import {
@@ -32,6 +38,67 @@ import {
 } from "./remote-crypto";
 
 const CHANNEL_PREFIX = "vp_remote_";
+
+export function mapLaptopToRemoteTab(t: WorkspaceTab): ActiveRemoteTab {
+  switch (t) {
+    case "bible":
+      return "verse";
+    case "songs":
+      return "song";
+    case "media":
+      return "media";
+    case "text":
+      return "text";
+    default:
+      return "verse";
+  }
+}
+
+export function mapRemoteToLaptopTab(t: ActiveRemoteTab): WorkspaceTab {
+  switch (t) {
+    case "verse":
+      return "bible";
+    case "song":
+    case "lyric":
+      return "songs";
+    case "media":
+      return "media";
+    case "text":
+      return "text";
+    default:
+      return "bible";
+  }
+}
+
+// In-memory thumbnail cache to avoid re-reading blobs on every sync
+const thumbCache = new Map<string, string>();
+
+async function getMediaThumbnailDataUrl(
+  thumbBlobId?: string | null,
+  blobId?: string | null,
+): Promise<string | undefined> {
+  const id = thumbBlobId || blobId;
+  if (!id) return undefined;
+  if (thumbCache.has(id)) return thumbCache.get(id);
+
+  try {
+    const rec = await db().blobs.get(id);
+    if (!rec?.blob) return undefined;
+
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        thumbCache.set(id, result);
+        resolve(result);
+      };
+      reader.onerror = () => resolve(undefined);
+      reader.readAsDataURL(rec.blob);
+    });
+  } catch {
+    return undefined;
+  }
+}
 
 interface HostRemoteState {
   session: RemoteSession | null;
@@ -45,7 +112,11 @@ interface HostRemoteState {
   updatePassword: (newPassword: string) => Promise<void>;
   endSession: () => Promise<void>;
   broadcastSyncState: () => Promise<void>;
+  broadcastDelta: (delta: Partial<RemoteHostSyncState>) => Promise<void>;
 }
+
+// Flag to prevent loop: Laptop updates store from Remote -> store subscription does not re-broadcast back to Remote
+let isApplyingRemoteSync = false;
 
 export const useHostRemote = create<HostRemoteState>((set, get) => ({
   session: null,
@@ -56,7 +127,6 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
   setDialogOpen: (open) => set({ isDialogOpen: open }),
 
   startSession: async (customPassword?: string) => {
-    // If a session already exists and is active, return it
     const existing = get().session;
     if (existing && get().channel) {
       return existing;
@@ -114,7 +184,6 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
             );
             get().tokens.add(token);
 
-            // Record connected device
             const newDevice: RemoteDevice = {
               id: device.id,
               name: device.name || "Mobile Remote",
@@ -138,10 +207,10 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
 
             toast.success(`Remote Connected: ${newDevice.name}`);
 
-            // Prepare initial state sync
+            // Prepare complete current snapshot
             const syncState = await buildSyncState();
 
-            // Send success response back to phone
+            // Send full initial state sync to mobile
             await channel.send({
               type: "broadcast",
               event: "msg",
@@ -172,11 +241,11 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
         case "COMMAND": {
           const { sessionToken, command, clientId } = msg;
           if (!get().tokens.has(sessionToken)) {
-            logger.warn("Remote command rejected: invalid or expired session token", clientId);
+            logger.warn("Remote command rejected: invalid session token", clientId);
             return;
           }
 
-          // Update device heartbeat
+          // Update heartbeat
           const curSess = get().session;
           if (curSess) {
             const updated = curSess.connectedDevices.map((d) =>
@@ -185,9 +254,51 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
             set({ session: { ...curSess, connectedDevices: updated } });
           }
 
-          // Execute command via existing adapters
           try {
             switch (command.action) {
+              case "SYNC_TAB": {
+                const targetLaptopTab = mapRemoteToLaptopTab(command.tab);
+                if (useWorkspace.getState().activeTab !== targetLaptopTab) {
+                  isApplyingRemoteSync = true;
+                  useWorkspace.getState().setActiveTab(targetLaptopTab);
+                  isApplyingRemoteSync = false;
+                }
+                break;
+              }
+
+              case "SYNC_SEARCH": {
+                isApplyingRemoteSync = true;
+                const { tab, query } = command;
+                if (tab === "verse") {
+                  useWorkspace.getState().setBibleSearch({ query });
+                  useBibleStore.getState().setQuery(query);
+                } else if (tab === "song" || tab === "lyric") {
+                  useWorkspace.getState().setSongsSearch({ query });
+                  useSongsStore.getState().setQuery(query);
+                } else if (tab === "media") {
+                  useWorkspace.getState().setMediaSearch({ query });
+                } else if (tab === "text") {
+                  useWorkspace.getState().setTextSearch({ query });
+                }
+                isApplyingRemoteSync = false;
+                break;
+              }
+
+              case "SYNC_SELECT_SONG": {
+                isApplyingRemoteSync = true;
+                useWorkspace.getState().setSelectedSongId(command.songId);
+                useSongsStore.getState().selectSong(command.songId);
+                isApplyingRemoteSync = false;
+                break;
+              }
+
+              case "SYNC_SELECT_TEXT": {
+                isApplyingRemoteSync = true;
+                useWorkspace.getState().setSelectedTextId(command.textId);
+                isApplyingRemoteSync = false;
+                break;
+              }
+
               case "PROJECT_VERSE": {
                 if (command.directInput) {
                   projectVerse(command.directInput);
@@ -196,18 +307,22 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                 }
                 break;
               }
+
               case "PROJECT_SONG_SLIDE": {
                 projectSongSlide(command.input);
                 break;
               }
+
               case "PROJECT_MEDIA": {
                 await projectMediaById(command.mediaId);
                 break;
               }
+
               case "PROJECT_TEXT": {
                 projectTextSlide(command.input);
                 break;
               }
+
               case "TRANSPORT": {
                 if (command.subAction === "BLACK") {
                   projectionEngine.setBlack(Boolean(command.value));
@@ -224,12 +339,26 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                 }
                 break;
               }
+
+              case "REPROJECT_HISTORY": {
+                const item = command.item;
+                if (item.metadata?.verseData) {
+                  projectVerseAt(item.metadata.verseData);
+                } else if (item.metadata?.slideInput) {
+                  projectSongSlide(item.metadata.slideInput);
+                } else if (item.metadata?.mediaId) {
+                  await projectMediaById(item.metadata.mediaId);
+                } else if (item.metadata?.textInput) {
+                  projectTextSlide(item.metadata.textInput);
+                }
+                break;
+              }
             }
 
-            // Sync updated state to all connected remotes
+            // Sync updated state
             setTimeout(() => {
               void get().broadcastSyncState();
-            }, 50);
+            }, 60);
           } catch (err) {
             logger.error("Failed to execute remote command", err);
           }
@@ -268,7 +397,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
         passwordPlain: clean,
         passwordHash,
       },
-      tokens: new Set(), // Invalidate previous client tokens
+      tokens: new Set(),
     });
     toast.info("Remote password updated. Connected remotes must reconnect.");
   },
@@ -308,20 +437,52 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
       logger.warn("broadcastSyncState error", e);
     }
   },
+
+  broadcastDelta: async (delta: Partial<RemoteHostSyncState>) => {
+    const ch = get().channel;
+    if (!ch) return;
+    try {
+      await ch.send({
+        type: "broadcast",
+        event: "msg",
+        payload: {
+          type: "STATE_DELTA",
+          origin: "host",
+          delta,
+        },
+      });
+    } catch (e) {
+      logger.warn("broadcastDelta error", e);
+    }
+  },
 }));
 
 /**
- * Builds the current projection and library snapshot to sync with remotes.
+ * Builds the complete state snapshot for mobile synchronization.
  */
 async function buildSyncState(): Promise<RemoteHostSyncState> {
+  const ws = useWorkspace.getState();
   const cur = projectionEngine.getCurrent();
   const projState = useProjection.getState().state;
 
+  // Active tab & search queries
+  const activeTab = mapLaptopToRemoteTab(ws.activeTab);
+  const searchQuery = {
+    verse: ws.bibleSearch.query || useBibleStore.getState().query || "",
+    song: ws.songsSearch.query || useSongsStore.getState().query || "",
+    lyric: "",
+    media: ws.mediaSearch.query || "",
+    text: ws.textSearch.query || "",
+  };
+
+  // Currently live projection with exact metadata for card match
   let currentLive: RemoteHostSyncState["currentLive"] = null;
   if (cur) {
     currentLive = {
+      id: cur.id,
       title: cur.title,
       type: cur.type,
+      metadata: cur.metadata as Record<string, any>,
       details:
         cur.type === "bible_verse"
           ? (cur.body as any)?.text
@@ -331,16 +492,33 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
     };
   }
 
-  // Load media items from Dexie
+  // Recent history
+  const recentHistory: RemoteRecentItem[] = projectionHistory
+    .list()
+    .slice(0, 30)
+    .map((h) => ({
+      id: h.id,
+      title: h.title,
+      type: h.type,
+      projectedAt: h.projectedAt,
+    }));
+
+  // Load media items from Dexie + load thumbnail Data URLs
   let mediaList: RemoteHostSyncState["mediaList"] = [];
   try {
-    const records = await db().media.orderBy("createdAt").reverse().limit(100).toArray();
-    mediaList = records.map((m) => ({
-      id: m.id,
-      name: m.name,
-      type: m.type,
-      durationMs: m.durationMs,
-    }));
+    const records = await db().media.orderBy("createdAt").reverse().limit(60).toArray();
+    mediaList = await Promise.all(
+      records.map(async (m) => {
+        const thumbnailUrl = await getMediaThumbnailDataUrl(m.thumbBlobId, m.blobId);
+        return {
+          id: m.id,
+          name: m.name,
+          type: m.type,
+          durationMs: m.durationMs,
+          thumbnailUrl,
+        };
+      }),
+    );
   } catch (err) {
     logger.warn("Failed to load media for remote sync", err);
   }
@@ -354,15 +532,101 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
   }));
 
   return {
+    activeTab,
+    searchQuery,
+    selectedSongId: ws.selectedSongId,
+    selectedTextId: ws.selectedTextId,
     currentLive,
     blackScreen: Boolean(projState?.black),
+    recentHistory,
     mediaList,
     textList,
   };
 }
 
-// Hook into projection engine events to auto-sync state when projector changes
+// ── Workspace State Subscriptions (Laptop User -> Mobile Remote) ───────────────
+
 if (typeof window !== "undefined") {
+  let prevTab = useWorkspace.getState().activeTab;
+  let prevSongsQuery = useWorkspace.getState().songsSearch.query;
+  let prevBibleQuery = useWorkspace.getState().bibleSearch.query;
+  let prevMediaQuery = useWorkspace.getState().mediaSearch.query;
+  let prevTextQuery = useWorkspace.getState().textSearch.query;
+  let prevSelectedSongId = useWorkspace.getState().selectedSongId;
+
+  useWorkspace.subscribe((state) => {
+    if (isApplyingRemoteSync) return;
+    const { session, channel, broadcastDelta } = useHostRemote.getState();
+    if (!session || !channel) return;
+
+    // 1. Tab changed on laptop
+    if (state.activeTab !== prevTab) {
+      prevTab = state.activeTab;
+      const remoteTab = mapLaptopToRemoteTab(state.activeTab);
+      void broadcastDelta({ activeTab: remoteTab });
+    }
+
+    // 2. Search query changed on laptop
+    if (state.songsSearch.query !== prevSongsQuery) {
+      prevSongsQuery = state.songsSearch.query;
+      void broadcastDelta({
+        searchQuery: {
+          verse: prevBibleQuery,
+          song: prevSongsQuery,
+          lyric: "",
+          media: prevMediaQuery,
+          text: prevTextQuery,
+        },
+      });
+    }
+
+    if (state.bibleSearch.query !== prevBibleQuery) {
+      prevBibleQuery = state.bibleSearch.query;
+      void broadcastDelta({
+        searchQuery: {
+          verse: prevBibleQuery,
+          song: prevSongsQuery,
+          lyric: "",
+          media: prevMediaQuery,
+          text: prevTextQuery,
+        },
+      });
+    }
+
+    if (state.mediaSearch.query !== prevMediaQuery) {
+      prevMediaQuery = state.mediaSearch.query;
+      void broadcastDelta({
+        searchQuery: {
+          verse: prevBibleQuery,
+          song: prevSongsQuery,
+          lyric: "",
+          media: prevMediaQuery,
+          text: prevTextQuery,
+        },
+      });
+    }
+
+    if (state.textSearch.query !== prevTextQuery) {
+      prevTextQuery = state.textSearch.query;
+      void broadcastDelta({
+        searchQuery: {
+          verse: prevBibleQuery,
+          song: prevSongsQuery,
+          lyric: "",
+          media: prevMediaQuery,
+          text: prevTextQuery,
+        },
+      });
+    }
+
+    // 3. Selected song changed on laptop
+    if (state.selectedSongId !== prevSelectedSongId) {
+      prevSelectedSongId = state.selectedSongId;
+      void broadcastDelta({ selectedSongId: state.selectedSongId });
+    }
+  });
+
+  // Projection Engine listener: auto-sync state when projection changes
   projectionEngine.onAny(() => {
     const { session, channel } = useHostRemote.getState();
     if (session && channel) {
