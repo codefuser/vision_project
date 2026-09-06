@@ -21,6 +21,10 @@ import { projectTextSlide } from "@/projection/adapters/text.adapter";
 import { useWorkspace, type WorkspaceTab } from "@/features/workspace/workspace.store";
 import { useBibleStore } from "@/lib/bible/store";
 import { useSongsStore } from "@/lib/songs/store";
+import { getSongs } from "@/lib/songs/loader";
+import { searchSongs } from "@/lib/songs/search";
+import { getBible } from "@/lib/bible/loader";
+import { search as searchBible } from "@/lib/bible/search";
 import type {
   ActiveRemoteTab,
   RemoteBroadcastMessage,
@@ -344,6 +348,82 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
 
               case "REQUEST_MEDIA_THUMBS": {
                 void broadcastMediaThumbnails();
+                break;
+              }
+
+              case "SEARCH_SONGS": {
+                const q = command.query.trim();
+                const reqId = command.requestId;
+                const songs = getSongs();
+                let hits: Array<{ id: number; title: string; slides: string[]; scale: string }> = [];
+                if (songs && songs.length > 0 && q) {
+                  const rawHits = searchSongs(q, songs, 25);
+                  hits = rawHits.map((h) => ({
+                    id: h.song.id,
+                    title: h.song.title,
+                    slides: h.song.slides,
+                    scale: h.song.scale,
+                  }));
+                }
+                void channel.send({
+                  type: "broadcast",
+                  event: "msg",
+                  payload: {
+                    type: "SONG_SEARCH_RESULTS",
+                    requestId: reqId,
+                    hits,
+                  },
+                });
+                break;
+              }
+
+              case "SEARCH_VERSES": {
+                const q = command.query.trim();
+                const reqId = command.requestId;
+                const lang = command.lang || "ta";
+                const bibleData = getBible(lang);
+                let hits: Array<{ book: number; chapter: number; verse: number; text: string; bookName: string }> = [];
+                if (bibleData && q) {
+                  const rawHits = searchBible(q, bibleData, lang, 25);
+                  hits = rawHits.map((h) => ({
+                    book: h.book,
+                    chapter: h.chapter,
+                    verse: h.verse,
+                    text: h.text,
+                    bookName: h.bookNameLocal || h.bookName,
+                  }));
+                }
+                void channel.send({
+                  type: "broadcast",
+                  event: "msg",
+                  payload: {
+                    type: "VERSE_SEARCH_RESULTS",
+                    requestId: reqId,
+                    hits,
+                  },
+                });
+                break;
+              }
+
+              case "GET_CHAPTER_VERSES": {
+                const reqId = command.requestId;
+                const lang = command.lang || "ta";
+                const bibleData = getBible(lang);
+                const verses: string[] = [];
+                if (bibleData && bibleData[command.book]?.[command.chapter - 1]) {
+                  verses.push(...(bibleData[command.book][command.chapter - 1] || []));
+                }
+                void channel.send({
+                  type: "broadcast",
+                  event: "msg",
+                  payload: {
+                    type: "CHAPTER_VERSES_RESPONSE",
+                    requestId: reqId,
+                    book: command.book,
+                    chapter: command.chapter,
+                    verses,
+                  },
+                });
                 break;
               }
 

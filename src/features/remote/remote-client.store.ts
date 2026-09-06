@@ -22,6 +22,10 @@ const CHANNEL_PREFIX = "vp_remote_";
 const CLIENT_ID_KEY = "vp_remote_client_id";
 const SAVED_SESSION_KEY = "vp_remote_saved_session";
 
+const pendingSongRequests = new Map<string, (results: any[]) => void>();
+const pendingVerseRequests = new Map<string, (results: any[]) => void>();
+const pendingChapterRequests = new Map<string, (verses: string[]) => void>();
+
 function getOrCreateClientId(): string {
   if (typeof window === "undefined") return "mobile-unknown";
   let id = localStorage.getItem(CLIENT_ID_KEY);
@@ -89,6 +93,9 @@ interface RemoteClientState {
   disconnect: () => void;
   restoreSavedSession: () => void;
   requestMediaThumbnails: () => void;
+  requestSongSearch: (query: string) => Promise<Array<{ id: number; title: string; slides: string[]; scale: string }>>;
+  requestVerseSearch: (query: string, lang?: "en" | "ta") => Promise<Array<{ book: number; chapter: number; verse: number; text: string; bookName: string }>>;
+  requestChapterVerses: (book: number, chapter: number, lang?: "en" | "ta") => Promise<string[]>;
 }
 
 export const useRemoteClient = create<RemoteClientState>((set, get) => ({
@@ -261,6 +268,24 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
               textList: delta.textList ?? s.textList,
             }));
           }
+        } else if (msg.type === "SONG_SEARCH_RESULTS") {
+          const cb = pendingSongRequests.get(msg.requestId);
+          if (cb) {
+            pendingSongRequests.delete(msg.requestId);
+            cb(msg.hits);
+          }
+        } else if (msg.type === "VERSE_SEARCH_RESULTS") {
+          const cb = pendingVerseRequests.get(msg.requestId);
+          if (cb) {
+            pendingVerseRequests.delete(msg.requestId);
+            cb(msg.hits);
+          }
+        } else if (msg.type === "CHAPTER_VERSES_RESPONSE") {
+          const cb = pendingChapterRequests.get(msg.requestId);
+          if (cb) {
+            pendingChapterRequests.delete(msg.requestId);
+            cb(msg.verses);
+          }
         } else if (msg.type === "SESSION_ENDED") {
           get().disconnect();
           set({
@@ -341,6 +366,126 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
 
   reprojectHistory: (item: RemoteRecentItem) => {
     void get().sendCommand({ action: "REPROJECT_HISTORY", item });
+  },
+
+  requestSongSearch: async (query: string) => {
+    const q = query.trim();
+    if (!q) return [];
+    const requestId = generateRandomId("srch", 6);
+    const hostPromise = new Promise<any[]>((resolve) => {
+      pendingSongRequests.set(requestId, resolve);
+      setTimeout(() => {
+        if (pendingSongRequests.has(requestId)) {
+          pendingSongRequests.delete(requestId);
+          resolve([]);
+        }
+      }, 500);
+    });
+
+    void get().sendCommand({ action: "SEARCH_SONGS", query: q, requestId });
+    const hostResults = await hostPromise;
+    if (hostResults.length > 0) return hostResults;
+
+    // Fallback: direct lightweight Supabase REST query
+    try {
+      const { data } = await supabase
+        .from("songs")
+        .select("id, title, content, scale")
+        .ilike("title", `%${q}%`)
+        .limit(30);
+
+      if (data && data.length > 0) {
+        return data.map((r: any) => ({
+          id: r.id,
+          title: r.title,
+          slides: (r.content || "")
+            .split(/\n\s*\n+/)
+            .map((s: string) => s.trim())
+            .filter(Boolean),
+          scale: r.scale || "",
+        }));
+      }
+    } catch {
+      // Ignore
+    }
+    return [];
+  },
+
+  requestVerseSearch: async (query: string, lang = "ta") => {
+    const q = query.trim();
+    if (!q) return [];
+    const requestId = generateRandomId("vsrch", 6);
+    const hostPromise = new Promise<any[]>((resolve) => {
+      pendingVerseRequests.set(requestId, resolve);
+      setTimeout(() => {
+        if (pendingVerseRequests.has(requestId)) {
+          pendingVerseRequests.delete(requestId);
+          resolve([]);
+        }
+      }, 500);
+    });
+
+    void get().sendCommand({ action: "SEARCH_VERSES", query: q, lang: lang as "en" | "ta", requestId });
+    const hostResults = await hostPromise;
+    if (hostResults.length > 0) return hostResults;
+
+    // Fallback direct lightweight Supabase REST query
+    try {
+      const tableName = lang === "en" ? "english_bible" : "tamil_bible";
+      const { data } = await supabase
+        .from(tableName)
+        .select("book, chapter, versecount, verse")
+        .ilike("verse", `%${q}%`)
+        .limit(30);
+
+      if (data && data.length > 0) {
+        return data.map((r: any) => ({
+          book: Number(r.book),
+          chapter: Number(r.chapter),
+          verse: Number(r.versecount),
+          text: r.verse,
+          bookName: "",
+        }));
+      }
+    } catch {
+      // Ignore
+    }
+    return [];
+  },
+
+  requestChapterVerses: async (book: number, chapter: number, lang = "ta") => {
+    const requestId = generateRandomId("chvs", 6);
+    const hostPromise = new Promise<string[]>((resolve) => {
+      pendingChapterRequests.set(requestId, resolve);
+      setTimeout(() => {
+        if (pendingChapterRequests.has(requestId)) {
+          pendingChapterRequests.delete(requestId);
+          resolve([]);
+        }
+      }, 500);
+    });
+
+    void get().sendCommand({ action: "GET_CHAPTER_VERSES", book, chapter, lang: lang as "en" | "ta", requestId });
+    const hostResults = await hostPromise;
+    if (hostResults.length > 0) return hostResults;
+
+    // Fallback direct lightweight Supabase REST query
+    try {
+      const tableName = lang === "en" ? "english_bible" : "tamil_bible";
+      const { data } = await supabase
+        .from(tableName)
+        .select("verse")
+        .eq("book", book)
+        .eq("chapter", chapter)
+        .order("versecount");
+
+      if (data && data.length > 0) {
+        return data.map((r: any) => r.verse);
+      }
+    } catch {
+      // Ignore
+    }
+    return [];
   },
 
   sendCommand: async (action: RemoteCommandAction) => {

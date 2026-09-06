@@ -157,6 +157,24 @@ export type RemoteCommandAction =
     }
   | {
       action: "REQUEST_MEDIA_THUMBS";
+    }
+  | {
+      action: "SEARCH_SONGS";
+      query: string;
+      requestId: string;
+    }
+  | {
+      action: "SEARCH_VERSES";
+      query: string;
+      lang: "en" | "ta";
+      requestId: string;
+    }
+  | {
+      action: "GET_CHAPTER_VERSES";
+      book: number;
+      chapter: number;
+      lang: "en" | "ta";
+      requestId: string;
     };
 
 export interface RemoteCommandPayload {
@@ -165,6 +183,37 @@ export interface RemoteCommandPayload {
   sessionToken: string;
   clientId: string;
   command: RemoteCommandAction;
+}
+
+export interface RemoteSongSearchResultsPayload {
+  type: "SONG_SEARCH_RESULTS";
+  requestId: string;
+  hits: Array<{
+    id: number;
+    title: string;
+    slides: string[];
+    scale: string;
+  }>;
+}
+
+export interface RemoteVerseSearchResultsPayload {
+  type: "VERSE_SEARCH_RESULTS";
+  requestId: string;
+  hits: Array<{
+    book: number;
+    chapter: number;
+    verse: number;
+    text: string;
+    bookName: string;
+  }>;
+}
+
+export interface RemoteChapterVersesPayload {
+  type: "CHAPTER_VERSES_RESPONSE";
+  requestId: string;
+  book: number;
+  chapter: number;
+  verses: string[];
 }
 
 export interface RemoteHeartbeatPayload {
@@ -180,4 +229,7 @@ export type RemoteBroadcastMessage =
   | RemoteStateDeltaPayload
   | RemoteSessionEndedPayload
   | RemoteCommandPayload
-  | RemoteHeartbeatPayload;
+  | RemoteHeartbeatPayload
+  | RemoteSongSearchResultsPayload
+  | RemoteVerseSearchResultsPayload
+  | RemoteChapterVersesPayload;

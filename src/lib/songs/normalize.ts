@@ -111,12 +111,28 @@ export function tanglishLower(s: string): string {
   return t;
 }
 
-/** Aggressive Tanglish normalization */
+// Fast LRU / Map cache for single-word normalization (prevents repeating regex passes on frequent words)
+const normWordCache = new Map<string, string>();
+const MAX_WORD_CACHE = 15000;
+
+/** Aggressive Tanglish normalization with typo-tolerance for repeated letters and transliteration variants */
 export function tanglishNorm(s: string): string {
-  let t = s.toLowerCase().trim();
+  if (!s) return "";
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+
+  // Single word fast-path with memoization
+  if (!/\s/.test(trimmed) && trimmed.length < 40) {
+    const cached = normWordCache.get(trimmed);
+    if (cached !== undefined) return cached;
+  }
+
+  let t = trimmed.toLowerCase();
   if (/[\u0B80-\u0BFF]/.test(t)) t = tamilToLatin(t);
+
+  // Digraphs & transliteration equivalents
   t = t
-    .replace(/dh/g, "d")
+    .replace(/dh/g, "t")
     .replace(/th/g, "t")
     .replace(/zh/g, "l")
     .replace(/sh/g, "s")
@@ -124,7 +140,9 @@ export function tanglishNorm(s: string): string {
     .replace(/ph/g, "p")
     .replace(/gh/g, "k")
     .replace(/kh/g, "k")
-    .replace(/ng/g, "nk");
+    .replace(/ng/g, "n");
+
+  // Voicing & consonant equivalence
   t = t
     .replace(/b/g, "p")
     .replace(/g/g, "k")
@@ -133,24 +151,64 @@ export function tanglishNorm(s: string): string {
     .replace(/f/g, "p")
     .replace(/w/g, "v")
     .replace(/h/g, "");
-  t = t.replace(/oo/g, "u").replace(/ee/g, "i").replace(/aa/g, "a").replace(/ea/g, "e");
-  t = t.replace(/([ptkmnlrsvy])\1+/g, "$1");
+
+  // Vowel normalization & digraphs (oo/uu -> u, ee/ii -> i, aa -> a, ai/ae/ea/ey -> e)
+  t = t
+    .replace(/oo+/g, "u")
+    .replace(/uu+/g, "u")
+    .replace(/ee+/g, "i")
+    .replace(/ii+/g, "i")
+    .replace(/aa+/g, "a")
+    .replace(/(ai|ae|ea|ey)/g, "e");
+
+  // Repeated letter collapsing: "apppa" -> "apa", "yesuuve" -> "yesuve", "arputhamaana" -> "arputamana"
+  t = t.replace(/([a-z])\1+/g, "$1");
+
+  // Clean non-alpha
   t = t.replace(/[^a-z\s]/g, "");
   t = t.replace(/\s+/g, " ").trim();
+
+  if (!/\s/.test(trimmed) && trimmed.length < 40) {
+    if (normWordCache.size >= MAX_WORD_CACHE) {
+      const firstKey = normWordCache.keys().next().value;
+      if (firstKey !== undefined) normWordCache.delete(firstKey);
+    }
+    normWordCache.set(trimmed, t);
+  }
+
   return t;
 }
+
+const stemWordCache = new Map<string, string>();
 
 /** Consonant skeleton — initial vowels collapsed so sound-alikes match. */
 export function songStem(s: string): string {
   if (!s) return "";
-  const latin = /[\u0B80-\u0BFF]/.test(s) ? tamilToLatin(s) : s;
+  const trimmed = s.trim();
+  if (!trimmed) return "";
+
+  if (!/\s/.test(trimmed) && trimmed.length < 40) {
+    const cached = stemWordCache.get(trimmed);
+    if (cached !== undefined) return cached;
+  }
+
+  const latin = /[\u0B80-\u0BFF]/.test(trimmed) ? tamilToLatin(trimmed) : trimmed;
   let t = tanglishLower(latin);
   t = t.replace(/^[aeiou]+/g, "");
   t = t.replace(/\s+[aeiou]+/g, " ");
   t = t.replace(/[aeiou]/g, "");
-  t = t.replace(/([^\s])\1+/g, "$1");
-  t = t.replace(/[^a-z\s]/g, "");
-  return t.trim();
+  t = t.replace(/([a-z])\1+/g, "$1");
+  t = t.replace(/[^a-z\s]/g, "").trim();
+
+  if (!/\s/.test(trimmed) && trimmed.length < 40) {
+    if (stemWordCache.size >= MAX_WORD_CACHE) {
+      const firstKey = stemWordCache.keys().next().value;
+      if (firstKey !== undefined) stemWordCache.delete(firstKey);
+    }
+    stemWordCache.set(trimmed, t);
+  }
+
+  return t;
 }
 
 /** Damerau-Levenshtein distance (handles insertions, deletions, substitutions, and transpositions). */

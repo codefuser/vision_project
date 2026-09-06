@@ -1,8 +1,15 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, Music, ArrowLeft, ChevronRight, SkipBack, SkipForward } from "lucide-react";
-import { loadSongs, getSongs, type Song } from "@/lib/songs/loader";
+import { Search, Music, ArrowLeft, ChevronRight, SkipBack, SkipForward, Loader2 } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
+import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
+
+interface RemoteSong {
+  id: number;
+  title: string;
+  slides: string[];
+  scale?: string;
+}
 
 export function MobileSongTab() {
   const {
@@ -12,36 +19,42 @@ export function MobileSongTab() {
     setSearchQuery,
     selectedSongId,
     setSelectedSongId,
+    requestSongSearch,
+    recentHistory,
   } = useRemoteClient();
 
   const query = searchQuery.song || "";
-  const [songs, setSongs] = useState<Song[]>([]);
+  const [songs, setSongs] = useState<RemoteSong[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
+  const debouncedQuery = useDebounce(query, 150);
 
+  // Search or load initial song list on demand
   useEffect(() => {
     let active = true;
-    async function init() {
-      const existing = getSongs();
-      if (existing && existing.length > 0) {
-        setSongs(existing);
-        return;
-      }
+    const q = debouncedQuery.trim();
+
+    async function performSearch() {
       setLoading(true);
       try {
-        const loaded = await loadSongs();
-        if (active) setSongs(loaded || []);
+        const results = await requestSongSearch(q || "a");
+        if (active) {
+          setSongs(results as RemoteSong[]);
+        }
+      } catch {
+        if (active) setSongs([]);
       } finally {
         if (active) setLoading(false);
       }
     }
-    void init();
+
+    void performSearch();
     return () => {
       active = false;
     };
-  }, []);
+  }, [debouncedQuery, requestSongSearch]);
 
-  // Synchronized selected song from store or local
+  // Synchronized selected song from local list or context
   const selectedSong = useMemo(() => {
     if (!selectedSongId) return null;
     return songs.find((s) => s.id === selectedSongId) ?? null;
@@ -52,6 +65,14 @@ export function MobileSongTab() {
     if (currentLive?.type === "song_slide" && currentLive.metadata?.songId) {
       const match = songs.find((s) => s.id === currentLive.metadata?.songId);
       if (match) return match;
+      if (currentLive.title) {
+        return {
+          id: currentLive.metadata.songId as number,
+          title: currentLive.title,
+          slides: [currentLive.details || ""],
+          scale: "",
+        };
+      }
     }
     if (selectedSongId) {
       return songs.find((s) => s.id === selectedSongId) ?? null;
@@ -59,21 +80,7 @@ export function MobileSongTab() {
     return null;
   }, [songs, currentLive, selectedSongId]);
 
-  const filteredSongs = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return songs.slice(0, 80);
-
-    return songs
-      .filter(
-        (s) =>
-          s.titleLower.includes(q) ||
-          s.id.toString() === q ||
-          s.contentLower.includes(q),
-      )
-      .slice(0, 80);
-  }, [songs, query]);
-
-  const handleProjectSlide = (song: Song, slideIdx: number) => {
+  const handleProjectSlide = (song: RemoteSong, slideIdx: number) => {
     setActiveSlideIndex(slideIdx);
     const text = song.slides[slideIdx] || "";
     sendCommand({
@@ -201,9 +208,13 @@ export function MobileSongTab() {
             value={query}
             onChange={(e) => setSearchQuery("song", e.target.value)}
             placeholder="Search songs or lyrics..."
-            className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+            className="w-full h-10 pl-9 pr-9 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
           />
-          {query && (
+          {loading ? (
+            <div className="absolute right-3 top-3 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            </div>
+          ) : query ? (
             <button
               type="button"
               onClick={() => setSearchQuery("song", "")}
@@ -211,10 +222,10 @@ export function MobileSongTab() {
             >
               Clear
             </button>
-          )}
+          ) : null}
         </div>
         <div className="flex items-center justify-between text-[11px] text-muted-foreground px-1">
-          <span>{filteredSongs.length} songs</span>
+          <span>{songs.length} songs available</span>
           <span>Tap song to view slides</span>
         </div>
       </div>
@@ -252,18 +263,14 @@ export function MobileSongTab() {
           </div>
         )}
 
-        {loading ? (
-          <div className="text-center py-12 text-muted-foreground text-xs">
-            Loading songs library...
-          </div>
-        ) : filteredSongs.length === 0 ? (
+        {songs.length === 0 && !loading ? (
           <div className="text-center py-12 text-muted-foreground text-xs space-y-1">
             <Music className="w-8 h-8 mx-auto opacity-30 mb-2" />
             <p className="font-medium text-foreground">No songs found</p>
             <p>Try searching another title or phrase</p>
           </div>
         ) : (
-          filteredSongs.map((song) => {
+          songs.map((song) => {
             const isLive =
               currentLive?.type === "song_slide" &&
               (currentLive.metadata?.songId === song.id || currentLive.title.includes(song.title));
