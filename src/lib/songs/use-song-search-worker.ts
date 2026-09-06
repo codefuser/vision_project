@@ -89,6 +89,8 @@ export function useSongSearchWorker(songs: Song[] | null) {
       if (e.data.type === "INDEXED_COMPLETE") {
         isIndexedRef.current = true;
         isGlobalIndexed = true;
+      } else if (e.data.type === "INDEX_PROGRESS" && e.data.ready) {
+        isIndexedRef.current = true;
       }
     };
 

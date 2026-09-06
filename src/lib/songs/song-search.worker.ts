@@ -11,6 +11,7 @@
  */
 
 import type { Song } from "./loader";
+import { get } from "idb-keyval";
 import {
   songStem,
   tanglishNorm,
@@ -169,10 +170,6 @@ function indexSong(song: Song) {
 
           if (norm.length >= 2) addInvertedIndex(tokenInvertedIndex, norm, song.id);
           if (stem.length >= 2) addInvertedIndex(stemInvertedIndex, stem, song.id);
-          for (const tri of getTrigrams(norm)) {
-            songTrigrams.add(tri);
-            addInvertedIndex(trigramInvertedIndex, tri, song.id);
-          }
         }
       }
 
@@ -505,18 +502,78 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
   return result;
 }
 
+// ── Chunked Background Indexing State ─────────────────────────────────────────
+let indexingGeneration = 0;
+let isIndexing = false;
+const CHUNK_SIZE = 1000;
+
+function startIndexing(songs: Song[]) {
+  clearAllIndexes();
+  const currentGen = ++indexingGeneration;
+  isIndexing = true;
+  let cursor = 0;
+
+  function runNextChunk() {
+    if (currentGen !== indexingGeneration) return; // Stale indexing job canceled
+
+    const end = Math.min(cursor + CHUNK_SIZE, songs.length);
+    for (let i = cursor; i < end; i++) {
+      indexSong(songs[i]);
+    }
+    cursor = end;
+    tokensDirty = true;
+
+    // After first chunk, notify that initial search is ready so queries return immediately
+    if (cursor === Math.min(CHUNK_SIZE, songs.length)) {
+      self.postMessage({
+        type: "INDEX_PROGRESS",
+        indexed: cursor,
+        total: songs.length,
+        ready: true,
+      });
+    }
+
+    if (cursor < songs.length) {
+      // Yield to worker event loop so any incoming SEARCH messages are processed immediately!
+      setTimeout(runNextChunk, 0);
+    } else {
+      isIndexing = false;
+      buildSortedTokens();
+      self.postMessage({
+        type: "INDEXED_COMPLETE",
+        totalSongs: songsMap.size,
+      });
+    }
+  }
+
+  runNextChunk();
+}
+
 // ── Worker Message Handler ────────────────────────────────────────────────────
 self.onmessage = (e: MessageEvent) => {
   const { type, payload, queryId } = e.data;
 
-  if (type === "INDEX_ALL") {
-    clearAllIndexes();
+  if (type === "INIT_FROM_STORAGE") {
+    // Attempt to load precomputed songs directly from IndexedDB without main thread serialization
+    get<Song[]>("vision_songs_precomputed_v4")
+      .then((cachedSongs) => {
+        if (cachedSongs && cachedSongs.length > 0) {
+          startIndexing(cachedSongs);
+        } else {
+          self.postMessage({ type: "STORAGE_EMPTY" });
+        }
+      })
+      .catch(() => {
+        self.postMessage({ type: "STORAGE_EMPTY" });
+      });
+  } else if (type === "INDEX_ALL") {
     const songs: Song[] = payload.songs;
-    for (const song of songs) {
-      indexSong(song);
+    // If we already have all these songs indexed and not running, don't re-index!
+    if (songsMap.size === songs.length && !isIndexing) {
+      self.postMessage({ type: "INDEXED_COMPLETE", totalSongs: songsMap.size });
+      return;
     }
-    tokensDirty = true; // will rebuild sorted list on next search
-    self.postMessage({ type: "INDEXED_COMPLETE", totalSongs: songsMap.size });
+    startIndexing(songs);
   } else if (type === "UPDATE_SONG") {
     const song: Song = payload.song;
     indexSong(song);

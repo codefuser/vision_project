@@ -113,11 +113,6 @@ export async function loadSongs(): Promise<Song[]> {
         inflight = null;
         logger.info(`[Songs] Loaded ${cache.length} songs instantly from precomputed IndexedDB (<30ms)`);
 
-        // Build candidate search index in background
-        import("./search").then(({ buildSearchIndex }) => {
-          const combined = getSongs();
-          if (combined) buildSearchIndex(combined);
-        });
 
         // Trigger lightweight background delta sync (0 downloads if unchanged)
         backgroundDeltaSync().catch((err) =>
@@ -137,10 +132,6 @@ export async function loadSongs(): Promise<Song[]> {
         // Save precomputed so future reloads are instant
         set(SONGS_PRECOMPUTED_KEY, cache).catch(() => {});
 
-        import("./search").then(({ buildSearchIndex }) => {
-          const combined = getSongs();
-          if (combined) buildSearchIndex(combined);
-        });
 
         backgroundDeltaSync().catch((err) =>
           logger.warn("[Songs] Delta sync check error:", err),
@@ -214,10 +205,6 @@ async function fullFetchFromSupabase(): Promise<Song[]> {
 
   cache = precomputed;
 
-  import("./search").then(({ buildSearchIndex }) => {
-    const combined = getSongs();
-    if (combined) buildSearchIndex(combined);
-  });
 
   logger.info(`[Songs] Precomputed dataset stored in IndexedDB: ${precomputed.length} songs`);
   return precomputed;
@@ -274,11 +261,6 @@ async function backgroundDeltaSync(): Promise<void> {
 
   cache = updatedSongs;
 
-  // Update search index incrementally
-  import("./search").then(({ buildSearchIndex }) => {
-    const combined = getSongs();
-    if (combined) buildSearchIndex(combined);
-  });
 
   logger.info(`[Songs] Merged ${changedRows.length} changed songs into precomputed IndexedDB`);
 }
