@@ -90,6 +90,10 @@ export function tamilToLatin(s: string): string {
 /** Lowercase + lossless digraph and voicing normalization. */
 export function tanglishLower(s: string): string {
   let t = s.toLowerCase();
+  // Strip initial glides before u/o
+  t = t.replace(/^[yvw]+([uo])/g, "$1").replace(/\s+[yvw]+([uo])/g, " $1");
+  // Intervocalic 'h' represents Tamil consonant 'க' (k)
+  t = t.replace(/([aeiou])h+([aeiou])/g, "$1k$2");
   t = t
     .replace(/dh/g, "d")
     .replace(/th/g, "t")
@@ -129,6 +133,12 @@ export function tanglishNorm(s: string): string {
 
   let t = trimmed.toLowerCase();
   if (/[\u0B80-\u0BFF]/.test(t)) t = tamilToLatin(t);
+
+  // Initial glide / semi-vowel onset stripping before u/o ("yumahaha" -> "umahaha", "vumakaha" -> "umakaha")
+  t = t.replace(/^[yvw]+([uo])/g, "$1").replace(/\s+[yvw]+([uo])/g, " $1");
+
+  // Intervocalic 'h' in Tanglish almost always represents the Tamil consonant 'க' ("umakaha"/"umahaha" -> "umakaka")
+  t = t.replace(/([aeiou])h+([aeiou])/g, "$1k$2");
 
   // Digraphs & transliteration equivalents
   t = t
@@ -194,6 +204,8 @@ export function songStem(s: string): string {
 
   const latin = /[\u0B80-\u0BFF]/.test(trimmed) ? tamilToLatin(trimmed) : trimmed;
   let t = tanglishLower(latin);
+  t = t.replace(/^[yvw]+([uo])/g, "$1").replace(/\s+[yvw]+([uo])/g, " $1");
+  t = t.replace(/([aeiou])h+([aeiou])/g, "$1k$2");
   t = t.replace(/^[aeiou]+/g, "");
   t = t.replace(/\s+[aeiou]+/g, " ");
   t = t.replace(/[aeiou]/g, "");

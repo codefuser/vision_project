@@ -281,22 +281,62 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
   for (let i = 0; i < songs.length && hits.length < limit; i++) {
     const s = songs[i];
     const tLower = s.title.toLowerCase();
-    const fl = s.slides[0]?.split("\n")[0] || s.title;
+    const lines = s.slides.flatMap((sl) =>
+      sl.split("\n").map((l) => l.trim()).filter(Boolean),
+    );
+    const fl = lines[0] || s.title;
     let score = 0;
+    let matchedLineIdx = -1;
 
-    if (tLower === qLower) score = 1000;
-    else if (tLower.startsWith(qLower)) score = 500;
-    else if (tLower.includes(qLower)) score = 300;
-    else if (qNorm && tanglishNorm(s.title).includes(qNorm)) score = 250;
-    else if (fl.toLowerCase().includes(qLower)) score = 150;
+    if (tLower === qLower) {
+      score = 1000;
+    } else if (tLower.startsWith(qLower)) {
+      score = 500;
+    } else if (tLower.includes(qLower)) {
+      score = 300;
+    } else if (qNorm && tanglishNorm(s.title).includes(qNorm)) {
+      score = 250;
+    }
+
+    // Scan lyrics so inner lines match
+    for (let li = 0; li < lines.length; li++) {
+      const lineText = lines[li];
+      const lineLower = lineText.toLowerCase();
+      if (lineLower.includes(qLower)) {
+        score = Math.max(score, lineLower === qLower ? 950 : 700);
+        if (matchedLineIdx < 0) matchedLineIdx = li;
+      } else if (qNorm && tanglishNorm(lineText).includes(qNorm)) {
+        score = Math.max(score, 650);
+        if (matchedLineIdx < 0) matchedLineIdx = li;
+      }
+    }
 
     if (score > 0) {
+      const contextLines: { text: string; isMatch: boolean }[] = [];
+      const total = lines.length;
+      if (total > 0) {
+        const matchIdx = matchedLineIdx >= 0 ? matchedLineIdx : 0;
+        let startIdx = matchIdx - 1;
+        if (startIdx < 0) startIdx = 0;
+        if (startIdx + 4 > total) startIdx = Math.max(0, total - 4);
+        const endIdx = Math.min(total - 1, startIdx + 3);
+
+        for (let j = startIdx; j <= endIdx; j++) {
+          contextLines.push({
+            text: lines[j],
+            isMatch: matchedLineIdx >= 0 && j === matchIdx,
+          });
+        }
+      } else {
+        contextLines.push({ text: fl, isMatch: true });
+      }
+
       hits.push({
         song: s,
         score,
         firstLine: fl,
-        matchedLine: fl,
-        contextLines: [{ text: fl, isMatch: true }],
+        matchedLine: matchedLineIdx >= 0 ? lines[matchedLineIdx] : fl,
+        contextLines,
         highlightTokens: [q],
       });
     }

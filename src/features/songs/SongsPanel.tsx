@@ -89,8 +89,8 @@ export function SongsPanel() {
 
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
-  // Single 200ms debounce — SongSearchInput no longer double-debounces.
-  const debouncedQuery = useDebounce(query, 200);
+  // 120ms single debounce for instant search-as-you-type response
+  const debouncedQuery = useDebounce(query, 120);
   const [results, setResults] = useState<SongHit[]>([]);
   const [activeIdx, setActiveIdx] = useState(() => wsScrollPos);
   const [searchMs, setSearchMs] = useState<number | null>(null);
@@ -174,15 +174,30 @@ export function SongsPanel() {
         }
         return s.title;
       };
+      const getInitialLines = (s: Song) => {
+        const lines: string[] = [];
+        for (const slide of s.slides) {
+          for (const line of slide.split("\n")) {
+            const t = line.trim();
+            if (t) {
+              lines.push(t);
+              if (lines.length >= 4) break;
+            }
+          }
+          if (lines.length >= 4) break;
+        }
+        return lines.map((text, idx) => ({ text, isMatch: idx === 0 }));
+      };
       const push = (s: Song) => {
         if (seen.has(s.id) || !applyFilter(s)) return;
         const fl = firstLineOf(s);
+        const ctx = getInitialLines(s);
         out.push({
           song: s,
           score: 0,
           firstLine: fl,
           matchedLine: fl,
-          contextLines: [{ text: fl, isMatch: false }],
+          contextLines: ctx.length > 0 ? ctx : [{ text: fl, isMatch: false }],
           highlightTokens: [],
         });
         seen.add(s.id);
@@ -619,7 +634,7 @@ function SongList(p: ListProps) {
   const virtualizer = useVirtualizer({
     count: p.results.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => (p.compact ? 80 : 130),
+    estimateSize: () => (p.compact ? 110 : 140),
     overscan: 5,
   });
 
@@ -852,31 +867,15 @@ function SongSearchInput({ inputRef }: { inputRef: React.RefObject<HTMLInputElem
   const setQuery = useSongsStore((s) => s.setQuery);
   const setSongsSearch = useWorkspace((s) => s.setSongsSearch);
 
-  const [localValue, setLocalValue] = useState(query);
-
-  // Sync external changes
-  useEffect(() => {
-    setLocalValue(query);
-  }, [query]);
-
-  // Single 200ms debounce — this is the only debounce in the search pipeline.
-  // The panel uses useDebounce(query, 200) which now reads the same store value
-  // already debounced here, so there is no double-debounce stacking.
-  useEffect(() => {
-    if (localValue === query) return;
-    const t = setTimeout(() => {
-      setQuery(localValue);
-      setSongsSearch({ query: localValue });
-    }, 200);
-    return () => clearTimeout(t);
-  }, [localValue, query, setQuery, setSongsSearch]);
-
-
   return (
     <Input
       ref={inputRef}
-      value={localValue}
-      onChange={(e) => setLocalValue(e.target.value)}
+      value={query}
+      onChange={(e) => {
+        const val = e.target.value;
+        setQuery(val);
+        setSongsSearch({ query: val });
+      }}
       placeholder="yesu · anbu · vaazhvu · இயேசு · title · lyric…"
       className="h-8 pl-7 text-sm"
       autoFocus
@@ -891,9 +890,10 @@ function HighlightedText({
   text: string;
   highlightTokens?: string[];
 }) {
-  if (!highlightTokens.length) return <>{text}</>;
+  const validTokens = highlightTokens.filter((t) => t && t.trim().length >= 2);
+  if (!validTokens.length) return <>{text}</>;
   try {
-    const escaped = highlightTokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+    const escaped = validTokens.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     const regex = new RegExp(`(${escaped.join("|")})`, "gi");
     const parts = text.split(regex);
     return (
@@ -1052,6 +1052,7 @@ const SongRow = memo(
     prev.query === next.query &&
     prev.compact === next.compact &&
     prev.projectedText === next.projectedText &&
+    prev.hit.song.id === next.hit.song.id &&
     prev.hit.score === next.hit.score &&
     prev.hit.matchedLine === next.hit.matchedLine &&
     prev.hit.firstLine === next.hit.firstLine &&
