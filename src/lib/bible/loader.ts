@@ -62,21 +62,33 @@ export async function loadBible(lang: BibleLang): Promise<BibleData> {
 
 async function fetchBibleFromSupabase(lang: BibleLang): Promise<BibleData> {
   const tableName = lang === "en" ? "english_bible" : "tamil_bible";
-  logger.info(`[Bible] Initial download of ${lang.toUpperCase()} Bible from Supabase…`);
+  logger.info(`[Bible] Initial parallel download of ${lang.toUpperCase()} Bible from Supabase…`);
+
+  const total = 31102;
+  const pageSize = 1000;
+  const totalPages = Math.ceil(total / pageSize);
+  const pageIndices = Array.from({ length: totalPages }, (_, i) => i);
 
   const allRows: any[] = [];
-  let start = 0;
-  const limit = 1000;
+  const CONCURRENCY = 6;
 
-  while (true) {
-    const { data, error } = await supabase
-      .from(tableName)
-      .select("*")
-      .range(start, start + limit - 1);
-    if (error) throw error;
-    allRows.push(...data);
-    if (data.length < limit) break;
-    start += limit;
+  for (let i = 0; i < pageIndices.length; i += CONCURRENCY) {
+    const batch = pageIndices.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (page) => {
+        const start = page * pageSize;
+        const end = start + pageSize - 1;
+        const { data, error } = await supabase
+          .from(tableName)
+          .select("*")
+          .range(start, end);
+        if (error) throw error;
+        return (data as any[]) || [];
+      }),
+    );
+    for (const rows of results) {
+      allRows.push(...rows);
+    }
   }
 
   const bibleData: BibleData = [];

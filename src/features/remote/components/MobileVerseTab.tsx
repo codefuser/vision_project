@@ -1,58 +1,154 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, BookOpen } from "lucide-react";
+import { Search, BookOpen, Loader2 } from "lucide-react";
 import { BIBLE_BOOKS, type BibleBookMeta } from "@/lib/bible/books";
-import { loadBible, getBible, type BibleLang } from "@/lib/bible/loader";
-import { search, getChapterVerses, type VerseHit } from "@/lib/bible/search";
+import { parseReference } from "@/lib/bible/search";
+import type { BibleLang } from "@/lib/bible/loader";
 import { useRemoteClient } from "../remote-client.store";
+import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
 
+interface VerseItem {
+  book: number;
+  bookName: string;
+  bookNameLocal: string;
+  chapter: number;
+  verse: number;
+  text: string;
+}
+
 export function MobileVerseTab() {
-  const { sendCommand, currentLive, searchQuery, setSearchQuery } = useRemoteClient();
+  const {
+    sendCommand,
+    currentLive,
+    searchQuery,
+    setSearchQuery,
+    requestVerseSearch,
+    requestChapterVerses,
+  } = useRemoteClient();
 
   const query = searchQuery.verse || "";
   const [lang, setLang] = useState<BibleLang>("ta");
-  const [loadingBible, setLoadingBible] = useState(false);
-  const [activeBook, setActiveBook] = useState<BibleBookMeta | null>(null);
+  const [loading, setLoading] = useState(false);
+  // Default book John (index 42)
+  const [activeBook, setActiveBook] = useState<BibleBookMeta>(() => BIBLE_BOOKS[42]);
   const [activeChapter, setActiveChapter] = useState<number>(1);
+  const [chapterVerses, setChapterVerses] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<VerseItem[]>([]);
   const [showBookPicker, setShowBookPicker] = useState(false);
   const [activeTestament, setActiveTestament] = useState<"OT" | "NT">("NT");
 
-  // Load Bible data on mount
+  const debouncedQuery = useDebounce(query, 150);
+
+  // 1. Fetch verses for selected book & chapter when not searching
   useEffect(() => {
     let active = true;
-    async function init() {
-      if (!getBible("ta") || !getBible("en")) {
-        setLoadingBible(true);
-        try {
-          await Promise.allSettled([loadBible("ta"), loadBible("en")]);
-        } finally {
-          if (active) setLoadingBible(false);
+    if (debouncedQuery.trim()) return;
+
+    async function loadChapter() {
+      setLoading(true);
+      try {
+        const verses = await requestChapterVerses(activeBook.index, activeChapter, lang);
+        if (active) {
+          setChapterVerses(verses);
         }
+      } catch {
+        if (active) setChapterVerses([]);
+      } finally {
+        if (active) setLoading(false);
       }
     }
-    void init();
+
+    void loadChapter();
     return () => {
       active = false;
     };
-  }, []);
+  }, [activeBook.index, activeChapter, lang, debouncedQuery, requestChapterVerses]);
 
-  const bibleData = getBible(lang);
-
-  // Compute search hits or chapter verses
-  const results: VerseHit[] = useMemo(() => {
-    if (!bibleData) return [];
-
-    const q = query.trim();
-    if (q) {
-      return search(q, bibleData, lang, 40);
+  // 2. Perform search when query changes
+  useEffect(() => {
+    let active = true;
+    const q = debouncedQuery.trim();
+    if (!q) {
+      setSearchResults([]);
+      return;
     }
 
-    // Default: show current book & chapter
-    const bookIndex = activeBook ? activeBook.index : 42; // default John (index 42 in 0-indexed)
-    return getChapterVerses(bookIndex, activeChapter, bibleData, lang);
-  }, [query, bibleData, lang, activeBook, activeChapter]);
+    async function doSearch() {
+      setLoading(true);
+      try {
+        // Fast local reference parser first
+        const parsed = parseReference(q);
+        if (parsed && parsed.chapter) {
+          const chVerses = await requestChapterVerses(parsed.book.index, parsed.chapter, lang);
+          if (active) {
+            const hits: VerseItem[] = [];
+            const vStart = parsed.verse || 1;
+            const vEnd = parsed.verseEnd || parsed.verse || chVerses.length;
+            for (let v = vStart; v <= Math.min(vEnd, chVerses.length); v++) {
+              const text = chVerses[v - 1];
+              if (text) {
+                hits.push({
+                  book: parsed.book.index,
+                  bookName: parsed.book.name,
+                  bookNameLocal: lang === "ta" ? parsed.book.nameTa : parsed.book.name,
+                  chapter: parsed.chapter,
+                  verse: v,
+                  text,
+                });
+              }
+            }
+            setSearchResults(hits);
+          }
+          return;
+        }
 
-  const handleProject = (hit: VerseHit) => {
+        // Full text verse search on demand
+        const hits = await requestVerseSearch(q, lang);
+        if (active) {
+          setSearchResults(
+            hits.map((h) => {
+              const b = BIBLE_BOOKS[h.book] || { name: "", nameTa: "" };
+              return {
+                book: h.book,
+                bookName: b.name,
+                bookNameLocal: lang === "ta" ? b.nameTa : b.name,
+                chapter: h.chapter,
+                verse: h.verse,
+                text: h.text,
+              };
+            }),
+          );
+        }
+      } catch {
+        if (active) setSearchResults([]);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void doSearch();
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery, lang, requestVerseSearch, requestChapterVerses]);
+
+  // Current display list
+  const results: VerseItem[] = useMemo(() => {
+    const q = debouncedQuery.trim();
+    if (q) return searchResults;
+
+    const bookNameLocal = lang === "ta" ? activeBook.nameTa : activeBook.name;
+    return chapterVerses.map((text, idx) => ({
+      book: activeBook.index,
+      bookName: activeBook.name,
+      bookNameLocal,
+      chapter: activeChapter,
+      verse: idx + 1,
+      text,
+    }));
+  }, [debouncedQuery, searchResults, chapterVerses, activeBook, activeChapter, lang]);
+
+  const handleProject = (hit: VerseItem) => {
     sendCommand({
       action: "PROJECT_VERSE",
       verseData: {
@@ -78,9 +174,13 @@ export function MobileVerseTab() {
               value={query}
               onChange={(e) => setSearchQuery("verse", e.target.value)}
               placeholder="Search verse (e.g. John 3:16, ps 23)..."
-              className="w-full h-10 pl-9 pr-3 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full h-10 pl-9 pr-9 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
-            {query && (
+            {loading ? (
+              <div className="absolute right-3 top-3 text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              </div>
+            ) : query ? (
               <button
                 type="button"
                 onClick={() => setSearchQuery("verse", "")}
@@ -88,7 +188,7 @@ export function MobileVerseTab() {
               >
                 Clear
               </button>
-            )}
+            ) : null}
           </div>
 
           <button
@@ -98,7 +198,7 @@ export function MobileVerseTab() {
           >
             <BookOpen className="w-3.5 h-3.5 text-primary" />
             <span className="truncate max-w-[80px]">
-              {activeBook ? (lang === "ta" ? activeBook.nameTa : activeBook.name) : "Books"}
+              {lang === "ta" ? activeBook.nameTa : activeBook.name}
             </span>
           </button>
         </div>
@@ -153,11 +253,7 @@ export function MobileVerseTab() {
 
       {/* Verses Cards List */}
       <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-24">
-        {loadingBible ? (
-          <div className="text-center py-12 text-muted-foreground text-xs">
-            Loading Bible verses...
-          </div>
-        ) : results.length === 0 ? (
+        {results.length === 0 && !loading ? (
           <div className="text-center py-12 text-muted-foreground text-xs space-y-1">
             <BookOpen className="w-8 h-8 mx-auto opacity-30 mb-2" />
             <p className="font-medium text-foreground">No verses found</p>
@@ -265,7 +361,7 @@ export function MobileVerseTab() {
                   }}
                   className={cn(
                     "p-2.5 rounded-lg border text-left text-xs transition cursor-pointer",
-                    activeBook?.index === book.index
+                    activeBook.index === book.index
                       ? "border-primary bg-primary/10 text-primary font-semibold"
                       : "border-border bg-card hover:bg-muted text-foreground",
                   )}

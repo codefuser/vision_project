@@ -322,36 +322,53 @@ export function searchSongs(query: string, songs: Song[], limit = 120): SongHit[
 
 function getCandidateSongIds(qTokens: string[], qStems: string[], songs: Song[]): Set<number> {
   const candidates = new Set<number>();
+  const MAX_CANDIDATES = 120;
 
+  // 1. Exact token matches (titles & lyrics) — instant O(1)
   for (const qt of qTokens) {
     const ids = tokenInvertedIndex.get(qt);
-    if (ids) for (const id of ids) candidates.add(id);
-  }
-  for (const qs of qStems) {
-    const ids = stemInvertedIndex.get(qs);
-    if (ids) for (const id of ids) candidates.add(id);
+    if (ids) {
+      for (const id of ids) {
+        candidates.add(id);
+        if (candidates.size >= MAX_CANDIDATES) return candidates;
+      }
+    }
   }
 
-  // Prefix matching via binary search — O(log N + k) instead of O(N)
-  if (candidates.size < 10 && qTokens.length > 0) {
+  // 2. Sound-alike stem matches — instant O(1)
+  for (const qs of qStems) {
+    const ids = stemInvertedIndex.get(qs);
+    if (ids) {
+      for (const id of ids) {
+        candidates.add(id);
+        if (candidates.size >= MAX_CANDIDATES) return candidates;
+      }
+    }
+  }
+
+  // 3. Prefix matching via binary search on sorted tokens — O(log N + k)
+  if (candidates.size < 40 && qTokens.length > 0) {
     if (tokensDirty) buildSortedTokens();
     for (const qt of qTokens) {
-      if (qt.length < 3) continue;
+      if (qt.length < 2) continue;
       const start = lowerBound(sortedTokens, qt);
       for (let i = start; i < sortedTokens.length; i++) {
         const tok = sortedTokens[i];
         if (!tok.startsWith(qt)) break;
         const ids = tokenInvertedIndex.get(tok);
-        if (ids) for (const id of ids) candidates.add(id);
-        if (candidates.size >= 50) break;
+        if (ids) {
+          for (const id of ids) {
+            candidates.add(id);
+            if (candidates.size >= MAX_CANDIDATES) return candidates;
+          }
+        }
       }
-      if (candidates.size >= 50) break;
     }
   }
 
-  // Fallback to top 100 songs if candidates empty
+  // 4. Fallback to top songs if candidates empty
   if (candidates.size === 0) {
-    for (let i = 0; i < Math.min(100, songs.length); i++) {
+    for (let i = 0; i < Math.min(50, songs.length); i++) {
       candidates.add(songs[i].id);
     }
   }
@@ -372,59 +389,60 @@ function getMatchIndices(
   for (let qIdx = 0; qIdx < qTokens.length; qIdx++) {
     const qt = qTokens[qIdx];
     const qs = qStems?.[qIdx] ?? "";
-    let bestDist = Infinity;
-    let bestIdx = -1;
+    let matchedInLine = false;
 
+    // Fast pass 1: Exact, prefix, or sound-alike stem match (O(1) string checks)
     for (let i = 0; i < lineTokens.length; i++) {
       const lt = lineTokens[i];
       const ls = lineStems?.[i] ?? "";
 
-      // 1. Exact token match
+      // Exact token match
       if (lt === qt) {
-        bestIdx = i;
-        bestDist = 0;
+        indices.add(i);
         totalBonus += 50;
+        matchedInLine = true;
         break;
       }
 
-      // 2. Sound-alike stem match
-      if (qs && ls && (ls === qs || ls.includes(qs) || qs.includes(ls))) {
-        if (0.5 < bestDist) {
-          bestDist = 0.5;
-          bestIdx = i;
-          totalBonus += 35;
-        }
+      // Prefix match
+      if (lt.startsWith(qt) && qt.length >= 2) {
+        indices.add(i);
+        totalBonus += 40;
+        matchedInLine = true;
+        break;
       }
 
-      // 3. Jaro-Winkler prefix & typo match
-      const jw = jaroWinkler(lt, qt);
-      if (jw >= 0.85 && 0.8 < bestDist) {
-        bestDist = 0.8;
-        bestIdx = i;
-        totalBonus += Math.floor(jw * 30);
+      // Sound-alike stem match
+      if (qs && ls && (ls === qs || ls.startsWith(qs) || qs.startsWith(ls))) {
+        indices.add(i);
+        totalBonus += 35;
+        matchedInLine = true;
+        break;
       }
 
-      // 4. Substring match for 4+ chars
-      if (lt.length >= 4 && qt.length >= 4 && (lt.includes(qt) || qt.includes(lt))) {
-        if (1 < bestDist) {
-          bestDist = 1;
-          bestIdx = i;
-          totalBonus += 25;
-        }
+      // Substring match for 3+ chars
+      if (lt.length >= 3 && qt.length >= 3 && lt.includes(qt)) {
+        indices.add(i);
+        totalBonus += 25;
+        matchedInLine = true;
+        break;
       }
+    }
 
-      // 5. Damerau-Levenshtein / Bounded edit distance
-      if (Math.abs(lt.length - qt.length) <= 3) {
-        const threshold = Math.min(3, Math.max(1, Math.floor(Math.max(lt.length, qt.length) * 0.4)));
-        const d = damerauLevenshtein(lt, qt);
-        if (d <= threshold && d < bestDist) {
-          bestDist = d;
-          bestIdx = i;
-          totalBonus += 20;
+    // Fast pass 2: Only run edit distance if NO token matched and token is long enough (>= 4)
+    if (!matchedInLine && qt.length >= 4) {
+      for (let i = 0; i < lineTokens.length; i++) {
+        const lt = lineTokens[i];
+        if (Math.abs(lt.length - qt.length) <= 1) {
+          const d = damerauLevenshtein(lt, qt);
+          if (d <= 1) {
+            indices.add(i);
+            totalBonus += 20;
+            break;
+          }
         }
       }
     }
-    if (bestIdx !== -1) indices.add(bestIdx);
   }
 
   return { indices: Array.from(indices), scoreBonus: totalBonus };

@@ -72,7 +72,7 @@ export function buildSteps(): StartupStep[] {
     {
       id: "db",
       label: "Preparing local cache…",
-      weight: 10,
+      weight: 25,
       run: async () => {
         const { db } = await import("@/db/schema");
         db();
@@ -81,34 +81,16 @@ export function buildSteps(): StartupStep[] {
     {
       id: "settings",
       label: "Loading Settings…",
-      weight: 10,
+      weight: 25,
       run: async () => {
         const { useSettings } = await import("@/stores/settings.store");
         await useSettings.getState().load();
       },
     },
     {
-      id: "songs",
-      label: "Loading Song Library…",
-      weight: 35,
-      run: async () => {
-        const { useSongsStore } = await import("@/lib/songs/store");
-        await useSongsStore.getState().ensureLoaded();
-      },
-    },
-    {
-      id: "bible",
-      label: "Loading Bible…",
-      weight: 25,
-      run: async () => {
-        const { loadBible } = await import("@/lib/bible/loader");
-        await Promise.all([loadBible("en"), loadBible("ta")]);
-      },
-    },
-    {
       id: "projection",
       label: "Initializing Projection Engine…",
-      weight: 10,
+      weight: 30,
       run: async () => {
         const { useProjection } = await import("@/stores/projection.store");
         await useProjection.getState().init();
@@ -119,7 +101,7 @@ export function buildSteps(): StartupStep[] {
     {
       id: "session-init",
       label: "Finalizing startup…",
-      weight: 5,
+      weight: 20,
       run: async () => {
         await closeOrphanedSessions().catch(() => {});
         const session = await createSession().catch(() => null);
@@ -128,6 +110,16 @@ export function buildSteps(): StartupStep[] {
           sessionRecorder.start(session.id);
         }
         preloadAllPageData();
+
+        // Non-blocking background cache warmup
+        if (typeof window !== "undefined") {
+          setTimeout(() => {
+            import("@/lib/songs/loader").then(({ loadSongs }) => loadSongs().catch(() => {}));
+            import("@/lib/bible/loader").then(({ loadBible }) => {
+              loadBible("en").catch(() => {});
+            });
+          }, 300);
+        }
       },
     },
   ];
