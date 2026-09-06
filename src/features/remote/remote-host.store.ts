@@ -70,35 +70,7 @@ export function mapRemoteToLaptopTab(t: ActiveRemoteTab): WorkspaceTab {
   }
 }
 
-// In-memory thumbnail cache to avoid re-reading blobs on every sync
-const thumbCache = new Map<string, string>();
-
-async function getMediaThumbnailDataUrl(
-  thumbBlobId?: string | null,
-  blobId?: string | null,
-): Promise<string | undefined> {
-  const id = thumbBlobId || blobId;
-  if (!id) return undefined;
-  if (thumbCache.has(id)) return thumbCache.get(id);
-
-  try {
-    const rec = await db().blobs.get(id);
-    if (!rec?.blob) return undefined;
-
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        thumbCache.set(id, result);
-        resolve(result);
-      };
-      reader.onerror = () => resolve(undefined);
-      reader.readAsDataURL(rec.blob);
-    });
-  } catch {
-    return undefined;
-  }
-}
+// Host remote store for session management and live application state synchronization
 
 interface HostRemoteState {
   session: RemoteSession | null;
@@ -132,7 +104,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
       return existing;
     }
 
-    const sessionId = generateRandomId("vp", 6);
+    const sessionId = generateRandomId("vp", 6).toLowerCase();
     const salt = generateSalt(16);
     const passwordPlain = (customPassword || generateRandomId("pass", 4)).trim();
     const passwordHash = await sha256(`${passwordPlain}::${salt}::${sessionId}`);
@@ -150,7 +122,11 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
     // Clean up previous channel if any
     const prevChannel = get().channel;
     if (prevChannel) {
-      await supabase.removeChannel(prevChannel);
+      try {
+        await supabase.removeChannel(prevChannel);
+      } catch (e) {
+        logger.warn("Error removing previous channel", e);
+      }
     }
 
     const channelName = `${CHANNEL_PREFIX}${sessionId}`;
@@ -207,33 +183,42 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
 
             toast.success(`Remote Connected: ${newDevice.name}`);
 
-            // Prepare complete current snapshot
-            const syncState = await buildSyncState();
+            try {
+              // Prepare complete lightweight snapshot (< 5KB payload)
+              const syncState = await buildSyncState();
 
-            // Send full initial state sync to mobile
-            await channel.send({
-              type: "broadcast",
-              event: "msg",
-              payload: {
-                type: "AUTH_RESPONSE",
-                clientNonce,
-                success: true,
-                sessionToken: token,
-                syncState,
-              },
-            });
+              // Send full initial state sync to mobile immediately
+              const sendRes = await channel.send({
+                type: "broadcast",
+                event: "msg",
+                payload: {
+                  type: "AUTH_RESPONSE",
+                  clientNonce,
+                  success: true,
+                  sessionToken: token,
+                  syncState,
+                },
+              });
+              logger.info(`AUTH_RESPONSE broadcast status: ${sendRes}`);
+            } catch (sendErr) {
+              logger.error("Failed to send AUTH_RESPONSE", sendErr);
+            }
           } else {
             logger.warn("Remote auth failed: incorrect password proof");
-            await channel.send({
-              type: "broadcast",
-              event: "msg",
-              payload: {
-                type: "AUTH_RESPONSE",
-                clientNonce,
-                success: false,
-                error: "Incorrect password. Access denied.",
-              },
-            });
+            try {
+              await channel.send({
+                type: "broadcast",
+                event: "msg",
+                payload: {
+                  type: "AUTH_RESPONSE",
+                  clientNonce,
+                  success: false,
+                  error: "Incorrect password. Access denied.",
+                },
+              });
+            } catch (sendErr) {
+              logger.error("Failed to send negative AUTH_RESPONSE", sendErr);
+            }
           }
           break;
         }
@@ -390,10 +375,12 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
     const s = get().session;
     if (!s) return;
     const clean = newPassword.trim();
-    const passwordHash = await sha256(`${clean}::${s.salt}::${s.sessionId}`);
+    const sessionId = s.sessionId.trim().toLowerCase();
+    const passwordHash = await sha256(`${clean}::${s.salt}::${sessionId}`);
     set({
       session: {
         ...s,
+        sessionId,
         passwordPlain: clean,
         passwordHash,
       },
@@ -485,17 +472,17 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
       metadata: cur.metadata as Record<string, any>,
       details:
         cur.type === "bible_verse"
-          ? (cur.body as any)?.text
+          ? String((cur.body as any)?.text || "").slice(0, 300)
           : cur.type === "song_slide"
-            ? (cur.body as any)?.lines?.join("\n")
+            ? (cur.body as any)?.lines?.slice(0, 4)?.join("\n")
             : undefined,
     };
   }
 
-  // Recent history
+  // Recent history (max 25 items)
   const recentHistory: RemoteRecentItem[] = projectionHistory
     .list()
-    .slice(0, 30)
+    .slice(0, 25)
     .map((h) => ({
       id: h.id,
       title: h.title,
@@ -503,32 +490,26 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
       projectedAt: h.projectedAt,
     }));
 
-  // Load media items from Dexie + load thumbnail Data URLs
+  // Load media items from Dexie (lightweight metadata for fast sync, no heavy base64 strings)
   let mediaList: RemoteHostSyncState["mediaList"] = [];
   try {
     const records = await db().media.orderBy("createdAt").reverse().limit(60).toArray();
-    mediaList = await Promise.all(
-      records.map(async (m) => {
-        const thumbnailUrl = await getMediaThumbnailDataUrl(m.thumbBlobId, m.blobId);
-        return {
-          id: m.id,
-          name: m.name,
-          type: m.type,
-          durationMs: m.durationMs,
-          thumbnailUrl,
-        };
-      }),
-    );
+    mediaList = records.map((m) => ({
+      id: m.id,
+      name: m.name,
+      type: m.type,
+      durationMs: m.durationMs,
+    }));
   } catch (err) {
     logger.warn("Failed to load media for remote sync", err);
   }
 
-  // Load text items from store
+  // Load text items from store (trimmed to keep broadcast message well under 128KB)
   const textItems = useTextItems.getState().items;
-  const textList = textItems.slice(0, 50).map((t) => ({
+  const textList = textItems.slice(0, 30).map((t) => ({
     id: t.id,
     title: t.title,
-    content: t.content,
+    content: (t.content || "").slice(0, 200),
   }));
 
   return {
