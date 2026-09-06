@@ -7,7 +7,7 @@ import type { ProjectTextInput } from "@/projection/adapters/text.adapter";
 
 export type RemoteSessionStatus = "idle" | "waiting" | "connected" | "ended";
 
-export type ActiveRemoteTab = "verse" | "song" | "lyric" | "media" | "text";
+export type ActiveRemoteTab = "verse" | "song" | "media" | "text";
 
 export interface RemoteDevice {
   id: string;
@@ -36,13 +36,12 @@ export interface RemoteRecentItem {
 }
 
 export interface RemoteHostSyncState {
-  activeTab: ActiveRemoteTab;
-  searchQuery: {
-    verse: string;
-    song: string;
-    lyric: string;
-    media: string;
-    text: string;
+  activeTab?: ActiveRemoteTab;
+  searchQuery?: {
+    verse?: string;
+    song?: string;
+    media?: string;
+    text?: string;
   };
   selectedSongId: number | null;
   selectedTextId: string | null;
@@ -62,6 +61,7 @@ export interface RemoteHostSyncState {
     durationMs?: number;
     thumbnailUrl?: string;
   }>;
+  mediaThumbnails?: Record<string, string>;
   textList: Array<{
     id: string;
     title: string;
@@ -154,6 +154,9 @@ export type RemoteCommandAction =
   | {
       action: "REPROJECT_HISTORY";
       item: RemoteRecentItem;
+    }
+  | {
+      action: "REQUEST_MEDIA_THUMBS";
     };
 
 export interface RemoteCommandPayload {

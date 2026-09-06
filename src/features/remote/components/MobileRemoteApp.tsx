@@ -19,10 +19,10 @@ import { useRemoteClient } from "../remote-client.store";
 import { MobileQrScanner } from "./MobileQrScanner";
 import { MobileVerseTab } from "./MobileVerseTab";
 import { MobileSongTab } from "./MobileSongTab";
-import { MobileLyricTab } from "./MobileLyricTab";
 import { MobileMediaTab } from "./MobileMediaTab";
 import { MobileTextTab } from "./MobileTextTab";
 import { MobileRecentSheet } from "./MobileRecentSheet";
+import { MobileLiveNowModal } from "./MobileLiveNowModal";
 import { cn } from "@/lib/utils";
 
 export function MobileRemoteApp() {
@@ -41,6 +41,7 @@ export function MobileRemoteApp() {
     sendCommand,
     disconnect,
     restoreSavedSession,
+    setLiveModalOpen,
   } = useRemoteClient();
 
   const [password, setPassword] = useState("");
@@ -223,14 +224,26 @@ export function MobileRemoteApp() {
         <MobileRecentSheet onClose={() => setShowRecentSheet(false)} />
       )}
 
+      {/* Live Now Modal */}
+      <MobileLiveNowModal />
+
       {/* Top Header Bar */}
       <header className="h-12 px-3 border-b border-border bg-card/80 backdrop-blur flex items-center justify-between shrink-0 z-20">
-        {/* Status & Live Ticker */}
-        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+        {/* Status & Live Ticker (Clickable to open Live modal) */}
+        <div
+          onClick={() => setLiveModalOpen(true)}
+          className="flex items-center gap-2 min-w-0 flex-1 mr-2 cursor-pointer group py-1 px-1.5 rounded-lg hover:bg-muted/50 transition"
+          title="Click to view Live Projection details"
+        >
+          <span
+            className={cn(
+              "w-2 h-2 rounded-full shrink-0",
+              currentLive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground",
+            )}
+          />
           <div className="min-w-0 truncate">
             {currentLive ? (
-              <span className="text-xs font-semibold text-foreground truncate block">
+              <span className="text-xs font-semibold text-foreground truncate block group-hover:text-primary transition">
                 {currentLive.title}
               </span>
             ) : (
@@ -241,6 +254,27 @@ export function MobileRemoteApp() {
 
         {/* Quick actions */}
         <div className="flex items-center gap-1.5 shrink-0">
+          {/* Dedicated LIVE Button */}
+          <button
+            type="button"
+            onClick={() => setLiveModalOpen(true)}
+            className={cn(
+              "h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border",
+              currentLive
+                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 shadow-xs"
+                : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border opacity-80",
+            )}
+            title="Open Live Projection View"
+          >
+            <span
+              className={cn(
+                "w-2 h-2 rounded-full",
+                currentLive ? "bg-emerald-500 animate-ping" : "bg-muted-foreground",
+              )}
+            />
+            <span>LIVE</span>
+          </button>
+
           {/* Recent history button */}
           <button
             type="button"
@@ -298,7 +332,7 @@ export function MobileRemoteApp() {
         </div>
       </header>
 
-      {/* 5 Category Navigation Tabs — Synchronized with Laptop */}
+      {/* 4 Category Navigation Tabs — Independent Device Navigation */}
       <nav className="h-11 px-2 border-b border-border bg-muted/40 flex items-center justify-around shrink-0 text-xs font-medium z-10">
         <button
           type="button"
@@ -326,20 +360,6 @@ export function MobileRemoteApp() {
         >
           <Music className="w-3.5 h-3.5 text-primary" />
           <span>Song</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("lyric")}
-          className={cn(
-            "flex-1 h-8 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer",
-            activeTab === "lyric"
-              ? "bg-background text-foreground shadow-sm font-semibold border border-border"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <FileText className="w-3.5 h-3.5 text-primary" />
-          <span>Lyric</span>
         </button>
 
         <button
@@ -375,9 +395,39 @@ export function MobileRemoteApp() {
       <main className="flex-1 overflow-hidden relative">
         {activeTab === "verse" && <MobileVerseTab />}
         {activeTab === "song" && <MobileSongTab />}
-        {activeTab === "lyric" && <MobileLyricTab />}
         {activeTab === "media" && <MobileMediaTab />}
         {activeTab === "text" && <MobileTextTab />}
+
+        {/* Compact Floating Bottom LIVE Status Bar */}
+        {currentLive && (
+          <div
+            onClick={() => setLiveModalOpen(true)}
+            className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-30 p-2.5 px-3.5 rounded-xl bg-card/95 border border-emerald-500/40 backdrop-blur shadow-lg flex items-center justify-between cursor-pointer transition active:scale-[0.98] hover:border-emerald-500 select-none"
+          >
+            <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                    LIVE NOW
+                  </span>
+                  {currentLive.metadata?.slideIndex !== undefined && (
+                    <span className="text-[10px] text-muted-foreground font-mono">
+                      Slide {(currentLive.metadata.slideIndex as number) + 1}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-semibold text-foreground truncate leading-tight">
+                  {currentLive.title}
+                </p>
+              </div>
+            </div>
+
+            <div className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-bold shrink-0 border border-emerald-500/30">
+              View
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
