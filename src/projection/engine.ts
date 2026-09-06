@@ -50,6 +50,14 @@ class ProjectionEngineImpl {
         });
       }
     });
+
+    // Keep engine's authoritative current content in sync with all projection adapters
+    projectionEvents.on("CONTENT_PROJECTED", (e) => {
+      this.state = { current: e.content, queue: [e.content], index: 0 };
+    });
+    projectionEvents.on("CONTENT_CLEARED", () => {
+      this.state = { current: null, queue: [], index: 0 };
+    });
   }
 
   // ───────── read-side helpers (engine state, not React) ─────────

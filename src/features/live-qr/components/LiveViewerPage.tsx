@@ -4,7 +4,7 @@
  *
  * NO CONTROL CAPABILITIES. NO SEARCH. NO TABS. VIEW-ONLY.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useViewerLiveQr } from "../live-qr-client.store";
 import {
   Radio,
@@ -17,8 +17,8 @@ import {
   Maximize2,
   Minimize2,
   Tv,
+  Loader2,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
 
 interface LiveViewerPageProps {
   tokenFromQuery?: string;
@@ -29,6 +29,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
     useViewerLiveQr();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const mountedRef = useRef(false);
 
   // Extract token from prop or URL search param
   const activeToken =
@@ -41,10 +42,19 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
     if (activeToken) {
       void connect(activeToken);
     }
+  }, [activeToken, connect]);
+
+  // Clean disconnect only when component completely leaves DOM
+  useEffect(() => {
+    mountedRef.current = true;
     return () => {
-      void disconnect();
+      mountedRef.current = false;
+      // Do not disconnect immediately if navigating within /live
+      if (typeof window !== "undefined" && !window.location.pathname.startsWith("/live")) {
+        void disconnect();
+      }
     };
-  }, [activeToken, connect, disconnect]);
+  }, [disconnect]);
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -76,7 +86,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
     );
   }
 
-  // ── CONNECTING OR MISSING TOKEN STATE ──────────────────────────────────────
+  // ── MISSING TOKEN STATE ────────────────────────────────────────────────────
   if (!activeToken) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-[#070b14] px-4 text-center text-white select-none">
@@ -114,14 +124,18 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
                   LIVE
                 </span>
+              ) : connectionStatus === "disconnected" ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-medium text-red-400">
+                  Reconnecting...
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                  <Loader2 className="h-2.5 w-2.5 animate-spin" />
                   Connecting
                 </span>
               )}
             </div>
-            <p className="text-[10px] text-white/50">Viewer Stream • Token: {token}</p>
+            <p className="text-[10px] text-white/50">Viewer Stream • Token: {token || activeToken}</p>
           </div>
         </div>
 
@@ -142,7 +156,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
         {connectionStatus === "disconnected" && (
           <div className="mb-4 flex items-center gap-2 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-300">
             <WifiOff className="h-4 w-4 shrink-0 animate-pulse" />
-            <span>Connection lost. Waiting for live projection to reconnect...</span>
+            <span>Connection lost. Automatically reconnecting to live stream...</span>
           </div>
         )}
 
@@ -158,20 +172,26 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
             </p>
           </div>
         ) : !isLiveActive ? (
-          /* 2. IDLE / NO PROJECTION ACTIVE */
+          /* 2. INITIAL CONNECTING OR WAITING FOR PROJECTION */
           <div className="flex flex-col items-center justify-center text-center p-8 rounded-2xl border border-white/10 bg-white/[0.02] backdrop-blur-sm max-w-md w-full my-auto shadow-2xl">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 mb-4">
               <Radio className="h-7 w-7 animate-pulse" />
             </div>
-            <h2 className="text-base font-bold text-white/90">Waiting for Live Projection</h2>
+            <h2 className="text-base font-bold text-white/90">
+              {connectionStatus === "connecting"
+                ? "Connecting to Live Projection..."
+                : "Waiting for Live Projection"}
+            </h2>
             <p className="text-xs text-white/50 mt-2 leading-relaxed">
-              No content is currently being projected.
-              <br />
-              Scripture verses, songs, or media will automatically appear here when projected live.
+              {connectionStatus === "connecting"
+                ? "Establishing live link with church presentation..."
+                : "No content is currently being projected. Verses, songs, or media will automatically appear here when projected live."}
             </p>
             <div className="mt-4 flex items-center gap-1.5 text-[11px] font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-              Listening to live session
+              {connectionStatus === "connected"
+                ? "Listening to live session"
+                : "Connecting to realtime channel..."}
             </div>
           </div>
         ) : (
