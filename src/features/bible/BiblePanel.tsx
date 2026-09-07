@@ -78,10 +78,15 @@ export function BiblePanel() {
   const [activeIdx, setActiveIdx] = useState(() => (wsScrollPos ? 0 : 0));
   const [searchMs, setSearchMs] = useState<number | null>(null);
   const [chapterCtx, setChapterCtx] = useState<{ book: number; chapter: number } | null>(null);
-  const [containerWidth, setContainerWidth] = useState(0);
-  const [searchMode, setSearchMode] = useState<SearchMode>(
-    () => (wsBibleSearch.searchMode as SearchMode) || "reference",
-  );
+  const [cols, setCols] = useState<number>(() => {
+    if (typeof window !== "undefined") {
+      const w = window.innerWidth;
+      return w >= 1200 ? 3 : w >= 700 ? 2 : 1;
+    }
+    return 2;
+  });
+  const searchMode = wsBibleSearch.searchMode as SearchMode || "reference";
+  const setSearchMode = (sm: SearchMode) => setBibleSearch({ searchMode: sm });
   const projectedRef = useProjection((s) => s.state?.textOverlay?.reference ?? null);
   const selectedKeyRef = useRef<string | null>(null);
   const lastQueryRef = useRef<string>("");
@@ -89,16 +94,12 @@ export function BiblePanel() {
   const recent = useBibleRecent((s) => s.items);
   const pushRecent = useBibleRecent((s) => s.push);
 
-  // Restore persisted query and sync searchMode
+  // Restore persisted query
   useEffect(() => {
     if (wsBibleSearch.query) {
       setQuery(wsBibleSearch.query);
     }
   }, []);
-  // Sync searchMode changes to workspace store
-  useEffect(() => {
-    setBibleSearch({ searchMode });
-  }, [searchMode]);
   // Restore scroll position after data loads
   useEffect(() => {
     if (wsScrollPos > 0 && listRef.current) {
@@ -108,12 +109,18 @@ export function BiblePanel() {
     }
   }, []);
 
-  // Track container width for responsive columns
+  // Track container width for responsive columns:
+  // >= 720px: 3 columns (spacious card display)
+  // 460px - 719px: 2 columns (restricted layout)
+  // < 460px: 1 column
   useEffect(() => {
     if (!listRef.current) return;
     const observer = new ResizeObserver((entries) => {
-      if (entries[0]) {
-        setContainerWidth(entries[0].contentRect.width);
+      const entry = entries[0];
+      if (entry) {
+        const width = entry.contentRect.width;
+        const nextCols = width >= 720 ? 3 : width >= 460 ? 2 : 1;
+        setCols((prev) => (prev !== nextCols ? nextCols : prev));
       }
     });
     observer.observe(listRef.current);
@@ -556,8 +563,6 @@ export function BiblePanel() {
 
   const primaryLang: BibleLang = displayMode === "ta" ? "ta" : "en";
   const showingRecent = !query.trim() && recent.length > 0;
-
-  const cols = containerWidth > 1000 ? 3 : containerWidth > 600 ? 2 : 1;
 
   const rows = useMemo(() => {
     const chunks: { hits: DisplayHit[]; startIndex: number }[] = [];

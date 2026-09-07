@@ -62,6 +62,7 @@ export function SongsPanel() {
     addFavorite,
     removeFavorite,
     selectSong,
+    touchUserSong,
     removeUserSong,
   } = useSongsStore(
     useShallow((s) => ({
@@ -77,6 +78,7 @@ export function SongsPanel() {
       addFavorite: s.addFavorite,
       removeFavorite: s.removeFavorite,
       selectSong: s.selectSong,
+      touchUserSong: s.touchUserSong,
       removeUserSong: s.removeUserSong,
     })),
   );
@@ -142,7 +144,7 @@ export function SongsPanel() {
   const allSongs = useMemo(
     () => (loaded ? getSongs() : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [loaded, userSongs.length],
+    [loaded, userSongs],
   );
   const { executeSearch } = useSongSearchWorker(allSongs);
 
@@ -263,6 +265,7 @@ export function SongsPanel() {
   }, [selectedSongId, userSongs, loaded]);
 
   const project = (song: Song, slideIndex: number) => {
+    touchUserSong(song.id);
     const text = song.slides[slideIndex] ?? song.content;
     projectSongSlide({
       songId: song.id,

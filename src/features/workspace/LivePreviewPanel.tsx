@@ -140,6 +140,7 @@ export function LivePreviewPanel() {
 
   const black = state?.black ?? false;
   const isVideo = media?.type === "video";
+  const isImage = media?.type === "image";
 
   // Prefer projector-reported time/duration; fall back to local preview video.
   const currentTime =
@@ -222,16 +223,16 @@ export function LivePreviewPanel() {
             <div className="mt-1 opacity-60">Send media to the projector to preview it here</div>
           </div>
         )}
-        {media && !black && url && media.type === "image" && (
+        {media && !black && url && isImage && (
           <img
             src={url}
-            alt=""
+            alt={media.name}
             className="max-h-full max-w-full"
             style={{ objectFit: previewObjectFit }}
             draggable={false}
           />
         )}
-        {media && !black && url && media.type === "video" && (
+        {media && !black && url && isVideo && (
           <video
             ref={videoRef}
             src={url}
@@ -316,14 +317,16 @@ export function LivePreviewPanel() {
             <Rewind className="h-3.5 w-3.5" />
           </IconBtn>
         )}
-        {state?.playing ? (
-          <IconBtn onClick={() => send({ type: "PAUSE" })} title="Pause" primary>
-            <Pause className="h-3.5 w-3.5" />
-          </IconBtn>
-        ) : (
-          <IconBtn onClick={() => send({ type: "PLAY" })} title="Play" primary>
-            <Play className="h-3.5 w-3.5" />
-          </IconBtn>
+        {isVideo && (
+          state?.playing ? (
+            <IconBtn onClick={() => send({ type: "PAUSE" })} title="Pause" primary>
+              <Pause className="h-3.5 w-3.5" />
+            </IconBtn>
+          ) : (
+            <IconBtn onClick={() => send({ type: "PLAY" })} title="Play" primary>
+              <Play className="h-3.5 w-3.5" />
+            </IconBtn>
+          )
         )}
         {isVideo && (
           <IconBtn onClick={() => jump(5)} title="Forward 5s">
@@ -338,7 +341,7 @@ export function LivePreviewPanel() {
         <IconBtn onClick={() => send({ type: "NEXT" })} title="Next">
           <SkipForward className="h-3.5 w-3.5" />
         </IconBtn>
-        <IconBtn onClick={() => send({ type: "STOP" })} title="Stop">
+        <IconBtn onClick={() => send({ type: "STOP" })} title="Stop / Clear projection">
           <Square className="h-3.5 w-3.5" />
         </IconBtn>
         {isVideo && (
@@ -381,23 +384,29 @@ export function LivePreviewPanel() {
             <Maximize2 className="h-3.5 w-3.5" />
           )}
         </IconBtn>
-        <div className="mx-1 h-4 w-px bg-border" />
-        <IconBtn
-          onClick={() => send({ type: "MUTE", value: !state?.muted })}
-          title={state?.muted ? "Unmute" : "Mute"}
-        >
-          {state?.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
-        </IconBtn>
-        <input
-          type="range"
-          min={0}
-          max={1}
-          step={0.01}
-          value={state?.volume ?? 0.8}
-          onChange={(e) => send({ type: "VOLUME", value: Number(e.target.value) })}
-          className="h-1 w-20 cursor-pointer accent-primary"
-          aria-label="Volume"
-        />
+
+        {isVideo && (
+          <>
+            <div className="mx-1 h-4 w-px bg-border" />
+            <IconBtn
+              onClick={() => send({ type: "MUTE", value: !state?.muted })}
+              title={state?.muted ? "Unmute" : "Mute"}
+            >
+              {state?.muted ? <VolumeX className="h-3.5 w-3.5" /> : <Volume2 className="h-3.5 w-3.5" />}
+            </IconBtn>
+            <input
+              type="range"
+              min={0}
+              max={1}
+              step={0.01}
+              value={state?.volume ?? 0.8}
+              onChange={(e) => send({ type: "VOLUME", value: Number(e.target.value) })}
+              className="h-1 w-20 cursor-pointer accent-primary"
+              aria-label="Volume"
+            />
+          </>
+        )}
+
         {isVideo && (
           <div className="ml-1 flex items-center gap-1 font-mono text-[10px] tabular-nums text-muted-foreground">
             <Tooltip content="Current position">
@@ -425,7 +434,12 @@ export function LivePreviewPanel() {
               {state?.playing ? (state?.videoReady === false ? "Buffering" : "Playing") : "Paused"}
             </span>
           )}
-          <span className="truncate">{media ? media.name : "—"}</span>
+          {isImage && (
+            <span className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-sky-400">
+              Image
+            </span>
+          )}
+          <span className="truncate">{media ? media.name : (state?.textOverlay?.reference ?? "—")}</span>
         </div>
       </div>
     </div>
