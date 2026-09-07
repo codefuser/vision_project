@@ -38,6 +38,8 @@ interface SongStore {
   addFavorite: (fav: Omit<SongFavorite, "addedAt">) => void;
   removeFavorite: (id: number) => void;
   selectSong: (id: number | null) => void;
+  /** Bring user song to the top of the Mine MRU list immediately. */
+  touchUserSong: (id: number) => void;
   /** Create a new song. Returns the new id. */
   addUserSong: (s: Omit<PersistedUserSong, "id">) => number;
   /** Create OR override an existing song by id (used to edit library songs). */
@@ -84,10 +86,35 @@ export const useSongsStore = create<SongStore>()(
           ].slice(0, 500),
         })),
       removeFavorite: (id) => set((s) => ({ favorites: s.favorites.filter((f) => f.id !== id) })),
-      selectSong: (id) => set({ selectedSongId: id }),
+      selectSong: (id) => {
+        if (id == null) {
+          set({ selectedSongId: null });
+          return;
+        }
+        const state = get();
+        const idx = state.userSongs.findIndex((u) => u.id === id);
+        if (idx > 0) {
+          const item = state.userSongs[idx];
+          const next = [item, ...state.userSongs.filter((u) => u.id !== id)];
+          syncUserSongs(next);
+          set({ selectedSongId: id, userSongs: next });
+        } else {
+          set({ selectedSongId: id });
+        }
+      },
+      touchUserSong: (id) => {
+        const state = get();
+        const idx = state.userSongs.findIndex((u) => u.id === id);
+        if (idx > 0) {
+          const item = state.userSongs[idx];
+          const next = [item, ...state.userSongs.filter((u) => u.id !== id)];
+          syncUserSongs(next);
+          set({ userSongs: next });
+        }
+      },
       addUserSong: (s) => {
         const id = get().userSongs.reduce((m, x) => Math.max(m, x.id), USER_ID_BASE) + 1;
-        const next = [...get().userSongs, { ...s, id }];
+        const next = [{ ...s, id }, ...get().userSongs];
         set({ userSongs: next });
         const newSong = buildSong({ ...s, id, userCreated: true });
         syncUserSongs(next);
@@ -97,10 +124,7 @@ export const useSongsStore = create<SongStore>()(
         return id;
       },
       upsertUserSong: (s) => {
-        const exists = get().userSongs.some((u) => u.id === s.id);
-        const next = exists
-          ? get().userSongs.map((u) => (u.id === s.id ? s : u))
-          : [...get().userSongs, s];
+        const next = [s, ...get().userSongs.filter((u) => u.id !== s.id)];
         set({ userSongs: next });
         const updatedSong = buildSong({ ...s, userCreated: true });
         syncUserSongs(next);
@@ -112,7 +136,7 @@ export const useSongsStore = create<SongStore>()(
         const current = get().userSongs.find((u) => u.id === id);
         if (!current) return;
         const updated = { ...current, ...patch };
-        const next = get().userSongs.map((u) => (u.id === id ? updated : u));
+        const next = [updated, ...get().userSongs.filter((u) => u.id !== id)];
         set({ userSongs: next });
         const updatedSong = buildSong({ ...updated, userCreated: true });
         syncUserSongs(next);

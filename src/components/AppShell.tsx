@@ -9,6 +9,7 @@ import {
   Sun,
   Monitor,
   PanelLeftClose,
+  PanelLeftOpen,
   Keyboard,
   Code2,
   Route,
@@ -17,7 +18,7 @@ import {
   Smartphone,
   Radio,
 } from "lucide-react";
-import { memo, type ReactNode, useEffect } from "react";
+import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import { useSettings } from "@/stores/settings.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection";
@@ -77,6 +78,38 @@ export function AppShell({ children }: { children: ReactNode }) {
     initBackupScheduler();
   }, [init]);
 
+  const [isHovered, setIsHovered] = useState(false);
+  const hoverLeaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMouseEnter = () => {
+    if (typeof window !== "undefined" && window.matchMedia("(hover: hover) and (pointer: fine)").matches) {
+      if (hoverLeaveTimerRef.current) {
+        clearTimeout(hoverLeaveTimerRef.current);
+        hoverLeaveTimerRef.current = null;
+      }
+      setIsHovered(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    if (hoverLeaveTimerRef.current) {
+      clearTimeout(hoverLeaveTimerRef.current);
+    }
+    hoverLeaveTimerRef.current = setTimeout(() => {
+      setIsHovered(false);
+    }, 120);
+  };
+
+  useEffect(() => {
+    return () => {
+      if (hoverLeaveTimerRef.current) {
+        clearTimeout(hoverLeaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  const isEffectiveCollapsed = collapsed && !isHovered;
+
   const cycleTheme = () => {
     const order: Array<typeof settings.theme> = ["light", "dark", "system"];
     const next = order[(order.indexOf(settings.theme) + 1) % order.length];
@@ -100,7 +133,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         item={item}
         active={active}
         icon={Icon}
-        collapsed={collapsed}
+        collapsed={isEffectiveCollapsed}
         badge={badge}
       />
     );
@@ -110,81 +143,91 @@ export function AppShell({ children }: { children: ReactNode }) {
     <StartupScreen onReady={() => {}}>
     <div className="flex h-screen bg-background text-foreground">
       {!errorPageMode && (
-      <aside
-        style={{ width: collapsed ? 56 : 224, willChange: "width" }}
-        className="flex shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar transition-[width] duration-200 ease-out"
-      >
-        {/* Brand / toggle header — stable layout regardless of collapsed state */}
-        <div className="flex h-14 shrink-0 items-center gap-2.5 overflow-hidden border-b border-sidebar-border px-2">
-          <button
-            type="button"
-            onClick={collapsed ? () => setCollapsed(false) : undefined}
-            aria-label={collapsed ? "Expand sidebar" : "VersoLyn"}
-            title={collapsed ? "Expand sidebar" : "VersoLyn"}
+        <div
+          className="relative shrink-0 select-none z-30"
+          style={{ width: collapsed ? 56 : 224 }}
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <aside
+            style={{ width: !collapsed || isHovered ? 224 : 56, willChange: "width" }}
             className={cn(
-              "flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0 bg-transparent transition-transform overflow-hidden",
-              collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
+              "flex flex-col h-full overflow-hidden border-r border-border bg-sidebar transition-[width,box-shadow] duration-200 ease-out",
+              collapsed && isHovered && "absolute top-0 bottom-0 left-0 z-40 shadow-2xl shadow-black/40 border-r border-border/80"
             )}
           >
-            <VersoLynLogo className="h-full w-full rounded-full" />
-          </button>
+            {/* Brand / toggle header — stable layout regardless of collapsed state */}
+            <div className="flex h-14 shrink-0 items-center gap-2.5 overflow-hidden border-b border-sidebar-border px-2">
+              <button
+                type="button"
+                onClick={collapsed ? () => setCollapsed(false) : undefined}
+                aria-label={collapsed ? "Expand sidebar (keep open)" : "VersoLyn"}
+                title={collapsed ? "Expand sidebar (keep open)" : "VersoLyn"}
+                className={cn(
+                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-full p-0 bg-transparent transition-transform overflow-hidden",
+                  collapsed ? "cursor-pointer hover:scale-105" : "cursor-default",
+                )}
+              >
+                <VersoLynLogo className="h-full w-full rounded-full" />
+              </button>
 
-          <div
-            className={cn(
-              "min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sidebar-foreground transition-opacity duration-200",
-              collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            )}
-          >
-            VersoLyn
-          </div>
-          <button
-            type="button"
-            onClick={() => setCollapsed(true)}
-            title="Collapse sidebar"
-            aria-label="Collapse sidebar"
-            className={cn(
-              "inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-[opacity,colors] duration-200 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
-              collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            )}
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
+              <div
+                className={cn(
+                  "min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sidebar-foreground transition-opacity duration-200",
+                  isEffectiveCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
+                )}
+              >
+                VersoLyn
+              </div>
+              <button
+                type="button"
+                onClick={() => setCollapsed(!collapsed)}
+                title={collapsed ? "Keep sidebar open (Pin)" : "Collapse sidebar"}
+                aria-label={collapsed ? "Keep sidebar open (Pin)" : "Collapse sidebar"}
+                className={cn(
+                  "inline-flex h-7 w-7 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-[opacity,colors] duration-200 hover:bg-sidebar-accent/60 hover:text-sidebar-foreground",
+                  isEffectiveCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
+                )}
+              >
+                {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {/* Primary nav — icons always visible; labels fade with the effective state */}
+            <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2">
+              {PRIMARY_NAV.map((item) => {
+                // Attach a live recording dot to the History nav item
+                const badge =
+                  item.to === "/history" && activeSessionId ? (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-full bg-red-500"
+                      title="Recording"
+                      aria-label="Session recording"
+                    />
+                  ) : undefined;
+                return renderNavItem(item, badge);
+              })}
+            </nav>
+
+            {/* Developer Hub section */}
+            <div className="overflow-hidden border-t border-sidebar-border/50 px-2 pt-1 pb-0">
+              <div
+                className={cn(
+                  "mb-1 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 transition-opacity duration-200",
+                  isEffectiveCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
+                )}
+              >
+                Developer
+              </div>
+              {DEVELOPER_NAV.map((item) => renderNavItem(item))}
+            </div>
+
+            {/* Pinned bottom: Settings */}
+            <div className="overflow-hidden border-t border-sidebar-border/50 p-2">
+              {renderNavItem(SETTINGS_NAV)}
+            </div>
+          </aside>
         </div>
-
-        {/* Primary nav — icons always visible; labels fade with the sidebar width */}
-        <nav className="flex-1 space-y-1 overflow-y-auto overflow-x-hidden p-2">
-          {PRIMARY_NAV.map((item) => {
-            // Attach a live recording dot to the History nav item
-            const badge =
-              item.to === "/history" && activeSessionId ? (
-                <span
-                  className="h-2 w-2 shrink-0 rounded-full bg-red-500"
-                  title="Recording"
-                  aria-label="Session recording"
-                />
-              ) : undefined;
-            return renderNavItem(item, badge);
-          })}
-        </nav>
-
-        {/* Developer Hub section */}
-        <div className="overflow-hidden border-t border-sidebar-border/50 px-2 pt-1 pb-0">
-          <div
-            className={cn(
-              "mb-1 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/40 transition-opacity duration-200",
-              collapsed ? "pointer-events-none opacity-0" : "opacity-100",
-            )}
-          >
-            Developer
-          </div>
-          {DEVELOPER_NAV.map((item) => renderNavItem(item))}
-        </div>
-
-        {/* Pinned bottom: Settings */}
-        <div className="overflow-hidden border-t border-sidebar-border/50 p-2">
-          {renderNavItem(SETTINGS_NAV)}
-        </div>
-      </aside>
       )}
 
       <div className="flex flex-1 flex-col overflow-hidden">
