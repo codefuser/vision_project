@@ -26,8 +26,7 @@ import type { MediaRecord } from "@/db/schema";
 import { acquireUrl, releaseUrl } from "@/lib/blob-url";
 import { useFocusZone } from "./focus-manager";
 import { Tooltip } from "@/components/ui/tooltip";
-import { ProjectionTextStage } from "@/components/ProjectionTextStage";
-import { LogoLayer } from "@/components/LogoLayer";
+import { ProjectionRenderer } from "@/components/ProjectionRenderer";
 import { useLogo } from "@/stores/logo.store";
 import { useSettings } from "@/stores/settings.store";
 import { getObjectFit, SCALING_LABELS } from "@/lib/projection-scaling";
@@ -216,57 +215,31 @@ export function LivePreviewPanel() {
       </PanelHeader>
 
       {/* Stage */}
-      <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black">
-        {!media && !black && !state?.textOverlay && (
-          <div className="text-center text-xs text-muted-foreground">
-            <div className="font-medium">No media projecting</div>
-            <div className="mt-1 opacity-60">Send media to the projector to preview it here</div>
-          </div>
-        )}
-        {media && !black && url && isImage && (
-          <img
-            src={url}
-            alt={media.name}
-            className="max-h-full max-w-full"
-            style={{ objectFit: previewObjectFit }}
-            draggable={false}
-          />
-        )}
-        {media && !black && url && isVideo && (
-          <video
-            ref={videoRef}
-            src={url}
-            className="max-h-full max-w-full"
-            style={{ objectFit: previewObjectFit }}
-            muted
-            playsInline
-            loop
-            onLoadedMetadata={(e) => {
-              const v = e.currentTarget;
-              v.currentTime = 0;
-              setLocalDuration(isFinite(v.duration) ? v.duration : 0);
-            }}
-            onTimeUpdate={(e) => {
-              if (scrubbing == null) setLocalTime(e.currentTarget.currentTime);
-            }}
-            onDurationChange={(e) =>
-              setLocalDuration(isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)
-            }
-          />
-        )}
-        {!media && !black && state?.textOverlay && (
-          <ProjectionTextStage
-            overlay={state.textOverlay}
-            textStyle={state.textStyle}
-            groupedStyles={state.groupedStyles}
-            logo={localLogo}
-          />
-        )}
-
-        {black && <div className="absolute inset-0 bg-black" />}
-
-        {/* Logo overlay — mirror of projector */}
-        {!black && !state?.textOverlay && <LogoLayer logo={localLogo} />}
+      <div className="relative flex min-h-0 flex-1 items-center justify-center bg-black overflow-hidden">
+        <ProjectionRenderer
+          textOverlay={!media && !black ? state?.textOverlay : null}
+          textStyle={state?.textStyle}
+          groupedStyles={state?.groupedStyles}
+          logo={localLogo}
+          mediaUrl={!black ? url : null}
+          mediaType={media?.type}
+          black={black}
+          scalingMode={scalingMode}
+          videoRef={videoRef}
+          onLoadedMetadata={(e) => {
+            const v = e.currentTarget;
+            v.currentTime = 0;
+            setLocalDuration(isFinite(v.duration) ? v.duration : 0);
+          }}
+          onTimeUpdate={(e) => {
+            if (scrubbing == null) setLocalTime(e.currentTarget.currentTime);
+          }}
+          onDurationChange={(e) =>
+            setLocalDuration(isFinite(e.currentTarget.duration) ? e.currentTarget.duration : 0)
+          }
+          idleMessage="No media projecting"
+          className="h-full w-full"
+        />
 
         <div className="absolute left-2 top-2 inline-flex items-center gap-1.5 rounded-md bg-black/60 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur">
           <span
