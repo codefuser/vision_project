@@ -54,11 +54,14 @@ export function MobileSongTab() {
     };
   }, [debouncedQuery, requestSongSearch]);
 
+  const [activeSong, setActiveSong] = useState<RemoteSong | null>(null);
+
   // Synchronized selected song from local list or context
   const selectedSong = useMemo(() => {
+    if (activeSong) return activeSong;
     if (!selectedSongId) return null;
     return songs.find((s) => s.id === selectedSongId) ?? null;
-  }, [songs, selectedSongId]);
+  }, [activeSong, songs, selectedSongId]);
 
   // Context song from laptop (either currently live song or laptop selected song)
   const contextSong = useMemo(() => {
@@ -68,7 +71,7 @@ export function MobileSongTab() {
       if (currentLive.title) {
         return {
           id: currentLive.metadata.songId as number,
-          title: currentLive.title,
+          title: currentLive.title.replace(/\s*\(slide\s*\d+\)$/i, ""),
           slides: [currentLive.details || ""],
           scale: "",
         };
@@ -115,14 +118,24 @@ export function MobileSongTab() {
         <div className="p-3 border-b border-border flex items-center justify-between bg-card/70 backdrop-blur shrink-0">
           <button
             type="button"
-            onClick={() => setSelectedSongId(null)}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium py-1 px-2 rounded-lg bg-muted/60 cursor-pointer"
+            onClick={() => {
+              setActiveSong(null);
+              setSelectedSongId(null);
+            }}
+            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground font-medium py-1 px-2.5 rounded-lg bg-muted/60 cursor-pointer active:scale-95 transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" /> Back to Songs
           </button>
-          <span className="text-xs font-semibold text-primary truncate max-w-[200px]">
-            {selectedSong.title}
-          </span>
+          <div className="text-right min-w-0 flex-1 ml-3">
+            <span className="text-xs font-bold text-primary truncate block">
+              {selectedSong.title}
+            </span>
+            {selectedSong.scale && (
+              <span className="text-[10px] text-muted-foreground font-mono">
+                Scale: {selectedSong.scale}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Slides List */}
@@ -133,7 +146,8 @@ export function MobileSongTab() {
               ((currentLive.metadata?.songId === selectedSong.id &&
                 currentLive.metadata?.slideIndex === idx) ||
                 (currentLive.title.includes(selectedSong.title) &&
-                  currentLive.title.includes(`slide ${idx + 1}`)));
+                  currentLive.title.includes(`slide ${idx + 1}`)) ||
+                (activeSlideIndex === idx && currentLive.metadata?.songId === selectedSong.id));
 
             return (
               <div
@@ -142,7 +156,7 @@ export function MobileSongTab() {
                 className={cn(
                   "p-3.5 rounded-xl border transition cursor-pointer select-none active:scale-[0.98] text-left",
                   isLive
-                    ? "bg-primary/10 border-primary ring-1 ring-primary/40 shadow-sm"
+                    ? "bg-primary/10 border-primary ring-2 ring-primary/50 shadow-sm"
                     : "bg-card border-border hover:border-primary/40",
                 )}
               >
@@ -177,7 +191,7 @@ export function MobileSongTab() {
               disabled={activeSlideIndex <= 0}
               className="px-3 py-1.5 rounded-xl bg-secondary text-secondary-foreground text-xs font-medium flex items-center gap-1 hover:bg-secondary/80 disabled:opacity-40 cursor-pointer"
             >
-              <SkipBack className="w-3.5 h-3.5" /> Prev Slide
+              <SkipBack className="w-3.5 h-3.5" /> Prev
             </button>
             <span className="text-xs font-mono font-bold text-foreground px-2">
               {activeSlideIndex + 1} / {selectedSong.slides.length}
@@ -188,7 +202,7 @@ export function MobileSongTab() {
               disabled={activeSlideIndex >= selectedSong.slides.length - 1}
               className="px-3 py-1.5 rounded-xl bg-primary text-primary-foreground text-xs font-medium flex items-center gap-1 hover:opacity-90 disabled:opacity-40 cursor-pointer"
             >
-              Next Slide <SkipForward className="w-3.5 h-3.5" />
+              Next <SkipForward className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -236,6 +250,7 @@ export function MobileSongTab() {
         {contextSong && !query && (
           <div
             onClick={() => {
+              setActiveSong(contextSong);
               setSelectedSongId(contextSong.id);
               setActiveSlideIndex(
                 currentLive?.metadata?.slideIndex !== undefined
@@ -279,6 +294,7 @@ export function MobileSongTab() {
               <div
                 key={song.id}
                 onClick={() => {
+                  setActiveSong(song);
                   setSelectedSongId(song.id);
                   setActiveSlideIndex(0);
                 }}

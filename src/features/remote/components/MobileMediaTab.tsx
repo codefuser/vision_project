@@ -141,7 +141,10 @@ export function MobileMediaTab() {
                 )}
               >
                 {/* Image Preview Container (16:9 aspect ratio) */}
-                <div className="relative w-full aspect-video bg-muted/60 flex items-center justify-center overflow-hidden">
+                <div
+                  className="relative w-full bg-muted/70 flex items-center justify-center overflow-hidden min-h-[90px]"
+                  style={{ aspectRatio: "16 / 9" }}
+                >
                   {hasPreview ? (
                     <img
                       src={thumbSrc}
@@ -151,12 +154,14 @@ export function MobileMediaTab() {
                       loading="lazy"
                     />
                   ) : (
-                    <div className="flex flex-col items-center justify-center text-muted-foreground gap-1">
-                      {item.type === "video" ? (
-                        <Video className="w-6 h-6 text-primary/70" />
-                      ) : (
-                        <ImageIcon className="w-6 h-6 text-primary/70" />
-                      )}
+                    <div className="flex flex-col items-center justify-center text-muted-foreground/70 gap-1.5 p-2 animate-pulse">
+                      <div className="w-8 h-8 rounded-lg bg-background/60 flex items-center justify-center">
+                        {item.type === "video" ? (
+                          <Video className="w-4 h-4 text-primary" />
+                        ) : (
+                          <ImageIcon className="w-4 h-4 text-primary" />
+                        )}
+                      </div>
                       <span className="text-[9px] uppercase font-mono tracking-wider opacity-60">
                         {item.type}
                       </span>
@@ -164,7 +169,7 @@ export function MobileMediaTab() {
                   )}
 
                   {/* Type Badge on Top-Right */}
-                  <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 backdrop-blur-xs text-[9px] font-mono text-white/90 uppercase tracking-wider">
+                  <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-xs text-[9px] font-mono text-white/90 uppercase tracking-wider">
                     {item.type}
                   </div>
 

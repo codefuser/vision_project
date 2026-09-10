@@ -156,6 +156,14 @@ export function MobileVerseTab() {
         chapter: hit.chapter,
         verse: hit.verse,
       },
+      directInput: {
+        reference: `${hit.bookNameLocal} ${hit.chapter}:${hit.verse}`,
+        text: hit.text,
+        translation: lang === "ta" ? "Tamil" : "English",
+        book: hit.book,
+        chapter: hit.chapter,
+        verse: hit.verse,
+      },
     });
   };
 

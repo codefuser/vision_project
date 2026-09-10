@@ -132,9 +132,18 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
     // Preview window reacts instantly without waiting for the projector to
     // echo back a STATE frame. The authoritative STATE follow-up will
     // overwrite this within a frame or two.
-    const cur = get().state;
-    if (cur) {
-      let next = cur;
+    const cur = get().state ?? {
+      type: "STATE" as const,
+      mode: "idle" as const,
+      currentMediaId: null,
+      index: 0,
+      total: 0,
+      playing: false,
+      black: false,
+      muted: false,
+      volume: 1,
+    };
+    let next = cur;
       switch (cmd.type) {
         case "LOAD_TEXT":
           next = {
@@ -205,7 +214,6 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
           break;
       }
       if (next !== cur) set({ state: next });
-    }
-    get().channel?.postMessage(cmd);
-  },
-}));
+      get().channel?.postMessage(cmd);
+    },
+  }));

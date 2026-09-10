@@ -3,6 +3,8 @@
  * Provides view-only public streaming of the authoritative live projection.
  */
 import type { ProjectionContentType } from "@/projection/content.types";
+import type { GroupedStyles, LogoBroadcast, TextOverlay, TextStyle } from "@/lib/broadcast";
+import type { ProjectionScaling } from "@/db/schema";
 
 export interface LiveQrHostSession {
   token: string;
@@ -19,11 +21,19 @@ export interface LiveProjectionPayload {
   isLive: boolean;
   title: string;
   type: LiveProjectionType;
-  // Bible verse specifics
+  // Mirror projection rendering properties
+  textOverlay?: TextOverlay | null;
+  textStyle?: TextStyle | null;
+  groupedStyles?: GroupedStyles | null;
+  logo?: LogoBroadcast | null;
+  scalingMode?: ProjectionScaling;
+  mediaUrl?: string | null;
+  mediaId?: string | null;
+  // Bible verse specifics (backward-compat)
   reference?: string;
   verseText?: string;
   translation?: string;
-  // Song slide specifics
+  // Song slide specifics (backward-compat)
   songTitle?: string;
   slideIndex?: number;
   totalSlides?: number;

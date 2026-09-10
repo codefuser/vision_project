@@ -131,10 +131,13 @@ export function BackgroundLayer({ background }: Props) {
       />
     ) : null;
 
+  const directUrl = (bg as any).mediaUrl as string | undefined;
+  const effectiveUrl = url || directUrl || null;
+
   if (bg.kind === "none")
     return <>{overlay}</>;
 
-  if (bg.kind === "color" || !media || !url) {
+  if (bg.kind === "color" || !effectiveUrl) {
     return (
       <>
         <div className="absolute inset-0" style={{ background: bg.gradient ?? bg.color }} />
@@ -154,13 +157,22 @@ export function BackgroundLayer({ background }: Props) {
     filter: `blur(${bg.blur}px) brightness(${bg.brightness}) contrast(${bg.contrast})`,
   };
 
+  const isVideo =
+    media?.type === "video" ||
+    Boolean(
+      effectiveUrl &&
+        (effectiveUrl.startsWith("data:video") ||
+          effectiveUrl.endsWith(".mp4") ||
+          effectiveUrl.endsWith(".webm")),
+    );
+
   return (
     <>
-      {media.type === "video" ? (
+      {isVideo ? (
         <video
-          key={media.id}
+          key={media?.id ?? "bg-video"}
           ref={videoRef}
-          src={url}
+          src={effectiveUrl}
           className="absolute inset-0 h-full w-full"
           style={style}
           autoPlay
@@ -170,7 +182,7 @@ export function BackgroundLayer({ background }: Props) {
         />
       ) : (
         <img
-          src={url}
+          src={effectiveUrl}
           alt=""
           className="absolute inset-0 h-full w-full"
           style={style}

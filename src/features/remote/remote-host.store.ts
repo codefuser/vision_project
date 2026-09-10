@@ -76,25 +76,77 @@ export function mapRemoteToLaptopTab(t: ActiveRemoteTab): WorkspaceTab {
 // In-memory cache for base64 thumbnail URLs
 const thumbDataCache = new Map<string, string>();
 
-async function getThumbnailBase64(thumbBlobId?: string | null): Promise<string | undefined> {
-  if (!thumbBlobId) return undefined;
-  if (thumbDataCache.has(thumbBlobId)) return thumbDataCache.get(thumbBlobId);
+async function getThumbnailBase64(blobId?: string | null): Promise<string | undefined> {
+  if (!blobId) return undefined;
+  if (thumbDataCache.has(blobId)) return thumbDataCache.get(blobId);
 
   try {
-    const rec = await db().blobs.get(thumbBlobId);
-    if (!rec?.blob || rec.kind !== "thumb") return undefined;
-    if (rec.blob.size > 60000) return undefined;
+    const rec = await db().blobs.get(blobId);
+    if (!rec?.blob) return undefined;
 
-    return new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        thumbDataCache.set(thumbBlobId, result);
-        resolve(result);
-      };
-      reader.onerror = () => resolve(undefined);
-      reader.readAsDataURL(rec.blob);
-    });
+    // If already a small thumb blob (<= 25KB), read it directly
+    if (
+      rec.blob.size <= 25 * 1024 &&
+      (rec.kind === "thumb" || rec.blob.type === "image/webp" || rec.blob.type === "image/jpeg")
+    ) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const res = reader.result as string;
+          if (res) thumbDataCache.set(blobId, res);
+          resolve(res);
+        };
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(rec.blob);
+      });
+    }
+
+    // For any image (original or larger thumb), resize via an offscreen canvas to compact 240x135 JPEG
+    if (
+      typeof window !== "undefined" &&
+      (rec.blob.type.startsWith("image/") || rec.kind === "thumb" || rec.kind === "original")
+    ) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(rec.blob);
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxW = 240;
+            const maxH = 135;
+            const w = img.naturalWidth || img.width || 240;
+            const h = img.naturalHeight || img.height || 135;
+            const scale = Math.min(maxW / w, maxH / h, 1);
+            const cw = Math.max(1, Math.round(w * scale));
+            const ch = Math.max(1, Math.round(h * scale));
+
+            const canvas = document.createElement("canvas");
+            canvas.width = cw;
+            canvas.height = ch;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              URL.revokeObjectURL(url);
+              resolve(undefined);
+              return;
+            }
+            ctx.drawImage(img, 0, 0, cw, ch);
+            URL.revokeObjectURL(url);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+            thumbDataCache.set(blobId, dataUrl);
+            resolve(dataUrl);
+          } catch {
+            URL.revokeObjectURL(url);
+            resolve(undefined);
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(undefined);
+        };
+        img.src = url;
+      });
+    }
+
+    return undefined;
   } catch {
     return undefined;
   }
@@ -106,13 +158,14 @@ export async function broadcastMediaThumbnails(): Promise<void> {
 
   try {
     const records = await db().media.orderBy("createdAt").reverse().limit(60).toArray();
-    const batchSize = 4;
+    const batchSize = 3;
     let currentBatch: Record<string, string> = {};
     let count = 0;
 
     for (const m of records) {
-      if (!m.thumbBlobId) continue;
-      const dataUrl = await getThumbnailBase64(m.thumbBlobId);
+      const blobId = m.thumbBlobId ?? m.blobId;
+      if (!blobId) continue;
+      const dataUrl = await getThumbnailBase64(blobId);
       if (dataUrl) {
         currentBatch[m.id] = dataUrl;
         count++;
@@ -129,7 +182,7 @@ export async function broadcastMediaThumbnails(): Promise<void> {
           });
           currentBatch = {};
           count = 0;
-          await new Promise((r) => setTimeout(r, 60));
+          await new Promise((r) => setTimeout(r, 70));
         }
       }
     }
@@ -633,8 +686,9 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
       projectedAt: h.projectedAt,
     }));
 
-  // Load media items from Dexie (lightweight metadata for fast sync, no heavy base64 strings)
+  // Load media items from Dexie (lightweight metadata for fast sync)
   let mediaList: RemoteHostSyncState["mediaList"] = [];
+  const mediaThumbnails: Record<string, string> = {};
   try {
     const records = await db().media.orderBy("createdAt").reverse().limit(60).toArray();
     mediaList = records.map((m) => ({
@@ -643,6 +697,14 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
       type: m.type,
       durationMs: m.durationMs,
     }));
+
+    // Include pre-cached thumbnails in initial sync for immediate render
+    for (const m of records.slice(0, 10)) {
+      const blobId = m.thumbBlobId ?? m.blobId;
+      if (blobId && thumbDataCache.has(blobId)) {
+        mediaThumbnails[m.id] = thumbDataCache.get(blobId)!;
+      }
+    }
   } catch (err) {
     logger.warn("Failed to load media for remote sync", err);
   }
@@ -662,6 +724,7 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
     blackScreen: Boolean(projState?.black),
     recentHistory,
     mediaList,
+    mediaThumbnails,
     textList,
   };
 }

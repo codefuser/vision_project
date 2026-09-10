@@ -22,16 +22,21 @@ import type {
   LiveQrBroadcastMessage,
 } from "./types";
 import { LIVE_QR_STORAGE_KEY } from "./types";
+import { useTextFormat } from "@/lib/text-format/store";
+import { useLogo } from "@/stores/logo.store";
+import { useSettings } from "@/stores/settings.store";
+import type { TextOverlay } from "@/lib/broadcast";
+import type { ProjectionScaling } from "@/db/schema";
 
 const CHANNEL_PREFIX = "vp_live_";
 
 // In-memory cache for the most recent projection content emitted by any adapter
 let latestEmittedContent: ProjectionContent | null = null;
 
-// Thumbnail / preview cache
+// Image preview cache (in-memory data URLs)
 const liveThumbCache = new Map<string, string>();
 
-async function getMediaDataUrl(blobId?: string | null): Promise<string | undefined> {
+async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string | undefined> {
   if (!blobId) return undefined;
   if (liveThumbCache.has(blobId)) return liveThumbCache.get(blobId);
 
@@ -39,12 +44,75 @@ async function getMediaDataUrl(blobId?: string | null): Promise<string | undefin
     const rec = await db().blobs.get(blobId);
     if (!rec?.blob) return undefined;
 
+    // Small images (<= 40KB): encode directly without transcoding
+    if (rec.blob.size <= 40 * 1024) {
+      return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          const result = reader.result as string;
+          if (result) liveThumbCache.set(blobId, result);
+          resolve(result);
+        };
+        reader.onerror = () => resolve(undefined);
+        reader.readAsDataURL(rec.blob);
+      });
+    }
+
+    // High-resolution image: render to compact 800px canvas preserving aspect ratio (~25KB payload)
+    if (typeof window !== "undefined" && (rec.blob.type.startsWith("image/") || rec.kind === "original" || rec.kind === "thumb")) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(rec.blob);
+        const img = new Image();
+        img.onload = () => {
+          try {
+            const maxDim = 800;
+            let w = img.naturalWidth || img.width;
+            let h = img.naturalHeight || img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext("2d");
+            if (!ctx) {
+              URL.revokeObjectURL(url);
+              resolve(undefined);
+              return;
+            }
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "medium";
+            ctx.drawImage(img, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+
+            const result = canvas.toDataURL("image/jpeg", 0.70);
+            liveThumbCache.set(blobId, result);
+            resolve(result);
+          } catch {
+            URL.revokeObjectURL(url);
+            resolve(undefined);
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(undefined);
+        };
+        img.src = url;
+      });
+    }
+
+    // Fallback reader
     return new Promise((resolve) => {
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        // Cache if reasonable size (< 350KB)
-        if (result && result.length < 350000) {
+        if (result && result.length < 500000) {
           liveThumbCache.set(blobId, result);
         }
         resolve(result);
@@ -57,6 +125,8 @@ async function getMediaDataUrl(blobId?: string | null): Promise<string | undefin
     return undefined;
   }
 }
+
+const getMediaDataUrl = getOptimizedMediaDataUrl;
 
 function generateLiveToken(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -130,12 +200,62 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
   const projState = useProjection.getState().state;
   const blackScreen = Boolean(projState?.black);
 
-  // ── Source 1: Universal ProjectionContent (from engine or adapter event) ──
+  const textFormat = useTextFormat.getState();
+  const effectiveGroups = projState?.groupedStyles ?? textFormat.groups;
+  const effectiveStyle = projState?.textStyle ?? textFormat.style;
+  const logoState = useLogo.getState();
+  const effectiveLogo = projState?.logo ?? {
+    enabled: logoState.enabled,
+    current: logoState.current,
+    settings: logoState.settings,
+  };
+  const effectiveScaling =
+    projState?.projectionScaling ??
+    (useSettings.getState().settings.projectionScaling as ProjectionScaling) ??
+    "auto";
+
+  // ── Source 1: Active textOverlay from useProjection state ──
+  if (
+    projState?.textOverlay &&
+    (projState.textOverlay.text ||
+      projState.textOverlay.textTa ||
+      projState.textOverlay.textEn ||
+      projState.textOverlay.reference)
+  ) {
+    const ov = projState.textOverlay;
+    const isSong = ov.kind === "song_slide";
+    const isBible = ov.kind === "bible_verse";
+
+    return {
+      isLive: true,
+      title: ov.reference || (isSong ? "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
+      type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
+      reference: ov.reference,
+      verseText: ov.text,
+      translation: ov.translation || "Bible",
+      songTitle: ov.reference || "Song",
+      lines: ov.text.split("\n"),
+      textContent: ov.text,
+      textOverlay: ov,
+      textStyle: effectiveStyle,
+      groupedStyles: effectiveGroups,
+      logo: effectiveLogo,
+      scalingMode: effectiveScaling,
+      blackScreen,
+      updatedAt: Date.now(),
+    };
+  }
+
+  // ── Source 2: Universal ProjectionContent (from engine or adapter event) ──
   if (cur) {
     const basePayload: Partial<LiveProjectionPayload> = {
       isLive: true,
       title: cur.title || "Live Presentation",
       type: cur.type,
+      textStyle: effectiveStyle,
+      groupedStyles: effectiveGroups,
+      logo: effectiveLogo,
+      scalingMode: effectiveScaling,
       blackScreen,
       updatedAt: Date.now(),
     };
@@ -143,6 +263,19 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     switch (cur.type) {
       case "bible_verse": {
         const body = cur.body as any;
+        const overlay: TextOverlay = projState?.textOverlay ?? {
+          reference: body?.reference || cur.title,
+          text: body?.text || "",
+          translation: body?.translation || "Bible",
+          subtext: body?.subtext,
+          subtranslation: body?.subtranslation,
+          referenceEn: body?.referenceEn,
+          referenceTa: body?.referenceTa,
+          textEn: body?.textEn,
+          textTa: body?.textTa,
+          mode: body?.mode,
+          kind: "bible_verse",
+        };
         return {
           ...basePayload,
           isLive: true,
@@ -151,6 +284,7 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
           reference: body?.reference || cur.title,
           verseText: body?.text || "",
           translation: body?.translation || "Bible",
+          textOverlay: overlay,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -158,6 +292,23 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
 
       case "song_slide": {
         const body = cur.body as any;
+        const lines = Array.isArray(body?.lines)
+          ? body.lines
+          : typeof body?.text === "string"
+            ? body.text.split("\n")
+            : [];
+        const joinedText = lines.join("\n");
+        const overlay: TextOverlay = projState?.textOverlay ?? {
+          reference: "",
+          referenceEn: "",
+          referenceTa: "",
+          text: joinedText,
+          textEn: "",
+          textTa: joinedText,
+          translation: "",
+          mode: "ta",
+          kind: "song_slide",
+        };
         return {
           ...basePayload,
           isLive: true,
@@ -165,11 +316,8 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
           type: "song_slide",
           songTitle: cur.title,
           slideIndex: typeof body?.slideIndex === "number" ? body.slideIndex + 1 : undefined,
-          lines: Array.isArray(body?.lines)
-            ? body.lines
-            : typeof body?.text === "string"
-              ? body.text.split("\n")
-              : [],
+          lines,
+          textOverlay: overlay,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -179,17 +327,18 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
         const body = cur.body as any;
         let imageDataUrl: string | undefined;
 
-        if (body?.mediaId) {
-          const mediaItem = await db().media.get(body.mediaId);
-          if (mediaItem?.thumbBlobId) {
-            imageDataUrl = await getMediaDataUrl(mediaItem.thumbBlobId);
-          }
-          if (!imageDataUrl && mediaItem?.blobId) {
-            imageDataUrl = await getMediaDataUrl(mediaItem.blobId);
-          }
+        // Prioritize original high-res blobId over low-res thumbnail
+        if (body?.blobId) {
+          imageDataUrl = await getOptimizedMediaDataUrl(body.blobId);
         }
-        if (!imageDataUrl && body?.blobId) {
-          imageDataUrl = await getMediaDataUrl(body.blobId);
+        if (!imageDataUrl && body?.mediaId) {
+          const mediaItem = await db().media.get(body.mediaId);
+          if (mediaItem?.blobId) {
+            imageDataUrl = await getOptimizedMediaDataUrl(mediaItem.blobId);
+          }
+          if (!imageDataUrl && mediaItem?.thumbBlobId) {
+            imageDataUrl = await getOptimizedMediaDataUrl(mediaItem.thumbBlobId);
+          }
         }
 
         return {
@@ -199,6 +348,8 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
           type: "image",
           mediaType: "image",
           imageDataUrl,
+          mediaUrl: imageDataUrl,
+          textOverlay: null,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -211,7 +362,7 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
         if (body?.mediaId) {
           const mediaItem = await db().media.get(body.mediaId);
           if (mediaItem?.thumbBlobId) {
-            posterDataUrl = await getMediaDataUrl(mediaItem.thumbBlobId);
+            posterDataUrl = await getOptimizedMediaDataUrl(mediaItem.thumbBlobId);
           }
         }
 
@@ -222,6 +373,8 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
           type: "video",
           mediaType: "video",
           imageDataUrl: posterDataUrl,
+          mediaUrl: posterDataUrl,
+          textOverlay: null,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -231,12 +384,19 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
       case "announcement":
       case "sermon_point": {
         const body = cur.body as any;
+        const rawText = body?.text || body?.heading || cur.title;
+        const overlay: TextOverlay = projState?.textOverlay ?? {
+          reference: cur.title,
+          text: rawText,
+          kind: cur.type as any,
+        };
         return {
           ...basePayload,
           isLive: true,
           title: cur.title,
           type: cur.type,
-          textContent: body?.text || body?.heading || cur.title,
+          textContent: rawText,
+          textOverlay: overlay,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -255,51 +415,17 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     }
   }
 
-  // ── Source 2: useProjection Store active textOverlay or currentMediaId ──
-  if (projState?.textOverlay && projState.textOverlay.text) {
-    const ov = projState.textOverlay;
-    if (ov.kind === "bible_verse" || ov.reference) {
-      return {
-        isLive: true,
-        title: ov.reference || "Bible Verse",
-        type: "bible_verse",
-        reference: ov.reference,
-        verseText: ov.text,
-        translation: ov.translation || "Bible",
-        blackScreen,
-        updatedAt: Date.now(),
-      };
-    }
-    if (ov.kind === "song_slide") {
-      return {
-        isLive: true,
-        title: ov.reference || "Song Lyrics",
-        type: "song_slide",
-        songTitle: ov.reference || "Song",
-        lines: ov.text.split("\n"),
-        blackScreen,
-        updatedAt: Date.now(),
-      };
-    }
-    return {
-      isLive: true,
-      title: ov.reference || "Announcement",
-      type: "live_text",
-      textContent: ov.text,
-      blackScreen,
-      updatedAt: Date.now(),
-    };
-  }
-
+  // ── Source 3: Active currentMediaId from useProjection ──
   if (projState?.currentMediaId) {
     const media = await db().media.get(projState.currentMediaId);
     if (media) {
       let imageDataUrl: string | undefined;
-      if (media.thumbBlobId) {
-        imageDataUrl = await getMediaDataUrl(media.thumbBlobId);
+      // Prioritize full quality original blobId!
+      if (media.blobId) {
+        imageDataUrl = await getOptimizedMediaDataUrl(media.blobId);
       }
-      if (!imageDataUrl && media.blobId) {
-        imageDataUrl = await getMediaDataUrl(media.blobId);
+      if (!imageDataUrl && media.thumbBlobId) {
+        imageDataUrl = await getOptimizedMediaDataUrl(media.thumbBlobId);
       }
 
       return {
@@ -308,17 +434,29 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
         type: media.type === "video" ? "video" : "image",
         mediaType: media.type === "video" ? "video" : "image",
         imageDataUrl,
+        mediaUrl: imageDataUrl,
+        mediaId: media.id,
+        textOverlay: null,
+        textStyle: effectiveStyle,
+        groupedStyles: effectiveGroups,
+        logo: effectiveLogo,
+        scalingMode: effectiveScaling,
         blackScreen,
         updatedAt: Date.now(),
       };
     }
   }
 
-  // ── Source 3: Idle / No Projection ──
+  // ── Source 4: Idle / No Projection ──
   return {
     isLive: false,
     title: "No Active Projection",
     type: "none",
+    textOverlay: null,
+    textStyle: effectiveStyle,
+    groupedStyles: effectiveGroups,
+    logo: effectiveLogo,
+    scalingMode: effectiveScaling,
     blackScreen,
     updatedAt: Date.now(),
   };
@@ -467,9 +605,13 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
       });
 
       // 2. Track presence so newly connecting viewers receive current projection instantly on join!
+      // Keep presence state lightweight by omitting heavy media data URLs
+      const presenceState = { ...payload };
+      delete (presenceState as any).imageDataUrl;
+      delete (presenceState as any).mediaUrl;
       void channel.track({
         role: "host",
-        liveState: payload,
+        liveState: presenceState,
         token: session.token,
         updatedAt: Date.now(),
       });
@@ -555,6 +697,30 @@ if (typeof window !== "undefined") {
 
   // 4. Projection Store subscriber: when black screen, clear, or overlay changes, broadcast automatically
   useProjection.subscribe(() => {
+    const { session } = useHostLiveQr.getState();
+    if (session && session.active && Date.now() < session.expiresAt) {
+      void useHostLiveQr.getState().broadcastCurrentLive();
+    }
+  });
+
+  // 5. Formatting Store subscriber: when fonts, colors, or themes change, mirror live instantly
+  useTextFormat.subscribe(() => {
+    const { session } = useHostLiveQr.getState();
+    if (session && session.active && Date.now() < session.expiresAt) {
+      void useHostLiveQr.getState().broadcastCurrentLive();
+    }
+  });
+
+  // 6. Logo Store subscriber: when logo is toggled or customized, mirror live instantly
+  useLogo.subscribe(() => {
+    const { session } = useHostLiveQr.getState();
+    if (session && session.active && Date.now() < session.expiresAt) {
+      void useHostLiveQr.getState().broadcastCurrentLive();
+    }
+  });
+
+  // 7. Settings Store subscriber: when scaling mode changes, mirror live instantly
+  useSettings.subscribe(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {
       void useHostLiveQr.getState().broadcastCurrentLive();
