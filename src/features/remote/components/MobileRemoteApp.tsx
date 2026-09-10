@@ -14,6 +14,8 @@ import {
   LogOut,
   RefreshCw,
   History,
+  Radio,
+  Power,
 } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { MobileQrScanner } from "./MobileQrScanner";
@@ -35,8 +37,11 @@ export function MobileRemoteApp() {
     blackScreen,
     activeTab,
     recentHistory,
+    remoteControlMode,
+    isHostDisabled,
     setSessionCredentials,
     authenticate,
+    setRemoteControlMode,
     setActiveTab,
     sendCommand,
     disconnect,
@@ -332,7 +337,66 @@ export function MobileRemoteApp() {
         </div>
       </header>
 
-      {/* 4 Category Navigation Tabs — Independent Device Navigation */}
+      {/* Remote Mode Switcher Bar (ON = Full Remote Control, OFF = Projection-Only Control) */}
+      <div className="px-3 py-1.5 bg-card/95 border-b border-border flex items-center justify-between gap-2 shrink-0 z-15">
+        <div className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <Radio className="w-3 h-3 text-primary" />
+            REMOTE CONTROL
+          </span>
+          <span
+            className={cn(
+              "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0",
+              remoteControlMode === "full"
+                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
+                : "bg-blue-500/15 text-blue-400 border border-blue-500/30",
+            )}
+          >
+            {remoteControlMode === "full" ? "FULL CONTROL" : "PROJ ONLY"}
+          </span>
+        </div>
+
+        {/* ON / OFF Segmented Switch */}
+        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border shrink-0">
+          <button
+            type="button"
+            onClick={() => setRemoteControlMode("full")}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1",
+              remoteControlMode === "full"
+                ? "bg-emerald-500 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title="Turn ON Full Remote Control (Tabs sync with laptop)"
+          >
+            <Power className="w-3 h-3" />
+            ON
+          </button>
+          <button
+            type="button"
+            onClick={() => setRemoteControlMode("projection_only")}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1",
+              remoteControlMode === "projection_only"
+                ? "bg-slate-700 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title="Turn OFF Full Remote Control (Tabs browse independently, projection still works)"
+          >
+            OFF
+          </button>
+        </div>
+      </div>
+
+      {/* Host Disabled Warning Banner */}
+      {isHostDisabled && (
+        <div className="px-3 py-2 bg-amber-500/15 border-b border-amber-500/30 text-amber-300 text-xs flex items-center gap-2 font-medium shrink-0 animate-pulse">
+          <ShieldAlert className="w-4 h-4 shrink-0 text-amber-400" />
+          <span>Projection control has been disabled by the laptop host.</span>
+        </div>
+      )}
+
+      {/* 4 Category Navigation Tabs */}
       <nav className="h-11 px-2 border-b border-border bg-muted/40 flex items-center justify-around shrink-0 text-xs font-medium z-10">
         <button
           type="button"

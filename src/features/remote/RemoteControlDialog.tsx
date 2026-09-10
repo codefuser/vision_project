@@ -18,14 +18,32 @@ import {
   Wifi,
   ShieldCheck,
   Users,
+  Power,
+  UserX,
 } from "lucide-react";
 import { useHostRemote } from "./remote-host.store";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+function formatLastSeen(lastSeenAt: number): string {
+  const diffSec = Math.max(0, Math.floor((Date.now() - lastSeenAt) / 1000));
+  if (diffSec < 5) return "Just now";
+  if (diffSec < 60) return `${diffSec}s ago`;
+  const diffMin = Math.floor(diffSec / 60);
+  return `${diffMin}m ago`;
+}
+
 export function RemoteControlDialog() {
-  const { session, isDialogOpen, setDialogOpen, startSession, updatePassword, endSession } =
-    useHostRemote();
+  const {
+    session,
+    isDialogOpen,
+    setDialogOpen,
+    startSession,
+    updatePassword,
+    endSession,
+    toggleDeviceEnabled,
+    disconnectDevice,
+  } = useHostRemote();
 
   const [passwordInput, setPasswordInput] = useState("");
   const [showPassword, setShowPassword] = useState(true);
@@ -100,7 +118,7 @@ export function RemoteControlDialog() {
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="sm:max-w-[480px] bg-card border-border p-6 select-none max-h-[90vh] overflow-y-auto">
+      <DialogContent className="sm:max-w-[500px] bg-card border-border p-6 select-none max-h-[90vh] overflow-y-auto">
         <DialogHeader className="space-y-1 text-left">
           <div className="flex items-center gap-2 text-primary font-semibold text-base">
             <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
@@ -239,24 +257,109 @@ export function RemoteControlDialog() {
               </div>
             </div>
 
-            {/* Connected devices list */}
+            {/* Multi-Device Management: Connected Phones list */}
             {session.connectedDevices.length > 0 && (
-              <div className="rounded-lg border border-border p-2 space-y-1.5 bg-muted/10">
-                <span className="text-[10px] font-semibold uppercase text-muted-foreground px-1">
-                  Connected Phones
-                </span>
-                {session.connectedDevices.map((device) => (
-                  <div
-                    key={device.id}
-                    className="flex items-center justify-between text-xs px-2 py-1 rounded bg-background border border-border/50"
-                  >
-                    <div className="flex items-center gap-2 truncate">
-                      <Smartphone className="w-3.5 h-3.5 text-primary shrink-0" />
-                      <span className="font-medium truncate">{device.name}</span>
-                    </div>
-                    <span className="text-[10px] text-emerald-500 font-semibold shrink-0">Live</span>
-                  </div>
-                ))}
+              <div className="rounded-xl border border-border/80 p-3 space-y-2.5 bg-muted/20">
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                    <Users className="w-3.5 h-3.5 text-primary" />
+                    Connected Devices ({session.connectedDevices.length})
+                  </span>
+                  <span className="text-[10px] text-muted-foreground">
+                    Live control permissions
+                  </span>
+                </div>
+
+                <div className="space-y-2">
+                  {session.connectedDevices.map((device) => {
+                    const isEnabled = device.enabled !== false;
+                    return (
+                      <div
+                        key={device.id}
+                        className={cn(
+                          "flex items-center justify-between gap-2 p-2.5 rounded-lg border transition-all",
+                          isEnabled
+                            ? "bg-background/80 border-border shadow-xs"
+                            : "bg-muted/40 border-dashed border-amber-500/30 opacity-80",
+                        )}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                          <div
+                            className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-xs font-semibold",
+                              isEnabled ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
+                            )}
+                          >
+                            <Smartphone className="w-4 h-4" />
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-semibold text-xs text-foreground truncate">
+                                {device.name}
+                              </span>
+                              <span
+                                className={cn(
+                                  "text-[9px] px-1.5 py-0.5 rounded font-medium shrink-0",
+                                  device.remoteMode === "projection_only"
+                                    ? "bg-blue-500/15 text-blue-400"
+                                    : "bg-purple-500/15 text-purple-400",
+                                )}
+                              >
+                                {device.remoteMode === "projection_only" ? "Proj Only" : "Full Remote"}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <span
+                                  className={cn(
+                                    "w-1.5 h-1.5 rounded-full shrink-0",
+                                    isEnabled ? "bg-emerald-500 animate-pulse" : "bg-amber-500",
+                                  )}
+                                />
+                                {isEnabled ? "Authorized" : "Disabled"}
+                              </span>
+                              <span>•</span>
+                              <span>Seen {formatLastSeen(device.lastSeenAt)}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons: ON/OFF toggle and Disconnect */}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={() => toggleDeviceEnabled(device.id, !isEnabled)}
+                            className={cn(
+                              "h-7 px-2.5 rounded-md text-[11px] font-semibold transition cursor-pointer flex items-center gap-1 border",
+                              isEnabled
+                                ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25"
+                                : "bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/25",
+                            )}
+                            title={
+                              isEnabled
+                                ? "Disable remote projection for this device"
+                                : "Enable remote projection for this device"
+                            }
+                          >
+                            <Power className="w-3 h-3" />
+                            {isEnabled ? "ON" : "OFF"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => disconnectDevice(device.id)}
+                            className="h-7 w-7 rounded-md border border-border bg-background hover:bg-destructive/15 hover:text-destructive hover:border-destructive/30 text-muted-foreground transition flex items-center justify-center cursor-pointer"
+                            title="Disconnect device"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
 
