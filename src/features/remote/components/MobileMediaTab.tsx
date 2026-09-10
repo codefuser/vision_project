@@ -142,7 +142,7 @@ export function MobileMediaTab() {
               >
                 {/* Image Preview Container (16:9 aspect ratio) */}
                 <div
-                  className="relative w-full bg-muted/70 flex items-center justify-center overflow-hidden min-h-[90px]"
+                  className="relative w-full bg-slate-950/90 flex items-center justify-center overflow-hidden min-h-[90px]"
                   style={{ aspectRatio: "16 / 9" }}
                 >
                   {hasPreview ? (
@@ -150,7 +150,7 @@ export function MobileMediaTab() {
                       src={thumbSrc}
                       alt={item.name}
                       onError={() => handleImageError(item.id)}
-                      className="w-full h-full object-cover transition duration-300 hover:scale-105"
+                      className="w-full h-full object-contain transition duration-200"
                       loading="lazy"
                     />
                   ) : (

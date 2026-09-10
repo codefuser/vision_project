@@ -218,6 +218,8 @@ interface HostRemoteState {
   endSession: () => Promise<void>;
   broadcastSyncState: () => Promise<void>;
   broadcastDelta: (delta: Partial<RemoteHostSyncState>) => Promise<void>;
+  toggleDeviceEnabled: (deviceId: string, enabled: boolean) => Promise<void>;
+  disconnectDevice: (deviceId: string) => Promise<void>;
 }
 
 // Flag to prevent loop: Laptop updates store from Remote -> store subscription does not re-broadcast back to Remote
@@ -293,12 +295,15 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
             );
             get().tokens.add(token);
 
+            const existingDev = currentSession.connectedDevices.find((d) => d.id === device.id);
             const newDevice: RemoteDevice = {
               id: device.id,
-              name: device.name || "Mobile Remote",
-              userAgent: device.userAgent,
-              connectedAt: Date.now(),
+              name: device.name || existingDev?.name || "Mobile Remote",
+              userAgent: device.userAgent || existingDev?.userAgent,
+              connectedAt: existingDev?.connectedAt || Date.now(),
               lastSeenAt: Date.now(),
+              enabled: existingDev?.enabled ?? true,
+              remoteMode: existingDev?.remoteMode ?? "full",
             };
 
             const updatedDevices = [
@@ -370,6 +375,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
 
           // Update heartbeat
           const curSess = get().session;
+          const currentDev = curSess?.connectedDevices.find((d) => d.id === clientId);
           if (curSess) {
             const updated = curSess.connectedDevices.map((d) =>
               d.id === clientId ? { ...d, lastSeenAt: Date.now() } : d,
@@ -377,10 +383,55 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
             set({ session: { ...curSess, connectedDevices: updated } });
           }
 
+          // Server-side authorization check: if device was disabled by laptop host, reject projection & commands
+          if (currentDev && currentDev.enabled === false) {
+            logger.warn(`Remote command rejected: device ${currentDev.name} (${clientId}) is disabled by host`);
+            void channel.send({
+              type: "broadcast",
+              event: "msg",
+              payload: {
+                type: "DEVICE_PERMISSION_STATUS",
+                deviceId: clientId,
+                enabled: false,
+              },
+            });
+            return;
+          }
+
           try {
             switch (command.action) {
               case "SYNC_TAB": {
-                // Independent tabs: do not change laptop active tab
+                // If device is in 'full' remote mode and enabled, sync to laptop and other remotes
+                if (currentDev && currentDev.enabled !== false && currentDev.remoteMode !== "projection_only") {
+                  const laptopTab = mapRemoteToLaptopTab(command.tab);
+                  isApplyingRemoteSync = true;
+                  try {
+                    useWorkspace.getState().setActiveTab(laptopTab);
+                  } finally {
+                    isApplyingRemoteSync = false;
+                  }
+                  // Bi-directionally broadcast to all other remotes that activeTab has changed
+                  void channel.send({
+                    type: "broadcast",
+                    event: "msg",
+                    payload: {
+                      type: "STATE_DELTA",
+                      origin: "host",
+                      originClientId: clientId,
+                      delta: { activeTab: command.tab },
+                    },
+                  });
+                }
+                break;
+              }
+
+              case "SET_DEVICE_REMOTE_MODE": {
+                if (curSess) {
+                  const updated = curSess.connectedDevices.map((d) =>
+                    d.id === clientId ? { ...d, remoteMode: command.mode } : d,
+                  );
+                  set({ session: { ...curSess, connectedDevices: updated } });
+                }
                 break;
               }
 
@@ -507,6 +558,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               case "TRANSPORT": {
                 if (command.subAction === "BLACK") {
                   projectionEngine.setBlack(Boolean(command.value));
+                  void get().broadcastDelta({ blackScreen: Boolean(command.value) });
                 } else if (command.subAction === "CLEAR") {
                   projectionEngine.clear();
                 } else if (command.subAction === "PLAY") {
@@ -536,10 +588,8 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               }
             }
 
-            // Sync updated state
-            setTimeout(() => {
-              void get().broadcastSyncState();
-            }, 60);
+            // Sync updated state instantly without artificial setTimeout delay
+            void get().broadcastSyncState();
           } catch (err) {
             logger.error("Failed to execute remote command", err);
           }
@@ -638,6 +688,65 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
       logger.warn("broadcastDelta error", e);
     }
   },
+
+  toggleDeviceEnabled: async (deviceId: string, enabled: boolean) => {
+    const s = get().session;
+    const ch = get().channel;
+    if (!s) return;
+
+    const updated = s.connectedDevices.map((d) =>
+      d.id === deviceId ? { ...d, enabled } : d,
+    );
+    set({ session: { ...s, connectedDevices: updated } });
+
+    // Inform the specific mobile client about its permission status
+    if (ch) {
+      try {
+        await ch.send({
+          type: "broadcast",
+          event: "msg",
+          payload: {
+            type: "DEVICE_PERMISSION_STATUS",
+            deviceId,
+            enabled,
+          },
+        });
+      } catch (err) {
+        logger.warn("Failed to send DEVICE_PERMISSION_STATUS", err);
+      }
+    }
+
+    toast.info(enabled ? "Device enabled for projection" : "Device disabled from projection");
+  },
+
+  disconnectDevice: async (deviceId: string) => {
+    const s = get().session;
+    const ch = get().channel;
+    if (!s) return;
+
+    const deviceToDisconnect = s.connectedDevices.find((d) => d.id === deviceId);
+    const updated = s.connectedDevices.filter((d) => d.id !== deviceId);
+    set({ session: { ...s, connectedDevices: updated } });
+
+    // Send disconnect notification to client
+    if (ch) {
+      try {
+        await ch.send({
+          type: "broadcast",
+          event: "msg",
+          payload: {
+            type: "DEVICE_DISCONNECTED",
+            deviceId,
+            reason: "Disconnected by host",
+          },
+        });
+      } catch (err) {
+        logger.warn("Failed to send DEVICE_DISCONNECTED", err);
+      }
+    }
+
+    toast.info(`Disconnected ${deviceToDisconnect?.name || "device"}`);
+  },
 }));
 
 /**
@@ -718,6 +827,7 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
   }));
 
   return {
+    activeTab,
     selectedSongId: ws.selectedSongId,
     selectedTextId: ws.selectedTextId,
     currentLive,
@@ -733,11 +843,19 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
 
 if (typeof window !== "undefined") {
   let prevSelectedSongId = useWorkspace.getState().selectedSongId;
+  let prevActiveTab = useWorkspace.getState().activeTab;
 
   useWorkspace.subscribe((state) => {
     if (isApplyingRemoteSync) return;
     const { session, channel, broadcastDelta } = useHostRemote.getState();
     if (!session || !channel) return;
+
+    // Active tab changed on laptop -> broadcast to remotes
+    if (state.activeTab !== prevActiveTab) {
+      prevActiveTab = state.activeTab;
+      const remoteTab = mapLaptopToRemoteTab(state.activeTab);
+      void broadcastDelta({ activeTab: remoteTab });
+    }
 
     // Selected song changed on laptop (shared song context for remote browsing)
     if (state.selectedSongId !== prevSelectedSongId) {

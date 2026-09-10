@@ -8,6 +8,7 @@ import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { logger } from "@/lib/logger";
+import { toast } from "sonner";
 import type {
   ActiveRemoteTab,
   RemoteAuthResponsePayload,
@@ -21,10 +22,17 @@ import { computeAuthProof, generateRandomId } from "./remote-crypto";
 const CHANNEL_PREFIX = "vp_remote_";
 const CLIENT_ID_KEY = "vp_remote_client_id";
 const SAVED_SESSION_KEY = "vp_remote_saved_session";
+const REMOTE_MODE_KEY = "vp_remote_mode";
 
 const pendingSongRequests = new Map<string, (results: any[]) => void>();
 const pendingVerseRequests = new Map<string, (results: any[]) => void>();
 const pendingChapterRequests = new Map<string, (verses: string[]) => void>();
+
+function getInitialRemoteMode(): "full" | "projection_only" {
+  if (typeof window === "undefined") return "full";
+  const saved = localStorage.getItem(REMOTE_MODE_KEY);
+  return saved === "projection_only" ? "projection_only" : "full";
+}
 
 function getOrCreateClientId(): string {
   if (typeof window === "undefined") return "mobile-unknown";
@@ -61,7 +69,11 @@ interface RemoteClientState {
   channel: RealtimeChannel | null;
   clientId: string;
 
-  // Device-local UI state (independent on mobile phone)
+  // Remote Control Mode: ON (full bidirectional tab sync) vs OFF (projection-only control)
+  remoteControlMode: "full" | "projection_only";
+  isHostDisabled: boolean;
+
+  // Device-local UI state (independent search on mobile phone)
   activeTab: ActiveRemoteTab;
   searchQuery: {
     verse: string;
@@ -84,6 +96,7 @@ interface RemoteClientState {
   // Actions
   setSessionCredentials: (sessionId: string, salt: string) => void;
   authenticate: (password: string) => Promise<boolean>;
+  setRemoteControlMode: (mode: "full" | "projection_only") => void;
   setActiveTab: (tab: ActiveRemoteTab) => void;
   setSearchQuery: (tab: ActiveRemoteTab, query: string) => void;
   setSelectedSongId: (songId: number | null) => void;
@@ -106,6 +119,9 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   errorMessage: null,
   channel: null,
   clientId: getOrCreateClientId(),
+
+  remoteControlMode: getInitialRemoteMode(),
+  isHostDisabled: false,
 
   activeTab: "verse",
   searchQuery: {
@@ -194,11 +210,13 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             const res = msg as RemoteAuthResponsePayload;
             if (res.success && res.sessionToken) {
               const sync = res.syncState;
+              const shouldSyncTab = get().remoteControlMode === "full" && Boolean(sync?.activeTab);
               set({
                 status: "connected",
                 sessionToken: res.sessionToken,
                 errorMessage: null,
-                // Tab and search are independent: do not overwrite local activeTab or searchQuery
+                isHostDisabled: false,
+                activeTab: shouldSyncTab ? sync!.activeTab! : get().activeTab,
                 selectedSongId: sync?.selectedSongId ?? null,
                 selectedTextId: sync?.selectedTextId ?? null,
                 currentLive: sync?.currentLive ?? null,
@@ -222,6 +240,12 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 // Ignore quota
               }
 
+              // Notify host of our remote control mode
+              void get().sendCommand({
+                action: "SET_DEVICE_REMOTE_MODE",
+                mode: get().remoteControlMode,
+              });
+
               resolve(true);
             } else {
               set({
@@ -233,9 +257,9 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           }
         } else if (msg.type === "STATE_SYNC") {
           const sync = msg.syncState;
+          const shouldSyncTab = get().remoteControlMode === "full" && Boolean(sync.activeTab);
           set((s) => ({
-            // Mobile navigation (activeTab, searchQuery, selectedSongId, selectedTextId) is independent on mobile device
-            // Only update live projector state, assets, and history from host
+            activeTab: shouldSyncTab ? sync.activeTab! : s.activeTab,
             currentLive: sync.currentLive,
             blackScreen: sync.blackScreen,
             recentHistory: sync.recentHistory ?? s.recentHistory,
@@ -249,8 +273,14 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           // Delta received from host
           if (msg.origin === "host") {
             const delta = msg.delta;
+            const isFromOtherClient = msg.originClientId !== get().clientId;
+            const shouldSyncTab =
+              get().remoteControlMode === "full" &&
+              Boolean(delta.activeTab) &&
+              isFromOtherClient;
+
             set((s) => ({
-              // Mobile navigation is independent on mobile device
+              activeTab: shouldSyncTab ? delta.activeTab! : s.activeTab,
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,
@@ -260,6 +290,24 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
               mediaList: delta.mediaList ?? s.mediaList,
               textList: delta.textList ?? s.textList,
             }));
+          }
+        } else if (msg.type === "DEVICE_PERMISSION_STATUS") {
+          if (msg.deviceId === get().clientId) {
+            set({ isHostDisabled: !msg.enabled });
+            if (!msg.enabled) {
+              toast.warning("Projection control disabled by laptop host");
+            } else {
+              toast.success("Projection control re-enabled by laptop host");
+            }
+          }
+        } else if (msg.type === "DEVICE_DISCONNECTED") {
+          if (msg.deviceId === get().clientId) {
+            get().disconnect();
+            set({
+              status: "error",
+              errorMessage: msg.reason || "Device disconnected by laptop host.",
+            });
+            toast.error("Disconnected by laptop host");
           }
         } else if (msg.type === "SONG_SEARCH_RESULTS") {
           const cb = pendingSongRequests.get(msg.requestId);
@@ -329,9 +377,28 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
     });
   },
 
+  setRemoteControlMode: (mode: "full" | "projection_only") => {
+    set({ remoteControlMode: mode });
+    try {
+      localStorage.setItem(REMOTE_MODE_KEY, mode);
+    } catch {
+      // Ignore
+    }
+    void get().sendCommand({ action: "SET_DEVICE_REMOTE_MODE", mode });
+    toast.info(
+      mode === "full"
+        ? "Full Remote Control (ON): Tabs will sync with laptop"
+        : "Projection-Only Mode (OFF): Tabs browse independently",
+    );
+  },
+
   setActiveTab: (tab: ActiveRemoteTab) => {
-    // Independent tab navigation on mobile: only update local active tab!
     set({ activeTab: tab });
+    const { remoteControlMode, status } = get();
+    // If in Full Remote Control mode, broadcast tab switch to laptop & other remotes
+    if (remoteControlMode === "full" && status === "connected") {
+      void get().sendCommand({ action: "SYNC_TAB", tab });
+    }
   },
 
   setSearchQuery: (tab: ActiveRemoteTab, query: string) => {
@@ -482,10 +549,21 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   },
 
   sendCommand: async (action: RemoteCommandAction) => {
-    const { channel, sessionId, sessionToken, clientId, status } = get();
+    const { channel, sessionId, sessionToken, clientId, status, isHostDisabled } = get();
     if (status !== "connected" || !channel || !sessionToken) {
       logger.warn("Cannot send command: not connected");
       return;
+    }
+
+    if (isHostDisabled) {
+      const isProjectionAction =
+        action.action.startsWith("PROJECT_") ||
+        action.action === "TRANSPORT" ||
+        action.action === "REPROJECT_HISTORY";
+      if (isProjectionAction) {
+        toast.warning("Projection control disabled by laptop host");
+        return;
+      }
     }
 
     // Gentle haptic feedback if supported

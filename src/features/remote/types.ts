@@ -15,6 +15,8 @@ export interface RemoteDevice {
   userAgent: string;
   connectedAt: number;
   lastSeenAt: number;
+  enabled?: boolean;
+  remoteMode?: "full" | "projection_only";
 }
 
 export interface RemoteSession {
@@ -99,7 +101,20 @@ export interface RemoteStateSyncPayload {
 export interface RemoteStateDeltaPayload {
   type: "STATE_DELTA";
   origin: "host" | "remote";
+  originClientId?: string;
   delta: Partial<RemoteHostSyncState>;
+}
+
+export interface RemoteDevicePermissionPayload {
+  type: "DEVICE_PERMISSION_STATUS";
+  clientId: string;
+  enabled: boolean;
+}
+
+export interface RemoteDeviceDisconnectedPayload {
+  type: "DEVICE_DISCONNECTED";
+  clientId: string;
+  reason?: string;
 }
 
 export interface RemoteSessionEndedPayload {
@@ -137,6 +152,11 @@ export type RemoteCommandAction =
   | {
       action: "SYNC_TAB";
       tab: ActiveRemoteTab;
+      originClientId?: string;
+    }
+  | {
+      action: "SET_DEVICE_REMOTE_MODE";
+      mode: "full" | "projection_only";
     }
   | {
       action: "SYNC_SEARCH";
@@ -232,4 +252,6 @@ export type RemoteBroadcastMessage =
   | RemoteHeartbeatPayload
   | RemoteSongSearchResultsPayload
   | RemoteVerseSearchResultsPayload
-  | RemoteChapterVersesPayload;
+  | RemoteChapterVersesPayload
+  | RemoteDevicePermissionPayload
+  | RemoteDeviceDisconnectedPayload;
