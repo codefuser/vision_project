@@ -44,8 +44,8 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
     const rec = await db().blobs.get(blobId);
     if (!rec?.blob) return undefined;
 
-    // Small images (<= 350KB): encode directly without transcoding
-    if (rec.blob.size <= 350 * 1024) {
+    // Small images (<= 40KB): encode directly without transcoding
+    if (rec.blob.size <= 40 * 1024) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -58,14 +58,14 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
       });
     }
 
-    // High-resolution image (> 350KB): render to crisp 1080p canvas preserving aspect ratio
-    if (typeof window !== "undefined" && rec.blob.type.startsWith("image/")) {
+    // High-resolution image: render to compact 800px canvas preserving aspect ratio (~25KB payload)
+    if (typeof window !== "undefined" && (rec.blob.type.startsWith("image/") || rec.kind === "original" || rec.kind === "thumb")) {
       return new Promise((resolve) => {
         const url = URL.createObjectURL(rec.blob);
         const img = new Image();
         img.onload = () => {
           try {
-            const maxDim = 1920;
+            const maxDim = 800;
             let w = img.naturalWidth || img.width;
             let h = img.naturalHeight || img.height;
             if (w > maxDim || h > maxDim) {
@@ -87,11 +87,11 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
               return;
             }
             ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "high";
+            ctx.imageSmoothingQuality = "medium";
             ctx.drawImage(img, 0, 0, w, h);
             URL.revokeObjectURL(url);
 
-            const result = canvas.toDataURL("image/jpeg", 0.88);
+            const result = canvas.toDataURL("image/jpeg", 0.70);
             liveThumbCache.set(blobId, result);
             resolve(result);
           } catch {
@@ -605,9 +605,13 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
       });
 
       // 2. Track presence so newly connecting viewers receive current projection instantly on join!
+      // Keep presence state lightweight by omitting heavy media data URLs
+      const presenceState = { ...payload };
+      delete (presenceState as any).imageDataUrl;
+      delete (presenceState as any).mediaUrl;
       void channel.track({
         role: "host",
-        liveState: payload,
+        liveState: presenceState,
         token: session.token,
         updatedAt: Date.now(),
       });

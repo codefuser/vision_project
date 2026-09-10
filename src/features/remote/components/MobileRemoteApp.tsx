@@ -391,12 +391,20 @@ export function MobileRemoteApp() {
         </button>
       </nav>
 
-      {/* Main Tab Body */}
+      {/* Main Tab Body — Persistent Keep-Alive for Instant 0ms Tab Switching */}
       <main className="flex-1 overflow-hidden relative">
-        {activeTab === "verse" && <MobileVerseTab />}
-        {activeTab === "song" && <MobileSongTab />}
-        {activeTab === "media" && <MobileMediaTab />}
-        {activeTab === "text" && <MobileTextTab />}
+        <div className={cn("h-full w-full", activeTab !== "verse" && "hidden")}>
+          <MobileVerseTab />
+        </div>
+        <div className={cn("h-full w-full", activeTab !== "song" && "hidden")}>
+          <MobileSongTab />
+        </div>
+        <div className={cn("h-full w-full", activeTab !== "media" && "hidden")}>
+          <MobileMediaTab />
+        </div>
+        <div className={cn("h-full w-full", activeTab !== "text" && "hidden")}>
+          <MobileTextTab />
+        </div>
 
         {/* Compact Floating Bottom LIVE Status Bar */}
         {currentLive && (

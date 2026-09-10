@@ -187,14 +187,14 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
           errorMessage: "Connection lost. Reconnecting to live projection...",
         });
 
-        // Auto-reconnect after 2 seconds
+        // Auto-reconnect after 1.2 seconds
         if (!reconnectTimeout) {
           reconnectTimeout = setTimeout(() => {
             reconnectTimeout = null;
             if (get().token === token && get().connectionStatus === "disconnected") {
               void get().connect(token);
             }
-          }, 2500);
+          }, 1200);
         }
       }
     });

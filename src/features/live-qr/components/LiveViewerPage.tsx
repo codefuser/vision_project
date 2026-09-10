@@ -144,77 +144,52 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
   const mediaUrl = liveState?.mediaUrl || liveState?.imageDataUrl || null;
   const isBlack = Boolean(liveState?.blackScreen);
 
+  // Screen Wake Lock: Keep phone screen awake during live service
+  useEffect(() => {
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ("wakeLock" in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request("screen");
+        }
+      } catch {
+        // Ignore
+      }
+    };
+    void requestWakeLock();
+    return () => {
+      wakeLock?.release?.().catch(() => {});
+    };
+  }, []);
+
   return (
-    <div className="flex h-screen w-screen flex-col bg-black text-white select-none overflow-hidden">
-      {/* ── MINIMAL FLOATING STATUS BAR (NON-INTRUSIVE MIRROR HEADER) ────────── */}
-      <header className="shrink-0 flex h-11 items-center justify-between border-b border-white/10 bg-black/80 px-3 sm:px-4 backdrop-blur-md z-30">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-6 w-6 items-center justify-center rounded-md bg-white/10 text-sky-400">
-            <Radio className="h-3.5 w-3.5" />
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold tracking-wider uppercase text-white/90">
-              Vision Live
-            </span>
-            {connectionStatus === "connected" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 px-2 py-0.5 text-[10px] font-bold text-emerald-400">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                LIVE
-              </span>
-            ) : connectionStatus === "disconnected" ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-red-500/20 border border-red-500/40 px-2 py-0.5 text-[10px] font-medium text-red-400">
-                <WifiOff className="h-2.5 w-2.5" /> Reconnecting
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/20 border border-amber-500/40 px-2 py-0.5 text-[10px] font-medium text-amber-400">
-                <Loader2 className="h-2.5 w-2.5 animate-spin" /> Connecting
-              </span>
-            )}
-          </div>
-        </div>
+    <div className="relative h-screen w-screen bg-black text-white select-none overflow-hidden flex items-center justify-center">
+      {/* ── LIVE PROJECTION MIRROR CANVAS (EDGE-TO-EDGE, TRUE 1:1 PROJECTION MIRROR) ───────── */}
+      <ProjectionRenderer
+        textOverlay={textOverlay}
+        textStyle={liveState?.textStyle}
+        groupedStyles={liveState?.groupedStyles}
+        logo={liveState?.logo}
+        mediaUrl={mediaUrl}
+        mediaType={liveState?.mediaType}
+        black={isBlack}
+        scalingMode={liveState?.scalingMode ?? "auto"}
+        idleMessage="Vision Projector"
+        className="h-full w-full"
+      />
 
-        <div className="flex items-center gap-2">
-          {/* Subtle session code indicator */}
-          <span className="hidden sm:inline-block text-[11px] text-white/40 font-mono">
-            Token: {token || activeToken}
-          </span>
-
-          {/* Fullscreen toggle button */}
-          <button
-            type="button"
-            onClick={toggleFullscreen}
-            className="flex h-7 w-7 items-center justify-center rounded-md bg-white/10 border border-white/10 text-white/70 hover:bg-white/20 hover:text-white transition cursor-pointer"
-            title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            aria-label="Toggle fullscreen"
-          >
-            {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
-          </button>
-        </div>
-      </header>
-
-      {/* ── LIVE PROJECTION MIRROR CANVAS (EDGE-TO-EDGE, ZERO CARDS) ───────── */}
-      <main className="relative flex-1 w-full h-full overflow-hidden bg-black flex items-center justify-center">
-        <ProjectionRenderer
-          textOverlay={textOverlay}
-          textStyle={liveState?.textStyle}
-          groupedStyles={liveState?.groupedStyles}
-          logo={liveState?.logo}
-          mediaUrl={mediaUrl}
-          mediaType={liveState?.mediaType}
-          black={isBlack}
-          scalingMode={liveState?.scalingMode ?? "auto"}
-          idleMessage="Vision Projector"
-          className="h-full w-full"
-        />
-
-        {/* Temporary Reconnect Banner (Floating Toast if connection drops) */}
-        {connectionStatus === "disconnected" && (
-          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 rounded-full border border-amber-500/40 bg-neutral-900/95 px-4 py-1.5 text-xs text-amber-300 shadow-2xl backdrop-blur-md pointer-events-none">
-            <WifiOff className="h-3.5 w-3.5 shrink-0 animate-pulse text-amber-400" />
-            <span>Connection interrupted. Reconnecting automatically...</span>
-          </div>
-        )}
-      </main>
+      {/* ── MINIMAL FLOATING FULLSCREEN TOGGLE (NON-INTRUSIVE, AUTO-BLENDING) ────────── */}
+      <div className="absolute top-3 right-3 z-50 pointer-events-auto">
+        <button
+          type="button"
+          onClick={toggleFullscreen}
+          className="h-9 w-9 rounded-full bg-black/50 hover:bg-black/85 border border-white/15 text-white/50 hover:text-white backdrop-blur-xs flex items-center justify-center transition-all opacity-40 hover:opacity-100 cursor-pointer shadow-xl active:scale-95"
+          title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+          aria-label="Toggle fullscreen"
+        >
+          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+        </button>
+      </div>
     </div>
   );
 }

@@ -234,11 +234,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
         } else if (msg.type === "STATE_SYNC") {
           const sync = msg.syncState;
           set((s) => ({
-            // Tab and search are independent: do not overwrite local activeTab or searchQuery
-            selectedSongId:
-              sync.selectedSongId !== undefined ? sync.selectedSongId : s.selectedSongId,
-            selectedTextId:
-              sync.selectedTextId !== undefined ? sync.selectedTextId : s.selectedTextId,
+            // Mobile navigation (activeTab, searchQuery, selectedSongId, selectedTextId) is independent on mobile device
+            // Only update live projector state, assets, and history from host
             currentLive: sync.currentLive,
             blackScreen: sync.blackScreen,
             recentHistory: sync.recentHistory ?? s.recentHistory,
@@ -253,11 +250,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           if (msg.origin === "host") {
             const delta = msg.delta;
             set((s) => ({
-              // Tab and search are independent: do not overwrite local activeTab or searchQuery
-              selectedSongId:
-                delta.selectedSongId !== undefined ? delta.selectedSongId : s.selectedSongId,
-              selectedTextId:
-                delta.selectedTextId !== undefined ? delta.selectedTextId : s.selectedTextId,
+              // Mobile navigation is independent on mobile device
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,
@@ -501,6 +494,62 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
         navigator.vibrate(35);
       } catch {
         // Ignore
+      }
+    }
+
+    // Instant optimistic state updates on mobile for 0ms response latency
+    if (action.action === "PROJECT_SONG_SLIDE") {
+      set({
+        currentLive: {
+          type: "song_slide",
+          title: `${action.input.title} (slide ${action.input.slideIndex + 1})`,
+          details: action.input.text,
+          metadata: {
+            songId: action.input.songId,
+            slideIndex: action.input.slideIndex,
+            totalSlides: action.input.totalSlides,
+          },
+        },
+        blackScreen: false,
+      });
+    } else if (action.action === "PROJECT_VERSE") {
+      if (action.directInput) {
+        set({
+          currentLive: {
+            type: "bible_verse",
+            title: action.directInput.reference,
+            details: action.directInput.text,
+          },
+          blackScreen: false,
+        });
+      }
+    } else if (action.action === "PROJECT_MEDIA") {
+      const mediaItem = get().mediaList.find((m) => m.id === action.mediaId);
+      if (mediaItem) {
+        set({
+          currentLive: {
+            type: mediaItem.type,
+            title: mediaItem.name,
+            id: `media:${mediaItem.id}`,
+            metadata: { mediaId: mediaItem.id },
+          },
+          blackScreen: false,
+        });
+      }
+    } else if (action.action === "PROJECT_TEXT") {
+      set({
+        currentLive: {
+          type: "text",
+          title: action.input.title,
+          details: action.input.text,
+        },
+        blackScreen: false,
+      });
+    } else if (action.action === "TRANSPORT") {
+      if (action.subAction === "BLACK") {
+        set({ blackScreen: Boolean(action.value) });
+      } else if (action.subAction === "CLEAR") {
+        set({ currentLive: null });
       }
     }
 
