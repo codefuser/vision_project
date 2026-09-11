@@ -299,7 +299,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
             const newDevice: RemoteDevice = {
               id: device.id,
               name: device.name || existingDev?.name || "Mobile Remote",
-              userAgent: device.userAgent || existingDev?.userAgent,
+              userAgent: device.userAgent || existingDev?.userAgent || "Unknown",
               connectedAt: existingDev?.connectedAt || Date.now(),
               lastSeenAt: Date.now(),
               enabled: existingDev?.enabled ?? true,
@@ -392,6 +392,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               payload: {
                 type: "DEVICE_PERMISSION_STATUS",
                 deviceId: clientId,
+                clientId,
                 enabled: false,
               },
             });
@@ -708,6 +709,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
           payload: {
             type: "DEVICE_PERMISSION_STATUS",
             deviceId,
+            clientId: deviceId,
             enabled,
           },
         });
@@ -737,6 +739,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
           payload: {
             type: "DEVICE_DISCONNECTED",
             deviceId,
+            clientId: deviceId,
             reason: "Disconnected by host",
           },
         });

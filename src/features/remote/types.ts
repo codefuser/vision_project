@@ -107,13 +107,15 @@ export interface RemoteStateDeltaPayload {
 
 export interface RemoteDevicePermissionPayload {
   type: "DEVICE_PERMISSION_STATUS";
-  clientId: string;
+  deviceId: string;
+  clientId?: string;
   enabled: boolean;
 }
 
 export interface RemoteDeviceDisconnectedPayload {
   type: "DEVICE_DISCONNECTED";
-  clientId: string;
+  deviceId: string;
+  clientId?: string;
   reason?: string;
 }
 

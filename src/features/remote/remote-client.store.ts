@@ -292,7 +292,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             }));
           }
         } else if (msg.type === "DEVICE_PERMISSION_STATUS") {
-          if (msg.deviceId === get().clientId) {
+          const targetDeviceId = msg.deviceId || msg.clientId;
+          if (targetDeviceId === get().clientId) {
             set({ isHostDisabled: !msg.enabled });
             if (!msg.enabled) {
               toast.warning("Projection control disabled by laptop host");
@@ -301,7 +302,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             }
           }
         } else if (msg.type === "DEVICE_DISCONNECTED") {
-          if (msg.deviceId === get().clientId) {
+          const targetDeviceId = msg.deviceId || msg.clientId;
+          if (targetDeviceId === get().clientId) {
             get().disconnect();
             set({
               status: "error",
