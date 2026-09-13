@@ -171,8 +171,16 @@ interface HostLiveQrState {
   updateCountdown: () => void;
 }
 
+export function isEligibleHostEnvironment(): boolean {
+  if (typeof window === "undefined") return false;
+  const p = window.location.pathname;
+  if (p.startsWith("/live") || p.startsWith("/remote")) return false;
+  if (window.opener && window.name === "church-projector") return false;
+  return true;
+}
+
 function loadSavedSession(): LiveQrHostSession | null {
-  if (typeof window === "undefined") return null;
+  if (!isEligibleHostEnvironment()) return null;
   try {
     const raw = localStorage.getItem(LIVE_QR_STORAGE_KEY);
     if (!raw) return null;
@@ -225,17 +233,19 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     const ov = projState.textOverlay;
     const isSong = ov.kind === "song_slide";
     const isBible = ov.kind === "bible_verse";
+    const rawText = ov.text || ov.textTa || ov.textEn || "";
+    const lines = rawText ? rawText.split("\n") : [];
 
     return {
       isLive: true,
       title: ov.reference || (isSong ? "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
       type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
       reference: ov.reference,
-      verseText: ov.text,
+      verseText: rawText,
       translation: ov.translation || "Bible",
       songTitle: ov.reference || "Song",
-      lines: ov.text.split("\n"),
-      textContent: ov.text,
+      lines,
+      textContent: rawText,
       textOverlay: ov,
       textStyle: effectiveStyle,
       groupedStyles: effectiveGroups,
@@ -523,6 +533,14 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
       },
     });
 
+    // Update store state FIRST so get().channel and get().session are valid immediately
+    set({
+      session: newSession,
+      channel,
+      isExpired: false,
+      remainingTime: formatRemainingTime(expiresAt),
+    });
+
     // Listen for new viewer join requests to instantly reply
     channel.on("broadcast", { event: "msg" }, async (payload) => {
       const msg = payload.payload as LiveQrBroadcastMessage;
@@ -533,18 +551,21 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
       }
     });
 
+    // Also listen on local BroadcastChannel for instant same-browser viewer requests
+    try {
+      const localReqBc = new BroadcastChannel(`vp_live_req_${token}`);
+      localReqBc.onmessage = async (ev) => {
+        if (ev.data?.type === "REQUEST_CURRENT_STATE") {
+          await get().broadcastCurrentLive();
+        }
+      };
+    } catch {}
+
     channel.subscribe(async (status) => {
       logger.info(`Live QR Host Channel [${channelName}] status: ${status}`);
       if (status === "SUBSCRIBED") {
         await get().broadcastCurrentLive();
       }
-    });
-
-    set({
-      session: newSession,
-      channel,
-      isExpired: false,
-      remainingTime: formatRemainingTime(expiresAt),
     });
 
     toast.success("Live Projection QR generated successfully!");
@@ -593,7 +614,7 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
     try {
       const payload = await resolveCurrentLivePayload();
 
-      // 1. Broadcast event for connected viewers
+      // 1. Broadcast event for connected viewers over Supabase Realtime
       await channel.send({
         type: "broadcast",
         event: "msg",
@@ -604,17 +625,69 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
         },
       });
 
-      // 2. Track presence so newly connecting viewers receive current projection instantly on join!
-      // Keep presence state lightweight by omitting heavy media data URLs
-      const presenceState = { ...payload };
-      delete (presenceState as any).imageDataUrl;
-      delete (presenceState as any).mediaUrl;
-      void channel.track({
-        role: "host",
-        liveState: presenceState,
-        token: session.token,
-        updatedAt: Date.now(),
-      });
+      // 2. Also broadcast over local BroadcastChannel for zero-latency local tab sync
+      try {
+        const localBc = new BroadcastChannel(`vp_live_local_${session.token}`);
+        localBc.postMessage({
+          type: "LIVE_PROJECTION_UPDATE",
+          token: session.token,
+          payload,
+        });
+        localBc.close();
+      } catch {}
+
+      // 3. Track presence so newly connecting viewers receive current projection instantly on join!
+      // Keep presence state lightweight by omitting heavy media data URLs and large logos
+      const presenceState: Partial<LiveProjectionPayload> = {
+        isLive: payload.isLive,
+        title: payload.title,
+        type: payload.type,
+        reference: payload.reference,
+        verseText: payload.verseText,
+        translation: payload.translation,
+        songTitle: payload.songTitle,
+        slideIndex: payload.slideIndex,
+        totalSlides: payload.totalSlides,
+        lines: payload.lines,
+        textContent: payload.textContent,
+        textOverlay: payload.textOverlay,
+        textStyle: payload.textStyle,
+        groupedStyles: payload.groupedStyles,
+        scalingMode: payload.scalingMode,
+        blackScreen: payload.blackScreen,
+        updatedAt: payload.updatedAt,
+      };
+
+      // Strip large dataUrls from presence logo
+      if (payload.logo) {
+        presenceState.logo = {
+          enabled: payload.logo.enabled,
+          settings: payload.logo.settings,
+          current: payload.logo.current
+            ? {
+                id: payload.logo.current.id,
+                name: payload.logo.current.name,
+                dataUrl:
+                  payload.logo.current.dataUrl?.startsWith("data:") &&
+                  payload.logo.current.dataUrl.length > 5000
+                    ? ""
+                    : payload.logo.current.dataUrl,
+              }
+            : null,
+        };
+      }
+
+      // Only track presence if channel is joined/subscribed
+      const isSubscribed =
+        channel.state === "joined" || (channel as any).subState === "joined";
+      if (isSubscribed) {
+        await channel.track({
+          role: "host",
+          liveState: presenceState,
+          token: session.token,
+          updatedAt: Date.now(),
+        }).catch((e) => logger.warn("Host track presence error", e));
+      }
     } catch (err) {
       logger.warn("Failed to broadcast live projection to viewers", err);
     }
@@ -623,7 +696,7 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
 
 // ── Background Auto-Resume & Realtime Projection Listeners ────────────────────
 
-if (typeof window !== "undefined") {
+if (isEligibleHostEnvironment()) {
   // 0. Cache all projection adapter events immediately into latestEmittedContent
   projectionEvents.on("CONTENT_PROJECTED", (e) => {
     latestEmittedContent = e.content;
@@ -661,18 +734,28 @@ if (typeof window !== "undefined") {
       }
     });
 
-    channel.subscribe(async (status) => {
-      logger.info(`Live QR Host Channel auto-resumed [${channelName}]: ${status}`);
-      if (status === "SUBSCRIBED") {
-        void useHostLiveQr.getState().broadcastCurrentLive();
-      }
-    });
+    // Also listen on local BroadcastChannel for instant same-browser requests
+    try {
+      const localReqBc = new BroadcastChannel(`vp_live_req_${saved.token}`);
+      localReqBc.onmessage = async (ev) => {
+        if (ev.data?.type === "REQUEST_CURRENT_STATE") {
+          void useHostLiveQr.getState().broadcastCurrentLive();
+        }
+      };
+    } catch {}
 
     useHostLiveQr.setState({
       session: saved,
       channel,
       isExpired: false,
       remainingTime: formatRemainingTime(saved.expiresAt),
+    });
+
+    channel.subscribe(async (status) => {
+      logger.info(`Live QR Host Channel auto-resumed [${channelName}]: ${status}`);
+      if (status === "SUBSCRIBED") {
+        void useHostLiveQr.getState().broadcastCurrentLive();
+      }
     });
   }
 
@@ -687,7 +770,19 @@ if (typeof window !== "undefined") {
     }
   }, 1000);
 
-  // 3. Projection Engine listener: whenever anything is projected, broadcast automatically
+  // 3. Periodic projection broadcast heartbeat (every 5 seconds while session is active)
+  setInterval(() => {
+    const { session, channel } = useHostLiveQr.getState();
+    if (session && session.active && Date.now() < session.expiresAt && channel) {
+      const isSubscribed =
+        channel.state === "joined" || (channel as any).subState === "joined";
+      if (isSubscribed) {
+        void useHostLiveQr.getState().broadcastCurrentLive();
+      }
+    }
+  }, 5000);
+
+  // 4. Projection Engine listener: whenever anything is projected, broadcast automatically
   projectionEngine.onAny(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {
@@ -695,7 +790,7 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // 4. Projection Store subscriber: when black screen, clear, or overlay changes, broadcast automatically
+  // 5. Projection Store subscriber: when black screen, clear, or overlay changes, broadcast automatically
   useProjection.subscribe(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {
@@ -703,7 +798,7 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // 5. Formatting Store subscriber: when fonts, colors, or themes change, mirror live instantly
+  // 6. Formatting Store subscriber: when fonts, colors, or themes change, mirror live instantly
   useTextFormat.subscribe(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {
@@ -711,7 +806,7 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // 6. Logo Store subscriber: when logo is toggled or customized, mirror live instantly
+  // 7. Logo Store subscriber: when logo is toggled or customized, mirror live instantly
   useLogo.subscribe(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {
@@ -719,7 +814,7 @@ if (typeof window !== "undefined") {
     }
   });
 
-  // 7. Settings Store subscriber: when scaling mode changes, mirror live instantly
+  // 8. Settings Store subscriber: when scaling mode changes, mirror live instantly
   useSettings.subscribe(() => {
     const { session } = useHostLiveQr.getState();
     if (session && session.active && Date.now() < session.expiresAt) {

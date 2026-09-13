@@ -52,6 +52,8 @@ interface ViewerLiveQrState {
 
 let reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
 
+let activeLocalBc: BroadcastChannel | null = null;
+
 export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
   token: null,
   connectionStatus: "idle",
@@ -95,11 +97,34 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
       }
     }
 
+    if (activeLocalBc) {
+      try {
+        activeLocalBc.close();
+      } catch {}
+      activeLocalBc = null;
+    }
+
     set({
       token,
       connectionStatus: "connecting",
       errorMessage: null,
     });
+
+    // ── 0. Local BroadcastChannel for zero-latency same-device tab sync ──
+    try {
+      activeLocalBc = new BroadcastChannel(`vp_live_local_${token}`);
+      activeLocalBc.onmessage = (ev) => {
+        const msg = ev.data;
+        if (msg?.type === "LIVE_PROJECTION_UPDATE" && msg.token === token && msg.payload) {
+          set({
+            liveState: msg.payload,
+            connectionStatus: "connected",
+            lastReceivedAt: Date.now(),
+            errorMessage: null,
+          });
+        }
+      };
+    } catch {}
 
     const clientId = get().clientId;
     const channelName = `${CHANNEL_PREFIX}${token}`;
@@ -114,17 +139,25 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
     channel.on("presence", { event: "sync" }, () => {
       try {
         const presenceMap = channel.presenceState();
-        const hostPresence = presenceMap["host"];
-        if (hostPresence && hostPresence.length > 0) {
-          const hostData = hostPresence[0] as any;
-          if (hostData?.liveState) {
-            set({
-              liveState: hostData.liveState,
-              connectionStatus: "connected",
-              lastReceivedAt: Date.now(),
-              errorMessage: null,
-            });
+        let foundState: LiveProjectionPayload | null = null;
+        for (const key of Object.keys(presenceMap)) {
+          const entries = presenceMap[key] as any[];
+          for (const entry of entries) {
+            if ((entry?.role === "host" || key === "host") && entry?.liveState) {
+              foundState = entry.liveState;
+              break;
+            }
           }
+          if (foundState) break;
+        }
+
+        if (foundState) {
+          set({
+            liveState: foundState,
+            connectionStatus: "connected",
+            lastReceivedAt: Date.now(),
+            errorMessage: null,
+          });
         }
       } catch (e) {
         logger.warn("Error processing presence sync in viewer", e);
@@ -168,19 +201,46 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
       if (status === "SUBSCRIBED") {
         set({ connectionStatus: "connected", errorMessage: null });
 
-        // Immediately request current projection state from host
-        try {
-          await channel.send({
-            type: "broadcast",
-            event: "msg",
-            payload: {
-              type: "REQUEST_CURRENT_STATE",
-              clientId,
-            },
-          });
-        } catch (e) {
-          logger.warn("Viewer failed to send REQUEST_CURRENT_STATE", e);
-        }
+        // Request current projection state from host with retries
+        const sendReq = async () => {
+          if (get().token !== token) return;
+          try {
+            await channel.send({
+              type: "broadcast",
+              event: "msg",
+              payload: {
+                type: "REQUEST_CURRENT_STATE",
+                clientId,
+              },
+            });
+          } catch (e) {
+            logger.warn("Viewer failed to send REQUEST_CURRENT_STATE", e);
+          }
+
+          // Also trigger local BroadcastChannel request
+          try {
+            const reqBc = new BroadcastChannel(`vp_live_req_${token}`);
+            reqBc.postMessage({ type: "REQUEST_CURRENT_STATE", clientId });
+            reqBc.close();
+          } catch {}
+        };
+
+        void sendReq();
+        setTimeout(() => {
+          if (!get().liveState && get().token === token) {
+            void sendReq();
+          }
+        }, 600);
+        setTimeout(() => {
+          if (!get().liveState && get().token === token) {
+            void sendReq();
+          }
+        }, 1800);
+        setTimeout(() => {
+          if (!get().liveState && get().token === token) {
+            void sendReq();
+          }
+        }, 3600);
       } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
         set({
           connectionStatus: "disconnected",
@@ -206,6 +266,12 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
     if (reconnectTimeout) {
       clearTimeout(reconnectTimeout);
       reconnectTimeout = null;
+    }
+    if (activeLocalBc) {
+      try {
+        activeLocalBc.close();
+      } catch {}
+      activeLocalBc = null;
     }
     const ch = get().channel;
     if (ch) {
