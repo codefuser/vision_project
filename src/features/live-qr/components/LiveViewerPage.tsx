@@ -112,34 +112,47 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
   }
 
   // ── SYNTHESIZE TEXT OVERLAY (FALLBACK FOR LEGACY OR PARTIAL PAYLOADS) ───────
-  const textOverlay: TextOverlay | null =
-    liveState?.textOverlay ??
-    (liveState?.type === "song_slide" && liveState.lines && liveState.lines.length > 0
-      ? {
-          reference: "",
-          referenceEn: "",
-          referenceTa: "",
-          text: liveState.lines.join("\n"),
-          textEn: "",
-          textTa: liveState.lines.join("\n"),
-          translation: "",
-          mode: "ta",
-          kind: "song_slide",
-        }
-      : liveState?.type === "bible_verse" && liveState.verseText
-        ? {
-            reference: liveState.reference || liveState.title,
-            text: liveState.verseText,
-            translation: liveState.translation || "Bible",
-            kind: "bible_verse",
-          }
-        : liveState?.textContent
-          ? {
-              reference: liveState.title,
-              text: liveState.textContent,
-              kind: liveState.type as any,
-            }
-          : null);
+  const rawOverlay = liveState?.textOverlay;
+  let textOverlay: TextOverlay | null = null;
+
+  if (rawOverlay && (rawOverlay.text || rawOverlay.textTa || rawOverlay.textEn || rawOverlay.reference)) {
+    const rawText = rawOverlay.text || rawOverlay.textTa || rawOverlay.textEn || "";
+    textOverlay = {
+      ...rawOverlay,
+      text: rawOverlay.text || rawText,
+      textTa: rawOverlay.textTa || (rawOverlay.mode === "ta" || !rawOverlay.mode ? rawText : undefined),
+      textEn: rawOverlay.textEn || (rawOverlay.mode === "en" ? rawText : undefined),
+    };
+  } else if (liveState?.type === "song_slide" && liveState.lines && liveState.lines.length > 0) {
+    const joined = liveState.lines.join("\n");
+    textOverlay = {
+      reference: "",
+      referenceEn: "",
+      referenceTa: "",
+      text: joined,
+      textEn: "",
+      textTa: joined,
+      translation: "",
+      mode: "ta",
+      kind: "song_slide",
+    };
+  } else if (liveState?.type === "bible_verse" && (liveState.verseText || liveState.textContent)) {
+    const vt = liveState.verseText || liveState.textContent || "";
+    textOverlay = {
+      reference: liveState.reference || liveState.title,
+      text: vt,
+      textTa: vt,
+      translation: liveState.translation || "Bible",
+      kind: "bible_verse",
+    };
+  } else if (liveState?.textContent) {
+    textOverlay = {
+      reference: liveState.title,
+      text: liveState.textContent,
+      textTa: liveState.textContent,
+      kind: liveState.type as any,
+    };
+  }
 
   const mediaUrl = liveState?.mediaUrl || liveState?.imageDataUrl || null;
   const isBlack = Boolean(liveState?.blackScreen);
@@ -177,6 +190,20 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
         idleMessage="Vision Projector"
         className="h-full w-full"
       />
+
+      {/* ── SUBTLE STATUS BADGE ──────────────────────────────────────────────────────── */}
+      {connectionStatus === "connected" && (
+        <div className="absolute top-3 left-3 z-50 pointer-events-none flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-emerald-400 border border-emerald-500/20 backdrop-blur-md opacity-70 hover:opacity-100 transition-opacity select-none shadow-lg">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          LIVE
+        </div>
+      )}
+      {connectionStatus === "connecting" && (
+        <div className="absolute top-3 left-3 z-50 pointer-events-none flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium tracking-wide text-sky-400 border border-sky-500/20 backdrop-blur-md opacity-80 transition-opacity select-none shadow-lg">
+          <Loader2 className="h-2.5 w-2.5 animate-spin" />
+          Connecting...
+        </div>
+      )}
 
       {/* ── MINIMAL FLOATING FULLSCREEN TOGGLE (NON-INTRUSIVE, AUTO-BLENDING) ────────── */}
       <div className="absolute top-3 right-3 z-50 pointer-events-auto">
