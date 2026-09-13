@@ -47,8 +47,10 @@ export function projectVerse(input: ProjectVerseInput): ProjectionContent<BibleV
   if (!store.projectorOpen) store.openProjector();
   const send = () =>
     useProjection.getState().send({ type: "LOAD_TEXT", overlay, style, styles: groups });
-  if (store.projectorOpen) send();
-  else setTimeout(send, 400);
+  send();
+  if (!store.projectorOpen) {
+    setTimeout(send, 300);
+  }
 
   const now = Date.now();
   const content: ProjectionContent<BibleVerseBody> = {

@@ -59,6 +59,8 @@ interface SongSearchData {
 // ── In-Memory Inverted Index Structures ───────────────────────────────────────
 const songsMap = new Map<number, SongSearchData>();
 const tokenInvertedIndex = new Map<string, Set<number>>();
+const rawTokenInvertedIndex = new Map<string, Set<number>>();
+const titleTokenInvertedIndex = new Map<string, Set<number>>();
 const trigramInvertedIndex = new Map<string, Set<number>>();
 const stemInvertedIndex = new Map<string, Set<number>>();
 
@@ -137,8 +139,18 @@ function indexSong(song: Song) {
   const titleLower = songLower(song.title);
   const titleNormTokens = titleNorm.split(/\s+/).filter((t) => t.length >= 2);
 
+  const rawTitleTokens = song.title
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((t) => t.length >= 2);
+  for (const rt of rawTitleTokens) {
+    addInvertedIndex(rawTokenInvertedIndex, rt, song.id);
+    addInvertedIndex(titleTokenInvertedIndex, rt, song.id);
+  }
+
   for (const t of titleNormTokens) {
     addInvertedIndex(tokenInvertedIndex, t, song.id);
+    addInvertedIndex(titleTokenInvertedIndex, t, song.id);
   }
   for (const s of titleStem.split(/\s+/)) {
     if (s.length >= 2) addInvertedIndex(stemInvertedIndex, s, song.id);
@@ -161,6 +173,11 @@ function indexSong(song: Song) {
       const validRawTokens: string[] = [];
 
       for (const raw of rawTokensArray) {
+        const rawClean = raw.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+        if (rawClean.length >= 2) {
+          addInvertedIndex(rawTokenInvertedIndex, rawClean, song.id);
+        }
+
         const norm = tanglishNorm(raw);
         const stem = songStem(raw);
         if (norm && stem) {
@@ -204,6 +221,8 @@ function indexSong(song: Song) {
 function clearAllIndexes() {
   songsMap.clear();
   tokenInvertedIndex.clear();
+  rawTokenInvertedIndex.clear();
+  titleTokenInvertedIndex.clear();
   trigramInvertedIndex.clear();
   stemInvertedIndex.clear();
   sortedTokens = [];
@@ -211,36 +230,73 @@ function clearAllIndexes() {
   clearQueryCache();
 }
 
-// ── Candidate lookup ──────────────────────────────────────────────────────────
+// ── Candidate lookup with multi-token scoring ───────────────────────────────
 
-function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: string[]): Set<number> {
-  const candidates = new Set<number>();
-  const MAX_CANDIDATES = 120;
+function getCandidateSongIds(
+  qTokens: string[],
+  qStems: string[],
+  qTrigrams: string[],
+  qRawTokens: string[] = [],
+): Set<number> {
+  const hitScores = new Map<number, number>();
+  const MAX_CANDIDATES = 250;
 
-  // 1. Exact token matches (titles & lyrics) — instant O(1)
-  for (const qt of qTokens) {
-    const ids = tokenInvertedIndex.get(qt);
+  // Helper to accumulate candidate points
+  const addScore = (songId: number, points: number) => {
+    hitScores.set(songId, (hitScores.get(songId) || 0) + points);
+  };
+
+  // 1. Raw exact token hits (Tamil or English)
+  for (const raw of qRawTokens) {
+    const clean = raw.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+    if (clean.length < 2) continue;
+    const ids = rawTokenInvertedIndex.get(clean);
     if (ids) {
+      const rarityBonus = ids.size < 30 ? 6 : ids.size < 100 ? 3 : 1;
       for (const id of ids) {
-        candidates.add(id);
-        if (candidates.size >= MAX_CANDIDATES) return candidates;
+        addScore(id, 4 + rarityBonus);
+      }
+    }
+    // Title match bonus
+    const titleIds = titleTokenInvertedIndex.get(clean);
+    if (titleIds) {
+      for (const id of titleIds) {
+        addScore(id, 6);
       }
     }
   }
 
-  // 2. Sound-alike stem matches — instant O(1)
+  // 2. Transliterated / Normalized Tanglish tokens
+  for (const qt of qTokens) {
+    if (qt.length < 2) continue;
+    const ids = tokenInvertedIndex.get(qt);
+    if (ids) {
+      const rarityBonus = ids.size < 30 ? 5 : ids.size < 100 ? 2 : 0;
+      for (const id of ids) {
+        addScore(id, 3 + rarityBonus);
+      }
+    }
+    const titleIds = titleTokenInvertedIndex.get(qt);
+    if (titleIds) {
+      for (const id of titleIds) {
+        addScore(id, 5);
+      }
+    }
+  }
+
+  // 3. Sound-alike stem matches
   for (const qs of qStems) {
+    if (qs.length < 2) continue;
     const ids = stemInvertedIndex.get(qs);
     if (ids) {
       for (const id of ids) {
-        candidates.add(id);
-        if (candidates.size >= MAX_CANDIDATES) return candidates;
+        addScore(id, 1);
       }
     }
   }
 
-  // 3. Prefix matching via binary search on sorted tokens — O(log N + k)
-  if (candidates.size < 40 && qTokens.length > 0) {
+  // 4. Prefix matching via binary search on sorted tokens if candidates are few
+  if (hitScores.size < 60 && qTokens.length > 0) {
     if (tokensDirty) buildSortedTokens();
     for (const qt of qTokens) {
       if (qt.length < 2) continue;
@@ -251,61 +307,44 @@ function getCandidateSongIds(qTokens: string[], qStems: string[], qTrigrams: str
         const ids = tokenInvertedIndex.get(tok);
         if (ids) {
           for (const id of ids) {
-            candidates.add(id);
-            if (candidates.size >= MAX_CANDIDATES) return candidates;
+            addScore(id, 2);
           }
         }
       }
     }
   }
 
-  // 3b. Fuzzy token match for typos (edit distance <= 1) if candidates are few (< 30)
-  if (candidates.size < 30 && qTokens.length > 0) {
-    if (tokensDirty) buildSortedTokens();
-    for (const qt of qTokens) {
-      if (qt.length < 3) continue;
-      for (let i = 0; i < sortedTokens.length; i++) {
-        const tok = sortedTokens[i];
-        if (Math.abs(tok.length - qt.length) <= 1) {
-          if (damerauLevenshtein(tok, qt) <= 1) {
-            const ids = tokenInvertedIndex.get(tok);
-            if (ids) {
-              for (const id of ids) {
-                candidates.add(id);
-                if (candidates.size >= MAX_CANDIDATES) return candidates;
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // 4. Trigrams ONLY if candidates are still very few (< 15) — strictly capped
-  if (candidates.size < 15 && qTrigrams.length > 0) {
+  // 5. Trigrams only if still very few hits (< 20)
+  if (hitScores.size < 20 && qTrigrams.length > 0) {
     for (const tri of qTrigrams) {
       const ids = trigramInvertedIndex.get(tri);
       if (ids) {
         for (const id of ids) {
-          candidates.add(id);
-          if (candidates.size >= 50) break;
+          addScore(id, 1);
+          if (hitScores.size >= 80) break;
         }
       }
-      if (candidates.size >= 50) break;
+      if (hitScores.size >= 80) break;
     }
   }
 
-  // 5. Fallback top songs if absolutely zero hits
-  if (candidates.size === 0) {
+  // 6. Fallback top songs if absolutely zero hits
+  if (hitScores.size === 0) {
     let count = 0;
     for (const id of songsMap.keys()) {
-      candidates.add(id);
+      hitScores.set(id, 1);
       count++;
       if (count >= 50) break;
     }
   }
 
-  return candidates;
+  // Rank candidate IDs by hit score (songs matching the most tokens come first)
+  const sortedCandidates = Array.from(hitScores.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_CANDIDATES)
+    .map(([id]) => id);
+
+  return new Set(sortedCandidates);
 }
 
 // ── Token match scoring ───────────────────────────────────────────────────────
@@ -403,7 +442,7 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
   const rawQueryLower = q.toLowerCase().trim();
   const qRawTokens = q.split(/\s+/).filter(Boolean);
 
-  const candidateIds = getCandidateSongIds(qTokens, qStems, qTrigrams);
+  const candidateIds = getCandidateSongIds(qTokens, qStems, qTrigrams, qRawTokens);
   const hits: SongHitWorker[] = [];
 
   for (const songId of candidateIds) {
@@ -413,16 +452,21 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
     // --- TITLE SCORING ---
     let titleScore = 0;
     const titleLower = data.titleLower;
+    const rawTitleLower = data.song.title.toLowerCase().trim();
 
-    if (titleLower === rawQueryLower || data.titleNorm === qFlat) {
+    if (titleLower === rawQueryLower || data.titleNorm === qFlat || rawTitleLower === rawQueryLower) {
+      titleScore = 1200;
+    } else if (titleLower.startsWith(rawQueryLower) || rawTitleLower.startsWith(rawQueryLower)) {
       titleScore = 1000;
-    } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qFlat)) {
-      titleScore = 750;
+    } else if (titleLower.includes(rawQueryLower) || data.titleNorm.includes(qFlat) || rawTitleLower.includes(rawQueryLower)) {
+      titleScore = 850;
+    } else if (rawQueryLower.includes(rawTitleLower) && rawTitleLower.length >= 4) {
+      titleScore = 900;
     } else if (qTokens.length) {
       // Use pre-computed titleNormTokens — no runtime split
       const { indices, scoreBonus } = getMatchIndices(data.titleNormTokens, qTokens);
       if (indices.length > 0) {
-        titleScore = (indices.length / qTokens.length) * 200 + scoreBonus;
+        titleScore = (indices.length / qTokens.length) * 350 + scoreBonus;
       }
     }
 
@@ -441,23 +485,27 @@ function evaluateSearch(query: string, limit = 120): SongHitWorker[] {
 
       // Use pre-computed lineFlat — no runtime .replace()
       const lineFlat = line.lineFlat;
+      const rawLineLower = line.text.toLowerCase().trim();
 
-      if (lineFlat === qFlat || line.text.toLowerCase() === rawQueryLower) {
-        ls = 950;
+      if (lineFlat === qFlat || rawLineLower === rawQueryLower) {
+        ls = 1000;
         indices = line.rawTokens.map((_, i) => i);
-      } else if (lineFlat.includes(qFlat)) {
-        ls = 750;
+      } else if (rawLineLower.includes(rawQueryLower) || lineFlat.includes(qFlat)) {
+        ls = 850;
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
-      } else if (qFlat.includes(lineFlat) && lineFlat.length >= 4) {
-        ls = 600;
+      } else if (
+        (qFlat.includes(lineFlat) && lineFlat.length >= 4) ||
+        (rawQueryLower.includes(rawLineLower) && rawLineLower.length >= 4)
+      ) {
+        ls = 800;
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
       } else if (qTokens.length) {
         const res = getMatchIndices(line.normTokens, qTokens, line.stemTokens, qStems);
         indices = res.indices;
         if (indices.length > 0) {
-          ls = (indices.length / qTokens.length) * 550 + res.scoreBonus;
+          ls = (indices.length / qTokens.length) * 600 + res.scoreBonus;
         }
       }
 

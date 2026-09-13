@@ -136,7 +136,7 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
     });
 
     // ── 1. Presence Sync: Instant projection state upon channel join ──
-    channel.on("presence", { event: "sync" }, () => {
+    const applyPresenceState = () => {
       try {
         const presenceMap = channel.presenceState();
         let foundState: LiveProjectionPayload | null = null;
@@ -160,9 +160,12 @@ export const useViewerLiveQr = create<ViewerLiveQrState>((set, get) => ({
           });
         }
       } catch (e) {
-        logger.warn("Error processing presence sync in viewer", e);
+        logger.warn("Error processing presence in viewer", e);
       }
-    });
+    };
+
+    channel.on("presence", { event: "sync" }, applyPresenceState);
+    channel.on("presence", { event: "join" }, applyPresenceState);
 
     // ── 2. Realtime Broadcast: Sub-50ms slide and verse projection updates ──
     channel.on("broadcast", { event: "msg" }, (payload) => {

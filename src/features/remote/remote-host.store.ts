@@ -12,7 +12,10 @@ import { db } from "@/db/schema";
 import { useTextItems } from "@/stores/text-items.store";
 import { useProjection } from "@/stores/projection.store";
 import { projectionEngine } from "@/projection/engine";
+import { projectionEvents } from "@/projection/event-bus";
 import { projectionHistory } from "@/projection/history";
+import type { ProjectionContent } from "@/projection/content.types";
+import { triggerHostLiveBroadcast } from "@/features/live-qr/live-qr-host.store";
 import { projectVerse } from "@/projection/adapters/bible.adapter";
 import { projectVerseAt } from "@/lib/bible/project-ref";
 import { projectSongSlide } from "@/projection/adapters/song.adapter";
@@ -42,6 +45,8 @@ import {
 } from "./remote-crypto";
 
 const CHANNEL_PREFIX = "vp_remote_";
+
+let latestEmittedContent: ProjectionContent | null = null;
 
 export function mapLaptopToRemoteTab(t: WorkspaceTab): ActiveRemoteTab {
   switch (t) {
@@ -402,8 +407,8 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
           try {
             switch (command.action) {
               case "SYNC_TAB": {
-                // If device is in 'full' remote mode and enabled, sync to laptop and other remotes
-                if (currentDev && currentDev.enabled !== false && currentDev.remoteMode !== "projection_only") {
+                // If device is authenticated and not explicitly disabled, sync to laptop and other remotes
+                if (!currentDev || (currentDev.enabled !== false && currentDev.remoteMode !== "projection_only")) {
                   const laptopTab = mapRemoteToLaptopTab(command.tab);
                   isApplyingRemoteSync = true;
                   try {
@@ -538,21 +543,29 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                 } else if (command.verseData) {
                   projectVerseAt(command.verseData);
                 }
+                triggerHostLiveBroadcast();
+                void get().broadcastSyncState();
                 break;
               }
 
               case "PROJECT_SONG_SLIDE": {
                 projectSongSlide(command.input);
+                triggerHostLiveBroadcast();
+                void get().broadcastSyncState();
                 break;
               }
 
               case "PROJECT_MEDIA": {
                 await projectMediaById(command.mediaId);
+                triggerHostLiveBroadcast();
+                void get().broadcastSyncState();
                 break;
               }
 
               case "PROJECT_TEXT": {
                 projectTextSlide(command.input);
+                triggerHostLiveBroadcast();
+                void get().broadcastSyncState();
                 break;
               }
 
@@ -757,7 +770,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
  */
 async function buildSyncState(): Promise<RemoteHostSyncState> {
   const ws = useWorkspace.getState();
-  const cur = projectionEngine.getCurrent();
+  const cur = projectionEngine.getCurrent() || latestEmittedContent;
   const projState = useProjection.getState().state;
 
   // Active tab & search queries
@@ -784,6 +797,23 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
           : cur.type === "song_slide"
             ? (cur.body as any)?.lines?.slice(0, 4)?.join("\n")
             : undefined,
+    };
+  } else if (
+    projState?.textOverlay &&
+    (projState.textOverlay.text ||
+      projState.textOverlay.textTa ||
+      projState.textOverlay.textEn ||
+      projState.textOverlay.reference)
+  ) {
+    const ov = projState.textOverlay;
+    const isSong = ov.kind === "song_slide";
+    const isBible = ov.kind === "bible_verse";
+    const text = ov.text || ov.textTa || ov.textEn || "";
+    currentLive = {
+      id: `live:${ov.kind || "text"}:${Date.now()}`,
+      title: ov.reference || (isSong ? "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
+      type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
+      details: text.slice(0, 300),
     };
   }
 
@@ -849,7 +879,11 @@ if (typeof window !== "undefined") {
   let prevActiveTab = useWorkspace.getState().activeTab;
 
   useWorkspace.subscribe((state) => {
-    if (isApplyingRemoteSync) return;
+    if (isApplyingRemoteSync) {
+      prevActiveTab = state.activeTab;
+      prevSelectedSongId = state.selectedSongId;
+      return;
+    }
     const { session, channel, broadcastDelta } = useHostRemote.getState();
     if (!session || !channel) return;
 
@@ -869,6 +903,31 @@ if (typeof window !== "undefined") {
 
   // Projection Engine listener: auto-sync state when projection changes
   projectionEngine.onAny(() => {
+    const { session, channel } = useHostRemote.getState();
+    if (session && channel) {
+      void useHostRemote.getState().broadcastSyncState();
+    }
+  });
+
+  // Projection Events listener: when song slide, bible verse, or text slide is projected
+  projectionEvents.on("CONTENT_PROJECTED", (e) => {
+    latestEmittedContent = e.content;
+    const { session, channel } = useHostRemote.getState();
+    if (session && channel) {
+      void useHostRemote.getState().broadcastSyncState();
+    }
+  });
+
+  projectionEvents.on("CONTENT_CLEARED", () => {
+    latestEmittedContent = null;
+    const { session, channel } = useHostRemote.getState();
+    if (session && channel) {
+      void useHostRemote.getState().broadcastSyncState();
+    }
+  });
+
+  // Projection Store subscriber: when black screen, clear, or overlay changes
+  useProjection.subscribe(() => {
     const { session, channel } = useHostRemote.getState();
     if (session && channel) {
       void useHostRemote.getState().broadcastSyncState();
