@@ -257,9 +257,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           }
         } else if (msg.type === "STATE_SYNC") {
           const sync = msg.syncState;
-          const shouldSyncTab = get().remoteControlMode === "full" && Boolean(sync.activeTab);
           set((s) => ({
-            activeTab: shouldSyncTab ? sync.activeTab! : s.activeTab,
+            // Keep mobile activeTab intact; tab switching is driven by explicit STATE_DELTA / user action
             currentLive: sync.currentLive,
             blackScreen: sync.blackScreen,
             recentHistory: sync.recentHistory ?? s.recentHistory,
@@ -441,7 +440,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           pendingSongRequests.delete(requestId);
           resolve([]);
         }
-      }, 500);
+      }, 2000);
     });
 
     void get().sendCommand({ action: "SEARCH_SONGS", query: q, requestId });
@@ -453,7 +452,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
       const { data } = await supabase
         .from("songs")
         .select("id, title, content, scale")
-        .ilike("title", `%${q}%`)
+        .or(`title.ilike.%${q}%,content.ilike.%${q}%`)
         .limit(30);
 
       if (data && data.length > 0) {
@@ -484,7 +483,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           pendingVerseRequests.delete(requestId);
           resolve([]);
         }
-      }, 500);
+      }, 2000);
     });
 
     void get().sendCommand({ action: "SEARCH_VERSES", query: q, lang: lang as "en" | "ta", requestId });

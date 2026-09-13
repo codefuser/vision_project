@@ -222,6 +222,25 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     (useSettings.getState().settings.projectionScaling as ProjectionScaling) ??
     "auto";
 
+  // Sanitize logo to ensure payload does not breach Supabase Realtime 256KB limits
+  const sanitizedLogo = effectiveLogo
+    ? {
+        enabled: effectiveLogo.enabled,
+        settings: effectiveLogo.settings,
+        current: effectiveLogo.current
+          ? {
+              id: effectiveLogo.current.id,
+              name: effectiveLogo.current.name,
+              dataUrl:
+                effectiveLogo.current.dataUrl?.startsWith("data:") &&
+                effectiveLogo.current.dataUrl.length > 30000
+                  ? ""
+                  : effectiveLogo.current.dataUrl,
+            }
+          : null,
+      }
+    : null;
+
   // ── Source 1: Active textOverlay from useProjection state ──
   if (
     projState?.textOverlay &&
@@ -236,20 +255,34 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     const rawText = ov.text || ov.textTa || ov.textEn || "";
     const lines = rawText ? rawText.split("\n") : [];
 
+    const songTitleFromCur = cur?.title?.replace(/\s*\(slide\s*\d+\)$/i, "");
+    const slideIdxFromCur =
+      typeof (cur?.body as any)?.slideIndex === "number"
+        ? (cur?.body as any).slideIndex + 1
+        : typeof (cur?.metadata as any)?.slideIndex === "number"
+          ? (cur?.metadata as any).slideIndex + 1
+          : undefined;
+    const totalSlidesFromCur =
+      typeof (cur?.metadata as any)?.totalSlides === "number"
+        ? (cur?.metadata as any).totalSlides
+        : undefined;
+
     return {
       isLive: true,
-      title: ov.reference || (isSong ? "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
+      title: ov.reference || (isSong ? cur?.title || "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
       type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
-      reference: ov.reference,
+      reference: ov.reference || (isSong ? songTitleFromCur : undefined),
       verseText: rawText,
       translation: ov.translation || "Bible",
-      songTitle: ov.reference || "Song",
+      songTitle: songTitleFromCur || ov.reference || "Song",
+      slideIndex: slideIdxFromCur,
+      totalSlides: totalSlidesFromCur,
       lines,
       textContent: rawText,
       textOverlay: ov,
       textStyle: effectiveStyle,
       groupedStyles: effectiveGroups,
-      logo: effectiveLogo,
+      logo: sanitizedLogo,
       scalingMode: effectiveScaling,
       blackScreen,
       updatedAt: Date.now(),
@@ -264,7 +297,7 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
       type: cur.type,
       textStyle: effectiveStyle,
       groupedStyles: effectiveGroups,
-      logo: effectiveLogo,
+      logo: sanitizedLogo,
       scalingMode: effectiveScaling,
       blackScreen,
       updatedAt: Date.now(),
@@ -696,22 +729,41 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
 
 // ── Background Auto-Resume & Realtime Projection Listeners ────────────────────
 
+let broadcastDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+let lastBroadcastTimestamp = 0;
+
+export function triggerHostLiveBroadcast() {
+  const { session } = useHostLiveQr.getState();
+  if (!session || !session.active || Date.now() >= session.expiresAt) return;
+
+  if (broadcastDebounceTimer) {
+    clearTimeout(broadcastDebounceTimer);
+    broadcastDebounceTimer = null;
+  }
+
+  const now = Date.now();
+  if (now - lastBroadcastTimestamp > 60) {
+    lastBroadcastTimestamp = now;
+    void useHostLiveQr.getState().broadcastCurrentLive();
+  } else {
+    broadcastDebounceTimer = setTimeout(() => {
+      broadcastDebounceTimer = null;
+      lastBroadcastTimestamp = Date.now();
+      void useHostLiveQr.getState().broadcastCurrentLive();
+    }, 25);
+  }
+}
+
 if (isEligibleHostEnvironment()) {
   // 0. Cache all projection adapter events immediately into latestEmittedContent
   projectionEvents.on("CONTENT_PROJECTED", (e) => {
     latestEmittedContent = e.content;
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   projectionEvents.on("CONTENT_CLEARED", () => {
     latestEmittedContent = null;
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   // 1. Resume saved session if still valid
@@ -784,41 +836,26 @@ if (isEligibleHostEnvironment()) {
 
   // 4. Projection Engine listener: whenever anything is projected, broadcast automatically
   projectionEngine.onAny(() => {
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   // 5. Projection Store subscriber: when black screen, clear, or overlay changes, broadcast automatically
   useProjection.subscribe(() => {
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   // 6. Formatting Store subscriber: when fonts, colors, or themes change, mirror live instantly
   useTextFormat.subscribe(() => {
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   // 7. Logo Store subscriber: when logo is toggled or customized, mirror live instantly
   useLogo.subscribe(() => {
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 
   // 8. Settings Store subscriber: when scaling mode changes, mirror live instantly
   useSettings.subscribe(() => {
-    const { session } = useHostLiveQr.getState();
-    if (session && session.active && Date.now() < session.expiresAt) {
-      void useHostLiveQr.getState().broadcastCurrentLive();
-    }
+    triggerHostLiveBroadcast();
   });
 }
