@@ -11,6 +11,7 @@ import type { MediaRecord, PlaylistRecord } from "@/db/schema";
 import { getPlaylist, touchMedia, getMedia, getSettings } from "@/db/repo";
 import type { ImageBody, ProjectionContent, ProjectionStyle, VideoBody } from "../content.types";
 import { projectionEngine } from "../engine";
+import { useProjection } from "@/stores/projection.store";
 
 function styleFromMedia(media: MediaRecord, override?: Partial<ProjectionStyle>): ProjectionStyle {
   return {
@@ -58,6 +59,8 @@ export function mediaToContent(media: MediaRecord): ProjectionContent<ImageBody 
  */
 export async function projectMedia(media: MediaRecord): Promise<ProjectionContent> {
   void touchMedia(media.id).catch(() => undefined);
+  // Clear any lingering text overlay immediately so Live QR and Preview switch to media without delay
+  useProjection.getState().send({ type: "LOAD", mediaId: media.id });
   return projectionEngine.project(mediaToContent(media));
 }
 

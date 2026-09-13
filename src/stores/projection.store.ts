@@ -144,7 +144,30 @@ export const useProjection = create<ProjectionStore>((set, get) => ({
       volume: 1,
     };
     let next = cur;
-      switch (cmd.type) {
+    switch (cmd.type) {
+      case "LOAD":
+          next = {
+            ...cur,
+            mode: "single",
+            currentMediaId: cmd.mediaId,
+            index: 0,
+            total: 1,
+            textOverlay: null,
+            black: false,
+            playing: true,
+          };
+          break;
+        case "LOAD_PLAYLIST":
+          next = {
+            ...cur,
+            mode: "slideshow",
+            currentMediaId: null,
+            index: cmd.startIndex ?? 0,
+            textOverlay: null,
+            black: false,
+            playing: true,
+          };
+          break;
         case "LOAD_TEXT":
           next = {
             ...cur,

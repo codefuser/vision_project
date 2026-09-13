@@ -13,7 +13,7 @@ import {
 import type { ProjectionScaling } from "@/db/schema";
 import { getObjectFit } from "@/lib/projection-scaling";
 import { cn } from "@/lib/utils";
-import { Tv } from "lucide-react";
+import { Tv, Play } from "lucide-react";
 
 export const STAGE_ASPECT = 16 / 9;
 export const STAGE_WIDTH = 1920;
@@ -38,6 +38,8 @@ export interface ProjectionRendererProps {
   scalingMode?: ProjectionScaling;
   /** Output display aspect ratio (width / height, defaults to 16/9) */
   screenAspect?: number;
+  /** Stage fitting mode: "stage" (16:9 mirror letterboxed) or "fill" (adaptive mobile full screen) */
+  fitMode?: "stage" | "fill";
   /** Video element ref (e.g. for preview transport control) */
   videoRef?: RefObject<HTMLVideoElement | null>;
   onLoadedMetadata?: (e: React.SyntheticEvent<HTMLVideoElement>) => void;
@@ -108,6 +110,7 @@ export function ProjectionRenderer({
   black = false,
   scalingMode = "auto",
   screenAspect,
+  fitMode = "stage",
   videoRef,
   onLoadedMetadata,
   onTimeUpdate,
@@ -116,6 +119,7 @@ export function ProjectionRenderer({
   className,
 }: ProjectionRendererProps) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const isFillMode = fitMode === "fill";
   const aspect = screenAspect ?? STAGE_ASPECT;
   const size = useFittedStage(hostRef, aspect);
   const effectiveGroups = groupedStyles ?? DEFAULT_GROUPED_STYLES;
@@ -128,6 +132,48 @@ export function ProjectionRenderer({
   );
   const isIdle = !black && !hasMedia && !hasText;
 
+  // Render media safely (prevent video tag crash on base64 image data URLs)
+  const renderMedia = () => {
+    if (!mediaUrl) return null;
+    const isVideoDataUrl = mediaType === "video" && mediaUrl.startsWith("data:");
+    const isRealVideo = mediaType === "video" && !isVideoDataUrl;
+
+    if (isRealVideo) {
+      return (
+        <video
+          ref={videoRef}
+          src={mediaUrl}
+          className="absolute inset-0 h-full w-full"
+          style={{ objectFit }}
+          autoPlay
+          playsInline
+          muted
+          onLoadedMetadata={onLoadedMetadata}
+          onTimeUpdate={onTimeUpdate}
+          onDurationChange={onDurationChange}
+        />
+      );
+    }
+
+    return (
+      <div className="relative h-full w-full flex items-center justify-center overflow-hidden">
+        <img
+          src={mediaUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full select-none"
+          style={{ objectFit }}
+          draggable={false}
+        />
+        {mediaType === "video" && (
+          <div className="absolute bottom-4 right-4 z-10 flex items-center gap-1.5 rounded-full bg-black/75 px-3 py-1 text-[11px] font-medium text-white/90 border border-white/15 backdrop-blur-md shadow-lg pointer-events-none">
+            <Play className="h-3 w-3 text-red-500 fill-current animate-pulse" />
+            <span>Playing on projector</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={hostRef}
@@ -136,65 +182,100 @@ export function ProjectionRenderer({
         className,
       )}
     >
-      {/* 16:9 Proportional Fitted Stage */}
+      {/* Container: In fill mode it adapts to the entire mobile viewport; in stage mode it enforces 16:9 */}
       <div
-        className="relative shrink-0 overflow-hidden bg-black shadow-2xl"
-        style={{
-          width: size ? `${size.width}px` : "100%",
-          height: size ? `${size.height}px` : "100%",
-          aspectRatio: "16 / 9",
-        }}
+        className={cn(
+          "relative shrink-0 overflow-hidden bg-black shadow-2xl",
+          isFillMode ? "h-full w-full" : "",
+        )}
+        style={
+          isFillMode
+            ? { width: "100%", height: "100%" }
+            : {
+                width: size ? `${size.width}px` : "100%",
+                height: size ? `${size.height}px` : "100%",
+                aspectRatio: "16 / 9",
+              }
+        }
       >
         {/* Layer A: Media (Image / Video) */}
         {!black && hasMedia && mediaUrl && (
           <div className="absolute inset-0 h-full w-full overflow-hidden bg-black">
-            {mediaType === "video" ? (
-              <video
-                ref={videoRef}
-                src={mediaUrl}
-                className="absolute inset-0 h-full w-full"
-                style={{ objectFit }}
-                autoPlay
-                playsInline
-                muted
-                onLoadedMetadata={onLoadedMetadata}
-                onTimeUpdate={onTimeUpdate}
-                onDurationChange={onDurationChange}
-              />
-            ) : (
-              <img
-                src={mediaUrl}
-                alt=""
-                className="absolute inset-0 h-full w-full select-none"
-                style={{ objectFit }}
-                draggable={false}
-              />
-            )}
-            {/* Logo overlay on top of media */}
+            {renderMedia()}
             <LogoLayer logo={logo} />
           </div>
         )}
 
-        {/* Layer B: Text Stage (1920x1080 scaled) */}
+        {/* Layer B: Text Stage */}
         {!black && !hasMedia && hasText && textOverlay && (
-          <div
-            className="relative overflow-hidden bg-black"
-            style={{
-              width: `${STAGE_WIDTH}px`,
-              height: `${STAGE_HEIGHT}px`,
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-            }}
-          >
-            <BackgroundLayer background={effectiveGroups.background} />
-            <TextOverlayRenderer
-              overlay={textOverlay}
-              style={textStyle ?? DEFAULT_TEXT_STYLE}
-              styles={effectiveGroups}
-              withBackground={false}
-            />
-            <LogoLayer logo={logo} />
-          </div>
+          isFillMode ? (
+            /* Adaptive Mobile Full-Screen Layout (no letterbox black bars on phone) */
+            <div className="absolute inset-0 flex flex-col overflow-hidden bg-black">
+              <BackgroundLayer background={effectiveGroups.background} />
+              <div className="relative flex flex-1 flex-col justify-center items-center px-6 py-8 z-10 select-none overflow-y-auto">
+                {/* Reference Pill Header */}
+                {effectiveGroups.reference.visible && textOverlay.reference && (
+                  <div className="mb-4 text-center shrink-0">
+                    <span
+                      className="inline-block rounded-full bg-black/40 px-4 py-1 text-xs md:text-sm font-bold tracking-wider backdrop-blur-md border border-white/15 text-sky-400 shadow-md"
+                      style={{
+                        fontFamily: `"${effectiveGroups.reference.fontFamily || "system-ui"}", system-ui, sans-serif`,
+                        color: effectiveGroups.reference.color || "#38bdf8",
+                      }}
+                    >
+                      {textOverlay.reference}
+                    </span>
+                  </div>
+                )}
+                {/* Body Text */}
+                <div className="flex-1 flex flex-col justify-center items-center w-full max-w-xl text-center my-auto">
+                  <p
+                    className="whitespace-pre-line text-xl sm:text-2xl font-bold leading-relaxed tracking-wide text-white drop-shadow-md"
+                    style={{
+                      fontFamily: `"${effectiveGroups.tamil.fontFamily || "system-ui"}", system-ui, sans-serif`,
+                      color: effectiveGroups.tamil.color || "#ffffff",
+                      textAlign: effectiveGroups.tamil.align || "center",
+                    }}
+                  >
+                    {textOverlay.textTa || textOverlay.text}
+                  </p>
+                  {textOverlay.mode === "both" && textOverlay.textEn && textOverlay.textEn !== textOverlay.textTa && (
+                    <p
+                      className="mt-4 whitespace-pre-line text-sm sm:text-base font-medium leading-relaxed text-neutral-300 drop-shadow-md"
+                      style={{
+                        fontFamily: `"${effectiveGroups.english.fontFamily || "system-ui"}", system-ui, sans-serif`,
+                        color: effectiveGroups.english.color || "#d4d4d8",
+                        textAlign: effectiveGroups.english.align || "center",
+                      }}
+                    >
+                      {textOverlay.textEn}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <LogoLayer logo={logo} />
+            </div>
+          ) : (
+            /* Strict 16:9 Scaled Canvas (for Desktop Monitor Stage Mirror) */
+            <div
+              className="relative overflow-hidden bg-black"
+              style={{
+                width: `${STAGE_WIDTH}px`,
+                height: `${STAGE_HEIGHT}px`,
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+            >
+              <BackgroundLayer background={effectiveGroups.background} />
+              <TextOverlayRenderer
+                overlay={textOverlay}
+                style={textStyle ?? DEFAULT_TEXT_STYLE}
+                styles={effectiveGroups}
+                withBackground={false}
+              />
+              <LogoLayer logo={logo} />
+            </div>
+          )
         )}
 
         {/* Layer C: Idle Standby */}
