@@ -7,6 +7,7 @@
  * block entirely (even if the Reference section is set to visible).
  */
 import { useProjection } from "@/stores/projection.store";
+import { projectionEngine } from "../engine";
 import { projectionEvents } from "../event-bus";
 import { projectionHistory } from "../history";
 import type { ProjectionContent, SongSlideBody } from "../content.types";
@@ -40,9 +41,6 @@ export function projectSongSlide(input: ProjectSlideInput): ProjectionContent<So
   const send = () =>
     useProjection.getState().send({ type: "LOAD_TEXT", overlay, style, styles: groups });
   send();
-  if (!store.projectorOpen) {
-    setTimeout(send, 300);
-  }
 
   const now = Date.now();
   const lines = input.text.split(/\n/);
@@ -62,6 +60,7 @@ export function projectSongSlide(input: ProjectSlideInput): ProjectionContent<So
     createdAt: now,
     updatedAt: now,
   };
+  projectionEngine.setCurrent(content);
   projectionEvents.emit({ type: "CONTENT_PROJECTED", content, previous: null });
   projectionHistory.append(content);
   return content;

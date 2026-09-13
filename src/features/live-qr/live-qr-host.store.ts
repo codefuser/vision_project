@@ -65,9 +65,9 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
         const img = new Image();
         img.onload = () => {
           try {
-            const maxDim = 640;
-            let w = img.naturalWidth || img.width || 640;
-            let h = img.naturalHeight || img.height || 360;
+            const maxDim = 1280;
+            let w = img.naturalWidth || img.width || 1280;
+            let h = img.naturalHeight || img.height || 720;
             if (w > maxDim || h > maxDim) {
               if (w > h) {
                 h = Math.round((h * maxDim) / w);
@@ -87,11 +87,11 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
               return;
             }
             ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = "medium";
+            ctx.imageSmoothingQuality = "high";
             ctx.drawImage(img, 0, 0, w, h);
             URL.revokeObjectURL(url);
 
-            const result = canvas.toDataURL("image/jpeg", 0.65);
+            const result = canvas.toDataURL("image/jpeg", 0.82);
             liveThumbCache.set(blobId, result);
             resolve(result);
           } catch {
@@ -204,8 +204,11 @@ function loadSavedSession(): LiveQrHostSession | null {
  * 4. projectionHistory.list()[0]
  */
 async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
-  const cur = projectionEngine.getCurrent() || latestEmittedContent;
   const projState = useProjection.getState().state;
+  const cur =
+    projState?.textOverlay && latestEmittedContent
+      ? latestEmittedContent
+      : projectionEngine.getCurrent() || latestEmittedContent;
   const blackScreen = Boolean(projState?.black);
 
   const textFormat = useTextFormat.getState();

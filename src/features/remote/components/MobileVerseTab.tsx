@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from "react";
-import { Search, BookOpen, Loader2 } from "lucide-react";
+import { Search, BookOpen, Loader2, X, ChevronRight, Hash } from "lucide-react";
 import { BIBLE_BOOKS, type BibleBookMeta } from "@/lib/bible/books";
 import { parseReference } from "@/lib/bible/search";
 import type { BibleLang } from "@/lib/bible/loader";
@@ -35,7 +35,29 @@ export function MobileVerseTab() {
   const [chapterVerses, setChapterVerses] = useState<string[]>([]);
   const [searchResults, setSearchResults] = useState<VerseItem[]>([]);
   const [showBookPicker, setShowBookPicker] = useState(false);
+  const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [activeTestament, setActiveTestament] = useState<"OT" | "NT">("NT");
+  const [bookFilterQuery, setBookFilterQuery] = useState("");
+  const [optimisticLiveVerse, setOptimisticLiveVerse] = useState<{
+    book: number;
+    chapter: number;
+    verse: number;
+  } | null>(null);
+
+  // Clear optimistic override once currentLive catches up or switches
+  useEffect(() => {
+    if (!optimisticLiveVerse) return;
+    if (
+      currentLive?.type === "bible_verse" &&
+      currentLive.metadata?.book === optimisticLiveVerse.book &&
+      currentLive.metadata?.chapter === optimisticLiveVerse.chapter &&
+      currentLive.metadata?.verse === optimisticLiveVerse.verse
+    ) {
+      setOptimisticLiveVerse(null);
+    } else if (currentLive && currentLive.type !== "bible_verse") {
+      setOptimisticLiveVerse(null);
+    }
+  }, [currentLive, optimisticLiveVerse]);
 
   const debouncedQuery = useDebounce(query, 150);
 
@@ -149,6 +171,11 @@ export function MobileVerseTab() {
   }, [debouncedQuery, searchResults, chapterVerses, activeBook, activeChapter, lang]);
 
   const handleProject = (hit: VerseItem) => {
+    setOptimisticLiveVerse({
+      book: hit.book,
+      chapter: hit.chapter,
+      verse: hit.verse,
+    });
     sendCommand({
       action: "PROJECT_VERSE",
       verseData: {
@@ -170,56 +197,85 @@ export function MobileVerseTab() {
   const otBooks = BIBLE_BOOKS.filter((b) => b.testament === "OT");
   const ntBooks = BIBLE_BOOKS.filter((b) => b.testament === "NT");
 
+  const filteredBooks = useMemo(() => {
+    const list = activeTestament === "OT" ? otBooks : ntBooks;
+    if (!bookFilterQuery.trim()) return list;
+    const q = bookFilterQuery.toLowerCase().trim();
+    return list.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.nameTa.toLowerCase().includes(q) ||
+        b.aliases.some((a) => a.toLowerCase().includes(q)),
+    );
+  }, [activeTestament, otBooks, ntBooks, bookFilterQuery]);
+
   return (
     <div className="flex flex-col h-full overflow-hidden bg-background">
-      {/* Search and Language bar */}
-      <div className="p-3 border-b border-border space-y-2 bg-card/60 backdrop-blur shrink-0">
-        <div className="flex items-center gap-2">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setSearchQuery("verse", e.target.value)}
-              placeholder="Search verse (e.g. John 3:16, ps 23)..."
-              className="w-full h-10 pl-9 pr-9 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            {loading ? (
-              <div className="absolute right-3 top-3 text-muted-foreground">
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              </div>
-            ) : query ? (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("verse", "")}
-                className="absolute right-2.5 top-2.5 px-1.5 py-0.5 text-xs text-muted-foreground hover:text-foreground"
-              >
-                Clear
-              </button>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowBookPicker(true)}
-            className="h-10 px-3 rounded-xl border border-border bg-secondary/80 text-secondary-foreground text-xs font-medium flex items-center gap-1.5 shrink-0 cursor-pointer"
-          >
-            <BookOpen className="w-3.5 h-3.5 text-primary" />
-            <span className="truncate max-w-[80px]">
-              {lang === "ta" ? activeBook.nameTa : activeBook.name}
-            </span>
-          </button>
+      {/* Search & Navigation Control Header */}
+      <div className="p-3 border-b border-border/80 space-y-2 bg-card/60 backdrop-blur-md shrink-0">
+        {/* Search Bar */}
+        <div className="relative">
+          <Search className="w-4 h-4 absolute left-3 top-3 text-muted-foreground" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setSearchQuery("verse", e.target.value)}
+            placeholder="Search verse (e.g. John 3:16, Ps 23, அன்பு)..."
+            className="w-full h-10 pl-9 pr-9 text-sm rounded-xl border border-input bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary/40 transition"
+          />
+          {loading ? (
+            <div className="absolute right-3 top-3 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+            </div>
+          ) : query ? (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("verse", "")}
+              className="absolute right-2.5 top-2.5 px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground font-medium rounded cursor-pointer"
+            >
+              Clear
+            </button>
+          ) : null}
         </div>
 
-        {/* Language & quick chapter selector pills */}
-        <div className="flex items-center justify-between gap-2 text-xs">
-          <div className="flex rounded-lg border border-border bg-muted/40 p-0.5">
+        {/* Book, Chapter & Language Selector Row */}
+        <div className="flex items-center justify-between gap-2">
+          {/* Book & Chapter Pills */}
+          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+            <button
+              type="button"
+              onClick={() => setShowBookPicker(true)}
+              className="h-8.5 px-2.5 rounded-lg border border-border bg-secondary/80 hover:bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1.5 min-w-0 max-w-[130px] truncate cursor-pointer transition active:scale-95"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-primary shrink-0" />
+              <span className="truncate">
+                {lang === "ta" ? activeBook.nameTa : activeBook.name}
+              </span>
+            </button>
+
+            {!query && (
+              <button
+                type="button"
+                onClick={() => setShowChapterPicker(true)}
+                className="h-8.5 px-2.5 rounded-lg border border-border bg-secondary/80 hover:bg-secondary text-secondary-foreground text-xs font-semibold flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0"
+                title="Select chapter"
+              >
+                <Hash className="w-3 h-3 text-primary" />
+                <span>Ch. {activeChapter}</span>
+              </button>
+            )}
+          </div>
+
+          {/* Language Toggle */}
+          <div className="flex rounded-lg border border-border bg-muted/60 p-0.5 shrink-0">
             <button
               type="button"
               onClick={() => setLang("ta")}
               className={cn(
-                "px-2.5 py-1 rounded-md font-medium transition cursor-pointer",
-                lang === "ta" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+                "px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer",
+                lang === "ta"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
               தமிழ்
@@ -228,53 +284,53 @@ export function MobileVerseTab() {
               type="button"
               onClick={() => setLang("en")}
               className={cn(
-                "px-2.5 py-1 rounded-md font-medium transition cursor-pointer",
-                lang === "en" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground",
+                "px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer",
+                lang === "en"
+                  ? "bg-background text-foreground shadow-xs"
+                  : "text-muted-foreground hover:text-foreground",
               )}
             >
-              English
+              EN
             </button>
           </div>
-
-          {!query && activeBook && (
-            <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-[55%]">
-              <span className="text-[11px] text-muted-foreground shrink-0 font-medium">Ch:</span>
-              {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((ch) => (
-                <button
-                  key={ch}
-                  type="button"
-                  onClick={() => setActiveChapter(ch)}
-                  className={cn(
-                    "min-w-[26px] h-6 px-1.5 text-xs rounded font-medium shrink-0 cursor-pointer",
-                    activeChapter === ch
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  )}
-                >
-                  {ch}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
       </div>
 
-      {/* Verses Cards List */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-24">
-        {results.length === 0 && !loading ? (
-          <div className="text-center py-12 text-muted-foreground text-xs space-y-1">
-            <BookOpen className="w-8 h-8 mx-auto opacity-30 mb-2" />
-            <p className="font-medium text-foreground">No verses found</p>
-            <p>Try searching &quot;John 3:16&quot;, &quot;Psalm 23&quot; or &quot;யோவான் 3:16&quot;</p>
+      {/* Verses List */}
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-28">
+        {loading && !results.length ? (
+          <div className="py-16 text-center space-y-2">
+            <Loader2 className="w-6 h-6 animate-spin text-primary mx-auto" />
+            <p className="text-xs text-muted-foreground">Loading passage scriptures...</p>
+          </div>
+        ) : results.length === 0 ? (
+          <div className="py-16 text-center text-muted-foreground space-y-2">
+            <BookOpen className="w-8 h-8 mx-auto opacity-30" />
+            <p className="font-semibold text-sm text-foreground">No verses found</p>
+            <p className="text-xs max-w-xs mx-auto">
+              {query
+                ? `No scripture matching "${query}". Try searching by book name like "John 3:16" or Tamil keywords.`
+                : "No verses available in this chapter."}
+            </p>
           </div>
         ) : (
           results.map((hit) => {
-            const isLive =
+            const isOptimisticMatch =
+              optimisticLiveVerse !== null &&
+              optimisticLiveVerse.book === hit.book &&
+              optimisticLiveVerse.chapter === hit.chapter &&
+              optimisticLiveVerse.verse === hit.verse;
+
+            const isHostLiveMatch =
               currentLive?.type === "bible_verse" &&
               ((currentLive.metadata?.book === hit.book &&
                 currentLive.metadata?.chapter === hit.chapter &&
                 currentLive.metadata?.verse === hit.verse) ||
+                currentLive.title.includes(`${hit.bookNameLocal} ${hit.chapter}:${hit.verse}`) ||
+                currentLive.title.includes(`${hit.bookName} ${hit.chapter}:${hit.verse}`) ||
                 currentLive.title.includes(`${hit.chapter}:${hit.verse}`));
+
+            const isLive = isOptimisticMatch || (!optimisticLiveVerse && isHostLiveMatch);
 
             return (
               <div
@@ -283,27 +339,30 @@ export function MobileVerseTab() {
                 className={cn(
                   "p-3.5 rounded-xl border transition cursor-pointer active:scale-[0.98] select-none text-left relative",
                   isLive
-                    ? "bg-primary/10 border-primary shadow-sm ring-1 ring-primary/40"
-                    : "bg-card border-border hover:border-primary/50 hover:bg-card/80",
+                    ? "bg-primary/10 border-primary shadow-sm ring-2 ring-primary/40"
+                    : "bg-card border-border/80 hover:border-primary/50 hover:bg-card/90",
                 )}
               >
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="font-semibold text-xs text-primary flex items-center gap-1.5">
-                    {hit.bookNameLocal} {hit.chapter}:{hit.verse}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[11px] font-bold text-primary font-mono bg-primary/10 px-2 py-0.5 rounded-md">
+                      {hit.bookNameLocal} {hit.chapter}:{hit.verse}
+                    </span>
+                  </div>
+
                   {isLive ? (
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/30">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                       LIVE
                     </span>
                   ) : (
-                    <span className="text-[11px] text-muted-foreground/70 font-medium">
+                    <span className="text-[10px] text-muted-foreground/80 font-medium">
                       Tap to Project
                     </span>
                   )}
                 </div>
 
-                <p className="text-sm text-foreground/90 leading-relaxed line-clamp-3">
+                <p className="text-sm font-medium text-foreground/90 leading-relaxed">
                   {hit.text}
                 </p>
               </div>
@@ -314,50 +373,65 @@ export function MobileVerseTab() {
 
       {/* Book Picker Modal / Sheet */}
       {showBookPicker && (
-        <div className="fixed inset-0 z-50 bg-black/80 flex flex-col justify-end">
-          <div className="bg-card border-t border-border rounded-t-2xl max-h-[85vh] flex flex-col p-4 space-y-3">
-            <div className="flex items-center justify-between border-b border-border pb-2">
-              <span className="font-semibold text-sm">Select Bible Book</span>
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex flex-col justify-end animate-in fade-in duration-150">
+          <div className="bg-card border-t border-border rounded-t-2xl max-h-[85vh] flex flex-col p-4 space-y-3 animate-in slide-in-from-bottom-6 duration-200">
+            <div className="flex items-center justify-between border-b border-border/80 pb-2">
+              <span className="font-bold text-sm">Select Bible Book</span>
               <button
                 type="button"
-                onClick={() => setShowBookPicker(false)}
-                className="text-xs text-muted-foreground hover:text-foreground cursor-pointer"
+                onClick={() => {
+                  setShowBookPicker(false);
+                  setBookFilterQuery("");
+                }}
+                className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
               >
-                Close
+                <X className="w-4 h-4" />
               </button>
             </div>
 
+            {/* Quick Book Filter Input */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-muted-foreground" />
+              <input
+                type="text"
+                value={bookFilterQuery}
+                onChange={(e) => setBookFilterQuery(e.target.value)}
+                placeholder="Type to filter books..."
+                className="w-full h-8 pl-8 pr-3 text-xs rounded-lg border border-input bg-background placeholder:text-muted-foreground/60 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+
             {/* OT / NT Tabs */}
-            <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted/60 p-1 text-xs">
+            <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted/60 p-1 text-xs">
               <button
                 type="button"
                 onClick={() => setActiveTestament("OT")}
                 className={cn(
-                  "py-1.5 rounded-md font-medium transition cursor-pointer",
+                  "py-1.5 rounded-lg font-bold transition cursor-pointer",
                   activeTestament === "OT"
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground",
                 )}
               >
-                Old Testament (பழைய ஏற்பாடு)
+                Old Testament ({otBooks.length})
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTestament("NT")}
                 className={cn(
-                  "py-1.5 rounded-md font-medium transition cursor-pointer",
+                  "py-1.5 rounded-lg font-bold transition cursor-pointer",
                   activeTestament === "NT"
-                    ? "bg-background text-foreground shadow-sm"
+                    ? "bg-background text-foreground shadow-xs"
                     : "text-muted-foreground",
                 )}
               >
-                New Testament (புதிய ஏற்பாடு)
+                New Testament ({ntBooks.length})
               </button>
             </div>
 
             {/* Books Grid */}
             <div className="flex-1 overflow-y-auto grid grid-cols-2 sm:grid-cols-3 gap-1.5 py-1">
-              {(activeTestament === "OT" ? otBooks : ntBooks).map((book) => (
+              {filteredBooks.map((book) => (
                 <button
                   key={book.index}
                   type="button"
@@ -366,20 +440,72 @@ export function MobileVerseTab() {
                     setActiveChapter(1);
                     setSearchQuery("verse", "");
                     setShowBookPicker(false);
+                    setBookFilterQuery("");
+                    setShowChapterPicker(true);
                   }}
                   className={cn(
-                    "p-2.5 rounded-lg border text-left text-xs transition cursor-pointer",
+                    "p-2.5 rounded-xl border text-left text-xs transition cursor-pointer flex items-center justify-between",
                     activeBook.index === book.index
-                      ? "border-primary bg-primary/10 text-primary font-semibold"
-                      : "border-border bg-card hover:bg-muted text-foreground",
+                      ? "border-primary bg-primary/10 text-primary font-bold shadow-xs"
+                      : "border-border/80 bg-card hover:bg-muted/60 text-foreground",
                   )}
                 >
-                  <span className="font-medium block truncate">
-                    {lang === "ta" ? book.nameTa : book.name}
-                  </span>
-                  <span className="text-[10px] text-muted-foreground block">
-                    {book.chapters} chapters
-                  </span>
+                  <div className="min-w-0">
+                    <span className="font-semibold block truncate">
+                      {lang === "ta" ? book.nameTa : book.name}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground font-mono block">
+                      {book.chapters} Ch.
+                    </span>
+                  </div>
+                  <ChevronRight className="w-3.5 h-3.5 text-muted-foreground/60 shrink-0" />
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chapter Picker Modal / Sheet */}
+      {showChapterPicker && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex flex-col justify-end animate-in fade-in duration-150">
+          <div className="bg-card border-t border-border rounded-t-2xl max-h-[75vh] flex flex-col p-4 space-y-3 animate-in slide-in-from-bottom-6 duration-200">
+            <div className="flex items-center justify-between border-b border-border/80 pb-2">
+              <div>
+                <span className="font-bold text-sm block">
+                  Select Chapter: {lang === "ta" ? activeBook.nameTa : activeBook.name}
+                </span>
+                <span className="text-[11px] text-muted-foreground">
+                  {activeBook.chapters} total chapters
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowChapterPicker(false)}
+                className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Chapters Grid */}
+            <div className="flex-1 overflow-y-auto grid grid-cols-5 sm:grid-cols-8 gap-2 py-2">
+              {Array.from({ length: activeBook.chapters }, (_, i) => i + 1).map((ch) => (
+                <button
+                  key={ch}
+                  type="button"
+                  onClick={() => {
+                    setActiveChapter(ch);
+                    setShowChapterPicker(false);
+                  }}
+                  className={cn(
+                    "h-11 rounded-xl border text-sm font-bold flex items-center justify-center transition cursor-pointer active:scale-95",
+                    activeChapter === ch
+                      ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                      : "border-border/80 bg-card hover:bg-muted text-foreground",
+                  )}
+                >
+                  {ch}
                 </button>
               ))}
             </div>

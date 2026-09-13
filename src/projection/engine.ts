@@ -65,6 +65,10 @@ class ProjectionEngineImpl {
   getCurrent(): ProjectionContent | null {
     return this.state.current;
   }
+  setCurrent(content: ProjectionContent | null): void {
+    this.bootstrap();
+    this.state = { current: content, queue: content ? [content] : [], index: 0 };
+  }
   getQueue(): readonly ProjectionContent[] {
     return this.state.queue;
   }
@@ -249,3 +253,7 @@ class ProjectionEngineImpl {
 }
 
 export const projectionEngine = new ProjectionEngineImpl();
+
+if (typeof window !== "undefined") {
+  projectionEngine.bootstrap();
+}

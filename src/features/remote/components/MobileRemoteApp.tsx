@@ -6,7 +6,6 @@ import {
   ShieldCheck,
   BookOpen,
   Music,
-  FileText,
   Film,
   Type,
   Moon,
@@ -16,6 +15,11 @@ import {
   History,
   Radio,
   Power,
+  ChevronRight,
+  SkipBack,
+  SkipForward,
+  Maximize2,
+  Tv,
 } from "lucide-react";
 import { useRemoteClient } from "../remote-client.store";
 import { MobileQrScanner } from "./MobileQrScanner";
@@ -94,10 +98,21 @@ export function MobileRemoteApp() {
     setSessionCredentials(scannedSessionId, scannedSalt);
   };
 
+  // Helper for live song transport
+  const isLiveSong = currentLive?.type === "song_slide";
+  const songSlideIndex =
+    typeof currentLive?.metadata?.slideIndex === "number"
+      ? (currentLive.metadata.slideIndex as number)
+      : undefined;
+  const songTotalSlides =
+    typeof currentLive?.metadata?.totalSlides === "number"
+      ? (currentLive.metadata.totalSlides as number)
+      : undefined;
+
   // ── STATE 1: NO SESSION ID (LANDING / SCAN) ─────────────────────────────────
   if (!sessionId) {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 select-none">
+      <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 text-foreground flex flex-col items-center justify-center p-4 select-none">
         {showScanner && (
           <MobileQrScanner
             onScan={handleQrScanned}
@@ -106,46 +121,50 @@ export function MobileRemoteApp() {
         )}
 
         <div className="w-full max-w-sm space-y-6 text-center">
-          <div className="space-y-2">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 mx-auto flex items-center justify-center shadow-lg">
-              <Smartphone className="w-8 h-8" />
+          <div className="space-y-3">
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 text-primary border border-primary/20 mx-auto flex items-center justify-center shadow-xl shadow-primary/5 ring-4 ring-primary/5">
+              <Smartphone className="w-10 h-10" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight">Vision Projector</h1>
-            <p className="text-xs text-muted-foreground">Mobile Remote Controller</p>
+            <div>
+              <h1 className="text-2xl font-black tracking-tight text-foreground">VersoLyn Remote</h1>
+              <p className="text-xs font-medium text-muted-foreground mt-0.5">
+                Wireless Church Presentation Controller
+              </p>
+            </div>
           </div>
 
-          <div className="p-5 rounded-2xl border border-border bg-card/70 backdrop-blur shadow-sm space-y-4">
+          <div className="p-5 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md shadow-lg space-y-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Scan the QR code displayed on the laptop screen to connect to live church projection.
+              Scan the QR code displayed on the laptop or enter the session credentials to begin live control.
             </p>
 
             <button
               type="button"
               onClick={() => setShowScanner(true)}
-              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] transition cursor-pointer shadow-md"
+              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-95 active:scale-[0.98] transition cursor-pointer shadow-md shadow-primary/20"
             >
-              <ScanLine className="w-5 h-5" /> Scan QR Code
+              <ScanLine className="w-5 h-5" /> Scan Host QR Code
             </button>
           </div>
 
           <form
             onSubmit={handleManualSessionSubmit}
-            className="p-4 rounded-xl border border-border/70 bg-muted/30 text-left space-y-3 text-xs"
+            className="p-4 rounded-xl border border-border/60 bg-muted/40 text-left space-y-3 text-xs"
           >
-            <span className="font-semibold text-foreground/80 block">Or enter manually:</span>
+            <span className="font-semibold text-foreground/80 block">Or connect manually:</span>
             <input
               type="text"
               value={manualSession}
               onChange={(e) => setManualSession(e.target.value)}
               placeholder="Session ID (e.g. vp-7x8a2)"
-              className="w-full h-9 px-3 rounded-lg border border-input bg-background font-mono focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full h-9 px-3 rounded-lg border border-input bg-background font-mono focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
             <button
               type="submit"
               disabled={!manualSession.trim()}
-              className="w-full h-8 rounded-lg bg-secondary text-secondary-foreground font-medium text-xs disabled:opacity-40 cursor-pointer"
+              className="w-full h-9 rounded-lg bg-secondary text-secondary-foreground font-semibold text-xs disabled:opacity-40 cursor-pointer active:scale-[0.98] transition"
             >
-              Continue
+              Continue to Password
             </button>
           </form>
         </div>
@@ -156,39 +175,40 @@ export function MobileRemoteApp() {
   // ── STATE 2: ENTER PASSWORD ─────────────────────────────────────────────────
   if (status !== "connected") {
     return (
-      <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-4 select-none">
+      <div className="min-h-screen bg-gradient-to-b from-background via-background/95 to-muted/20 text-foreground flex flex-col items-center justify-center p-4 select-none">
         <div className="w-full max-w-sm space-y-5 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-primary/10 text-primary border border-primary/20 mx-auto flex items-center justify-center shadow-md">
-            <ShieldCheck className="w-7 h-7" />
+          <div className="w-16 h-16 rounded-2xl bg-primary/10 text-primary border border-primary/20 mx-auto flex items-center justify-center shadow-lg ring-4 ring-primary/5">
+            <ShieldCheck className="w-8 h-8" />
           </div>
 
           <div>
-            <h1 className="text-lg font-bold">Enter Remote Password</h1>
-            <span className="text-[11px] font-mono text-muted-foreground uppercase">
-              Session: {sessionId}
-            </span>
+            <h1 className="text-xl font-bold tracking-tight">Enter Session Password</h1>
+            <div className="mt-1 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-muted border border-border font-mono text-xs text-muted-foreground">
+              <span>Session:</span>
+              <span className="font-bold text-foreground">{sessionId}</span>
+            </div>
           </div>
 
           <form
             onSubmit={handleConnect}
-            className="p-5 rounded-2xl border border-border bg-card/80 backdrop-blur shadow-sm space-y-4"
+            className="p-5 rounded-2xl border border-border/80 bg-card/80 backdrop-blur-md shadow-lg space-y-4"
           >
             <div className="space-y-1.5 text-left">
-              <label className="text-xs font-semibold text-foreground block">
-                Session Password
+              <label className="text-xs font-semibold text-foreground/90 block">
+                Session Passphrase
               </label>
               <input
                 type="password"
                 autoFocus
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter password set on laptop..."
-                className="w-full h-11 px-3 text-sm font-mono tracking-wider rounded-xl border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center"
+                placeholder="Enter 4-6 digit passphrase..."
+                className="w-full h-12 px-3 text-base font-mono tracking-widest rounded-xl border border-input bg-background focus:outline-none focus:ring-2 focus:ring-primary/50 text-center font-bold"
               />
             </div>
 
             {errorMessage && (
-              <div className="p-2.5 rounded-lg bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2 text-left">
+              <div className="p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs flex items-center gap-2 text-left">
                 <ShieldAlert className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -197,11 +217,11 @@ export function MobileRemoteApp() {
             <button
               type="submit"
               disabled={authenticating || !password.trim()}
-              className="w-full h-11 rounded-xl bg-primary text-primary-foreground font-medium text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition cursor-pointer disabled:opacity-50 shadow"
+              className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold text-sm flex items-center justify-center gap-2 hover:opacity-90 active:scale-[0.98] transition cursor-pointer disabled:opacity-50 shadow-md shadow-primary/20"
             >
               {authenticating ? (
                 <>
-                  <RefreshCw className="w-4 h-4 animate-spin" /> Verifying...
+                  <RefreshCw className="w-4 h-4 animate-spin" /> Verifying Credentials...
                 </>
               ) : (
                 "Connect to Projector"
@@ -212,9 +232,9 @@ export function MobileRemoteApp() {
           <button
             type="button"
             onClick={disconnect}
-            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer"
+            className="text-xs text-muted-foreground hover:text-foreground underline underline-offset-4 cursor-pointer transition"
           >
-            Scan a different QR Code
+            Scan a different session
           </button>
         </div>
       </div>
@@ -229,164 +249,109 @@ export function MobileRemoteApp() {
         <MobileRecentSheet onClose={() => setShowRecentSheet(false)} />
       )}
 
-      {/* Live Now Modal */}
+      {/* Live Now Detailed Modal */}
       <MobileLiveNowModal />
 
       {/* Top Header Bar */}
-      <header className="h-12 px-3 border-b border-border bg-card/80 backdrop-blur flex items-center justify-between shrink-0 z-20">
-        {/* Status & Live Ticker (Clickable to open Live modal) */}
-        <div
-          onClick={() => setLiveModalOpen(true)}
-          className="flex items-center gap-2 min-w-0 flex-1 mr-2 cursor-pointer group py-1 px-1.5 rounded-lg hover:bg-muted/50 transition"
-          title="Click to view Live Projection details"
-        >
-          <span
-            className={cn(
-              "w-2 h-2 rounded-full shrink-0",
-              currentLive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground",
-            )}
-          />
-          <div className="min-w-0 truncate">
-            {currentLive ? (
-              <span className="text-xs font-semibold text-foreground truncate block group-hover:text-primary transition">
-                {currentLive.title}
-              </span>
-            ) : (
-              <span className="text-xs text-muted-foreground">Connected • Projector Ready</span>
-            )}
+      <header className="h-14 px-3 border-b border-border/80 bg-card/85 backdrop-blur-md flex items-center justify-between shrink-0 z-20 shadow-xs">
+        {/* Connection & Session Badge */}
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/25">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-[11px] font-bold text-emerald-400 tracking-tight">ONLINE</span>
           </div>
+          <span className="text-[11px] font-mono text-muted-foreground hidden sm:inline">
+            {sessionId}
+          </span>
         </div>
 
-        {/* Quick actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* Dedicated LIVE Button */}
+        {/* Center Mode Switcher Pill */}
+        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border/70">
           <button
             type="button"
-            onClick={() => setLiveModalOpen(true)}
+            onClick={() => setRemoteControlMode("full")}
             className={cn(
-              "h-8 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition cursor-pointer border",
-              currentLive
-                ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400 hover:bg-emerald-500/25 shadow-xs"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80 border-border opacity-80",
+              "px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer flex items-center gap-1",
+              remoteControlMode === "full"
+                ? "bg-emerald-500 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
             )}
-            title="Open Live Projection View"
+            title="Full Control: Tabs sync with laptop"
           >
-            <span
-              className={cn(
-                "w-2 h-2 rounded-full",
-                currentLive ? "bg-emerald-500 animate-ping" : "bg-muted-foreground",
-              )}
-            />
-            <span>LIVE</span>
+            <Power className="w-3 h-3" />
+            Sync
           </button>
+          <button
+            type="button"
+            onClick={() => setRemoteControlMode("projection_only")}
+            className={cn(
+              "px-2.5 py-1 rounded-md text-[11px] font-bold transition cursor-pointer flex items-center gap-1",
+              remoteControlMode === "projection_only"
+                ? "bg-slate-700 text-white shadow-xs"
+                : "text-muted-foreground hover:text-foreground",
+            )}
+            title="Solo Browse: Browse privately without moving laptop screen"
+          >
+            Solo
+          </button>
+        </div>
 
-          {/* Recent history button */}
+        {/* Quick Actions Cluster */}
+        <div className="flex items-center gap-1 shrink-0">
+          {/* Recent History Button */}
           <button
             type="button"
             onClick={() => setShowRecentSheet(true)}
-            className="h-8 px-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs flex items-center gap-1 cursor-pointer"
+            className="h-8.5 px-2 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground text-xs flex items-center gap-1 cursor-pointer transition active:scale-95 border border-border/50"
             title="Recent Projections"
           >
             <History className="w-3.5 h-3.5 text-primary" />
-            <span className="text-[11px] hidden sm:inline">Recent</span>
             {recentHistory.length > 0 && (
-              <span className="text-[9px] bg-primary/20 text-primary font-mono px-1 rounded">
+              <span className="text-[10px] bg-primary/20 text-primary font-mono font-bold px-1 rounded">
                 {recentHistory.length}
               </span>
             )}
           </button>
 
-          {/* Black screen toggle */}
+          {/* Black Screen Toggle */}
           <button
             type="button"
             onClick={() =>
               sendCommand({ action: "TRANSPORT", subAction: "BLACK", value: !blackScreen })
             }
             className={cn(
-              "h-8 px-2.5 rounded-lg text-xs font-medium flex items-center gap-1 transition cursor-pointer",
+              "h-8.5 px-2.5 rounded-lg text-xs font-bold flex items-center gap-1 transition cursor-pointer active:scale-95 border",
               blackScreen
-                ? "bg-amber-500 text-black font-semibold"
-                : "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+                ? "bg-amber-500 text-black border-amber-600 shadow-xs"
+                : "bg-secondary/80 text-secondary-foreground hover:bg-secondary border-border/50",
             )}
-            title="Black Screen toggle"
+            title="Toggle Blackout Screen"
           >
             <Moon className="w-3.5 h-3.5" />
-            <span className="text-[11px]">{blackScreen ? "Black ON" : "Black"}</span>
+            <span className="text-[11px]">{blackScreen ? "BLACK" : "Black"}</span>
           </button>
 
-          {/* Clear screen */}
+          {/* Clear Screen */}
           <button
             type="button"
             onClick={() => sendCommand({ action: "TRANSPORT", subAction: "CLEAR" })}
-            className="h-8 px-2 rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 text-xs flex items-center gap-1 cursor-pointer"
-            title="Clear projector to idle"
+            className="h-8.5 px-2 rounded-lg bg-secondary/80 text-secondary-foreground hover:bg-secondary hover:text-destructive text-xs flex items-center gap-1 cursor-pointer transition active:scale-95 border border-border/50"
+            title="Clear projector stage"
           >
             <Square className="w-3.5 h-3.5" />
-            <span className="text-[11px] hidden sm:inline">Clear</span>
           </button>
 
           {/* Disconnect */}
           <button
             type="button"
             onClick={disconnect}
-            className="h-8 w-8 rounded-lg text-muted-foreground hover:text-destructive flex items-center justify-center cursor-pointer"
-            title="Disconnect"
+            className="h-8.5 w-8.5 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex items-center justify-center cursor-pointer transition active:scale-95"
+            title="Disconnect session"
           >
             <LogOut className="w-3.5 h-3.5" />
           </button>
         </div>
       </header>
-
-      {/* Remote Mode Switcher Bar (ON = Full Remote Control, OFF = Projection-Only Control) */}
-      <div className="px-3 py-1.5 bg-card/95 border-b border-border flex items-center justify-between gap-2 shrink-0 z-15">
-        <div className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-            <Radio className="w-3 h-3 text-primary" />
-            REMOTE CONTROL
-          </span>
-          <span
-            className={cn(
-              "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wide shrink-0",
-              remoteControlMode === "full"
-                ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/30"
-                : "bg-blue-500/15 text-blue-400 border border-blue-500/30",
-            )}
-          >
-            {remoteControlMode === "full" ? "FULL CONTROL" : "PROJ ONLY"}
-          </span>
-        </div>
-
-        {/* ON / OFF Segmented Switch */}
-        <div className="flex items-center bg-muted/60 p-0.5 rounded-lg border border-border shrink-0">
-          <button
-            type="button"
-            onClick={() => setRemoteControlMode("full")}
-            className={cn(
-              "px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1",
-              remoteControlMode === "full"
-                ? "bg-emerald-500 text-white shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title="Turn ON Full Remote Control (Tabs sync with laptop)"
-          >
-            <Power className="w-3 h-3" />
-            ON
-          </button>
-          <button
-            type="button"
-            onClick={() => setRemoteControlMode("projection_only")}
-            className={cn(
-              "px-2.5 py-1 rounded-md text-xs font-bold transition cursor-pointer flex items-center gap-1",
-              remoteControlMode === "projection_only"
-                ? "bg-slate-700 text-white shadow-xs"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-            title="Turn OFF Full Remote Control (Tabs browse independently, projection still works)"
-          >
-            OFF
-          </button>
-        </div>
-      </div>
 
       {/* Host Disabled Warning Banner */}
       {isHostDisabled && (
@@ -395,65 +360,6 @@ export function MobileRemoteApp() {
           <span>Projection control has been disabled by the laptop host.</span>
         </div>
       )}
-
-      {/* 4 Category Navigation Tabs */}
-      <nav className="h-11 px-2 border-b border-border bg-muted/40 flex items-center justify-around shrink-0 text-xs font-medium z-10">
-        <button
-          type="button"
-          onClick={() => setActiveTab("verse")}
-          className={cn(
-            "flex-1 h-8 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer",
-            activeTab === "verse"
-              ? "bg-background text-foreground shadow-sm font-semibold border border-border"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <BookOpen className="w-3.5 h-3.5 text-primary" />
-          <span>Verse</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("song")}
-          className={cn(
-            "flex-1 h-8 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer",
-            activeTab === "song"
-              ? "bg-background text-foreground shadow-sm font-semibold border border-border"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Music className="w-3.5 h-3.5 text-primary" />
-          <span>Song</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("media")}
-          className={cn(
-            "flex-1 h-8 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer",
-            activeTab === "media"
-              ? "bg-background text-foreground shadow-sm font-semibold border border-border"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Film className="w-3.5 h-3.5 text-primary" />
-          <span>Media</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setActiveTab("text")}
-          className={cn(
-            "flex-1 h-8 rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer",
-            activeTab === "text"
-              ? "bg-background text-foreground shadow-sm font-semibold border border-border"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          <Type className="w-3.5 h-3.5 text-primary" />
-          <span>Text</span>
-        </button>
-      </nav>
 
       {/* Main Tab Body — Persistent Keep-Alive for Instant 0ms Tab Switching */}
       <main className="flex-1 overflow-hidden relative">
@@ -469,38 +375,160 @@ export function MobileRemoteApp() {
         <div className={cn("h-full w-full", activeTab !== "text" && "hidden")}>
           <MobileTextTab />
         </div>
+      </main>
 
-        {/* Compact Floating Bottom LIVE Status Bar */}
-        {currentLive && (
+      {/* Docked "Now Playing / Live on Stage" Mini-Bar (Right above bottom nav) */}
+      <div className="shrink-0 border-t border-border/80 bg-card/95 backdrop-blur-lg px-3 py-2 z-20 shadow-lg">
+        <div className="flex items-center justify-between gap-2">
+          {/* Live Info (Tap to expand modal) */}
           <div
             onClick={() => setLiveModalOpen(true)}
-            className="absolute bottom-3 left-3 right-3 sm:left-auto sm:right-4 sm:w-80 z-30 p-2.5 px-3.5 rounded-xl bg-card/95 border border-emerald-500/40 backdrop-blur shadow-lg flex items-center justify-between cursor-pointer transition active:scale-[0.98] hover:border-emerald-500 select-none"
+            className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group py-0.5 active:opacity-80 transition"
           >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1 mr-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
-                    LIVE NOW
-                  </span>
-                  {currentLive.metadata?.slideIndex !== undefined && (
-                    <span className="text-[10px] text-muted-foreground font-mono">
-                      Slide {(currentLive.metadata.slideIndex as number) + 1}
-                    </span>
+            <div className="relative shrink-0">
+              <span
+                className={cn(
+                  "w-3 h-3 rounded-full flex items-center justify-center",
+                  currentLive ? "bg-emerald-500/20" : "bg-muted",
+                )}
+              >
+                <span
+                  className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    currentLive ? "bg-emerald-500 animate-pulse" : "bg-muted-foreground",
                   )}
-                </div>
-                <p className="text-xs font-semibold text-foreground truncate leading-tight">
-                  {currentLive.title}
-                </p>
-              </div>
+                />
+              </span>
             </div>
 
-            <div className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 text-[10px] font-bold shrink-0 border border-emerald-500/30">
-              View
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-400">
+                  {currentLive ? "LIVE ON STAGE" : "STAGE IDLE"}
+                </span>
+                {songSlideIndex !== undefined && songTotalSlides !== undefined && (
+                  <span className="text-[10px] text-muted-foreground font-mono font-bold bg-muted px-1.5 py-0.2 rounded">
+                    {songSlideIndex + 1}/{songTotalSlides}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs font-bold text-foreground truncate group-hover:text-primary transition leading-tight mt-0.5">
+                {currentLive ? currentLive.title : "No content currently projected"}
+              </p>
             </div>
           </div>
-        )}
-      </main>
+
+          {/* Quick Slide Navigation Buttons (if projecting song or queue) */}
+          {isLiveSong && (
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => sendCommand({ action: "TRANSPORT", subAction: "PREV" })}
+                disabled={songSlideIndex !== undefined && songSlideIndex <= 0}
+                className="h-8 w-8 rounded-lg bg-secondary/80 hover:bg-secondary text-secondary-foreground flex items-center justify-center disabled:opacity-30 cursor-pointer active:scale-95 transition"
+                title="Previous Slide"
+              >
+                <SkipBack className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => sendCommand({ action: "TRANSPORT", subAction: "NEXT" })}
+                disabled={
+                  songSlideIndex !== undefined &&
+                  songTotalSlides !== undefined &&
+                  songSlideIndex >= songTotalSlides - 1
+                }
+                className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center disabled:opacity-30 cursor-pointer active:scale-95 transition shadow-xs"
+                title="Next Slide"
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* Expand Full Preview Button */}
+          <button
+            type="button"
+            onClick={() => setLiveModalOpen(true)}
+            className="h-8 px-2 rounded-lg bg-muted/60 hover:bg-muted text-muted-foreground hover:text-foreground text-[11px] font-semibold flex items-center gap-1 cursor-pointer transition active:scale-95 shrink-0"
+            title="Open Full Live Modal"
+          >
+            <Maximize2 className="w-3 h-3" />
+            <span className="hidden sm:inline">Stage</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Category Navigation Bar (Thumb Friendly) */}
+      <nav className="h-14 px-4 border-t border-border/80 bg-card/95 backdrop-blur-md flex items-center justify-around shrink-0 text-xs font-semibold z-20 pb-safe shadow-md">
+        <button
+          type="button"
+          onClick={() => setActiveTab("verse")}
+          className={cn(
+            "flex-1 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition cursor-pointer active:scale-95",
+            activeTab === "verse"
+              ? "text-primary font-bold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <BookOpen className={cn("w-4 h-4 transition", activeTab === "verse" && "scale-110")} />
+          <span className="text-[11px]">Verse</span>
+          {activeTab === "verse" && (
+            <span className="w-1 h-1 rounded-full bg-primary -mt-0.5 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("song")}
+          className={cn(
+            "flex-1 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition cursor-pointer active:scale-95",
+            activeTab === "song"
+              ? "text-primary font-bold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Music className={cn("w-4 h-4 transition", activeTab === "song" && "scale-110")} />
+          <span className="text-[11px]">Song</span>
+          {activeTab === "song" && (
+            <span className="w-1 h-1 rounded-full bg-primary -mt-0.5 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("media")}
+          className={cn(
+            "flex-1 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition cursor-pointer active:scale-95",
+            activeTab === "media"
+              ? "text-primary font-bold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Film className={cn("w-4 h-4 transition", activeTab === "media" && "scale-110")} />
+          <span className="text-[11px]">Media</span>
+          {activeTab === "media" && (
+            <span className="w-1 h-1 rounded-full bg-primary -mt-0.5 animate-pulse" />
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("text")}
+          className={cn(
+            "flex-1 h-11 rounded-xl flex flex-col items-center justify-center gap-0.5 transition cursor-pointer active:scale-95",
+            activeTab === "text"
+              ? "text-primary font-bold"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          <Type className={cn("w-4 h-4 transition", activeTab === "text" && "scale-110")} />
+          <span className="text-[11px]">Text</span>
+          {activeTab === "text" && (
+            <span className="w-1 h-1 rounded-full bg-primary -mt-0.5 animate-pulse" />
+          )}
+        </button>
+      </nav>
     </div>
   );
 }

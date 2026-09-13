@@ -24,9 +24,9 @@ import { projectTextSlide } from "@/projection/adapters/text.adapter";
 import { useWorkspace, type WorkspaceTab } from "@/features/workspace/workspace.store";
 import { useBibleStore } from "@/lib/bible/store";
 import { useSongsStore } from "@/lib/songs/store";
-import { getSongs } from "@/lib/songs/loader";
+import { getSongs, loadSongs } from "@/lib/songs/loader";
 import { searchSongs } from "@/lib/songs/search";
-import { getBible } from "@/lib/bible/loader";
+import { getBible, loadBible } from "@/lib/bible/loader";
 import { search as searchBible } from "@/lib/bible/search";
 import type {
   ActiveRemoteTab,
@@ -116,10 +116,10 @@ async function getThumbnailBase64(blobId?: string | null): Promise<string | unde
         const img = new Image();
         img.onload = () => {
           try {
-            const maxW = 240;
-            const maxH = 135;
-            const w = img.naturalWidth || img.width || 240;
-            const h = img.naturalHeight || img.height || 135;
+            const maxW = 640;
+            const maxH = 360;
+            const w = img.naturalWidth || img.width || 640;
+            const h = img.naturalHeight || img.height || 360;
             const scale = Math.min(maxW / w, maxH / h, 1);
             const cw = Math.max(1, Math.round(w * scale));
             const ch = Math.max(1, Math.round(h * scale));
@@ -133,9 +133,11 @@ async function getThumbnailBase64(blobId?: string | null): Promise<string | unde
               resolve(undefined);
               return;
             }
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
             ctx.drawImage(img, 0, 0, cw, ch);
             URL.revokeObjectURL(url);
-            const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+            const dataUrl = canvas.toDataURL("image/jpeg", 0.80);
             thumbDataCache.set(blobId, dataUrl);
             resolve(dataUrl);
           } catch {
@@ -447,7 +449,26 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               }
 
               case "SYNC_SELECT_SONG": {
-                // Independent browsing: do not force laptop UI
+                if (!currentDev || (currentDev.enabled !== false && currentDev.remoteMode !== "projection_only")) {
+                  isApplyingRemoteSync = true;
+                  try {
+                    useWorkspace.getState().setActiveTab("songs");
+                    useWorkspace.getState().setSelectedSongId(command.songId);
+                    useSongsStore.getState().selectSong(command.songId);
+                  } finally {
+                    isApplyingRemoteSync = false;
+                  }
+                  void channel.send({
+                    type: "broadcast",
+                    event: "msg",
+                    payload: {
+                      type: "STATE_DELTA",
+                      origin: "host",
+                      originClientId: clientId,
+                      delta: { selectedSongId: command.songId, activeTab: "song" },
+                    },
+                  });
+                }
                 break;
               }
 
@@ -464,7 +485,10 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               case "SEARCH_SONGS": {
                 const q = command.query.trim();
                 const reqId = command.requestId;
-                const songs = getSongs();
+                let songs = getSongs();
+                if (!songs || songs.length === 0) {
+                  songs = await loadSongs();
+                }
                 let hits: Array<{ id: number; title: string; slides: string[]; scale: string }> = [];
                 if (songs && songs.length > 0 && q) {
                   const rawHits = searchSongs(q, songs, 25);
@@ -491,7 +515,10 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                 const q = command.query.trim();
                 const reqId = command.requestId;
                 const lang = command.lang || "ta";
-                const bibleData = getBible(lang);
+                let bibleData = getBible(lang);
+                if (!bibleData) {
+                  bibleData = await loadBible(lang);
+                }
                 let hits: Array<{ book: number; chapter: number; verse: number; text: string; bookName: string }> = [];
                 if (bibleData && q) {
                   const rawHits = searchBible(q, bibleData, lang, 25);
@@ -518,7 +545,10 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               case "GET_CHAPTER_VERSES": {
                 const reqId = command.requestId;
                 const lang = command.lang || "ta";
-                const bibleData = getBible(lang);
+                let bibleData = getBible(lang);
+                if (!bibleData) {
+                  bibleData = await loadBible(lang);
+                }
                 const verses: string[] = [];
                 if (bibleData && bibleData[command.book]?.[command.chapter - 1]) {
                   verses.push(...(bibleData[command.book][command.chapter - 1] || []));
@@ -538,34 +568,75 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               }
 
               case "PROJECT_VERSE": {
+                let content: ProjectionContent | null = null;
                 if (command.directInput) {
-                  projectVerse(command.directInput);
+                  content = projectVerse(command.directInput);
                 } else if (command.verseData) {
                   projectVerseAt(command.verseData);
+                  content = latestEmittedContent;
                 }
                 triggerHostLiveBroadcast();
-                void get().broadcastSyncState();
+                if (content) {
+                  void get().broadcastDelta({
+                    currentLive: {
+                      id: content.id,
+                      title: content.title,
+                      type: "bible_verse",
+                      details: (content.body as any)?.text?.slice(0, 300),
+                      metadata: content.metadata as any,
+                    },
+                    blackScreen: false,
+                  });
+                }
                 break;
               }
 
               case "PROJECT_SONG_SLIDE": {
-                projectSongSlide(command.input);
+                const content = projectSongSlide(command.input);
                 triggerHostLiveBroadcast();
-                void get().broadcastSyncState();
+                void get().broadcastDelta({
+                  currentLive: {
+                    id: content.id,
+                    title: content.title,
+                    type: "song_slide",
+                    details: (content.body as any)?.lines?.slice(0, 4)?.join("\n"),
+                    metadata: content.metadata as any,
+                  },
+                  blackScreen: false,
+                });
                 break;
               }
 
               case "PROJECT_MEDIA": {
-                await projectMediaById(command.mediaId);
+                const content = await projectMediaById(command.mediaId);
                 triggerHostLiveBroadcast();
-                void get().broadcastSyncState();
+                if (content) {
+                  void get().broadcastDelta({
+                    currentLive: {
+                      id: content.id,
+                      title: content.title,
+                      type: content.type,
+                      metadata: content.metadata as any,
+                    },
+                    blackScreen: false,
+                  });
+                }
                 break;
               }
 
               case "PROJECT_TEXT": {
-                projectTextSlide(command.input);
+                const content = projectTextSlide(command.input);
                 triggerHostLiveBroadcast();
-                void get().broadcastSyncState();
+                void get().broadcastDelta({
+                  currentLive: {
+                    id: content.id,
+                    title: content.title,
+                    type: "live_text",
+                    details: (content.body as any)?.text?.slice(0, 300),
+                    metadata: content.metadata as any,
+                  },
+                  blackScreen: false,
+                });
                 break;
               }
 
@@ -602,8 +673,14 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
               }
             }
 
-            // Sync updated state instantly without artificial setTimeout delay
-            void get().broadcastSyncState();
+            // Sync full state only for non-projection actions; projection actions already broadcast instant deltas
+            const isFastAction =
+              command.action.startsWith("PROJECT_") ||
+              command.action === "SYNC_TAB" ||
+              command.action === "SYNC_SELECT_SONG";
+            if (!isFastAction) {
+              void get().broadcastSyncState();
+            }
           } catch (err) {
             logger.error("Failed to execute remote command", err);
           }
@@ -626,6 +703,11 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
     channel.subscribe((status) => {
       logger.info(`Host remote channel [${channelName}] status: ${status}`);
     });
+
+    // Pre-warm songs and bible datasets in background for instant search on mobile
+    loadSongs().catch(() => {});
+    loadBible("ta").catch(() => {});
+    loadBible("en").catch(() => {});
 
     set({ session: newSession, channel, tokens: new Set() });
     return newSession;
@@ -770,8 +852,11 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
  */
 async function buildSyncState(): Promise<RemoteHostSyncState> {
   const ws = useWorkspace.getState();
-  const cur = projectionEngine.getCurrent() || latestEmittedContent;
   const projState = useProjection.getState().state;
+  const cur =
+    projState?.textOverlay && latestEmittedContent
+      ? latestEmittedContent
+      : projectionEngine.getCurrent() || latestEmittedContent;
 
   // Active tab & search queries
   const activeTab = mapLaptopToRemoteTab(ws.activeTab);

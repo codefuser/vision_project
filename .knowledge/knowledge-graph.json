@@ -1,0 +1,442 @@
+{
+  "meta": {
+    "schemaVersion": "1.0.0",
+    "projectName": "VersoLyn (Vision Projector)",
+    "projectDescription": "Church Presentation Software for Bible verses, song lyrics, media, playlists, remote control, and live streaming",
+    "generatedAt": "2026-09-13T19:13:00+05:30",
+    "maintainer": "Joseph (codefuser)",
+    "stack": {
+      "framework": "React 19.2",
+      "bundler": "Vite 7.3",
+      "fullstack": "TanStack Start 1.167 / Nitro 3.0 (preset: vercel)",
+      "router": "TanStack Router 1.168",
+      "styling": "TailwindCSS v4 (@tailwindcss/vite)",
+      "stateManagement": "Zustand 5.0",
+      "localDb": "Dexie 4.4 (IndexedDB) + idb-keyval 6.3",
+      "backendDb": "Supabase 2.110 (Postgres + Realtime Broadcast)",
+      "utilities": "fflate, dnd-kit, qrcode, sonner, cmdk, radix-ui"
+    }
+  },
+  "domains": [
+    "projection_engine",
+    "bible_module",
+    "songs_module",
+    "media_library",
+    "playlists_and_service",
+    "remote_control",
+    "live_qr_streaming",
+    "session_history",
+    "styling_and_themes",
+    "system_and_shell"
+  ],
+  "nodes": [
+    {
+      "id": "file:package.json",
+      "label": "package.json",
+      "type": "config",
+      "path": "package.json",
+      "summary": "Project metadata, scripts (dev, build, preview, lint), runtime and dev dependencies."
+    },
+    {
+      "id": "file:vite.config.ts",
+      "label": "vite.config.ts",
+      "type": "config",
+      "path": "vite.config.ts",
+      "summary": "Vite bundler configuration with TanStack Start, Nitro (vercel preset), TailwindCSS v4, React, tsconfigPaths."
+    },
+    {
+      "id": "file:server.ts",
+      "label": "src/server.ts",
+      "type": "server_entry",
+      "path": "src/server.ts",
+      "summary": "Server entry handler for TanStack Start SSR; normalizes catastrophic h3 errors and renders custom error pages."
+    },
+    {
+      "id": "file:start.ts",
+      "label": "src/start.ts",
+      "type": "server_config",
+      "path": "src/start.ts",
+      "summary": "TanStack Start instance with server errorMiddleware."
+    },
+    {
+      "id": "file:router.tsx",
+      "label": "src/router.tsx",
+      "type": "router_entry",
+      "path": "src/router.tsx",
+      "summary": "Router factory instantiating TanStack createRouter with routeTree and QueryClient."
+    },
+    {
+      "id": "file:routes/__root.tsx",
+      "label": "src/routes/__root.tsx",
+      "type": "root_route",
+      "path": "src/routes/__root.tsx",
+      "summary": "Root route shell, HTML head, fonts, isolation detection (/remote, /live, church-projector popup), AppShell wrapper."
+    },
+    {
+      "id": "file:components/AppShell.tsx",
+      "label": "src/components/AppShell.tsx",
+      "type": "component",
+      "path": "src/components/AppShell.tsx",
+      "summary": "Main operator interface shell with sidebar navigation, projection control status, remote dialogs, live QR status."
+    },
+    {
+      "id": "file:routes/project.tsx",
+      "label": "src/routes/project.tsx",
+      "type": "route",
+      "path": "src/routes/project.tsx",
+      "summary": "Route component that renders ProjectionWindow when opened as popup or ProjectionWorkspace when in operator view."
+    },
+    {
+      "id": "file:workspace/ProjectionWorkspace.tsx",
+      "label": "src/features/workspace/ProjectionWorkspace.tsx",
+      "type": "component",
+      "path": "src/features/workspace/ProjectionWorkspace.tsx",
+      "summary": "Split-panel operator workstation with LivePreviewPanel, collapsible TextFormattingPanel, and WorkspaceTabsPanel."
+    },
+    {
+      "id": "file:workspace/WorkspaceTabsPanel.tsx",
+      "label": "src/features/workspace/WorkspaceTabsPanel.tsx",
+      "type": "component",
+      "path": "src/features/workspace/WorkspaceTabsPanel.tsx",
+      "summary": "Right-hand operator workspace housing Media (LibraryPage), BiblePanel, SongsPanel, and TextPanel with shortcut scopes."
+    },
+    {
+      "id": "file:projection/engine.ts",
+      "label": "src/projection/engine.ts",
+      "type": "core_engine",
+      "path": "src/projection/engine.ts",
+      "summary": "Framework-free singleton managing authoritative projection state, wire translation, event dispatch, and history."
+    },
+    {
+      "id": "file:projection/content.types.ts",
+      "label": "src/projection/content.types.ts",
+      "type": "type_def",
+      "path": "src/projection/content.types.ts",
+      "summary": "Universal Projection Content Model (image, video, bible_verse, song_slide, live_text, announcement, sermon_point)."
+    },
+    {
+      "id": "file:projection/event-bus.ts",
+      "label": "src/projection/event-bus.ts",
+      "type": "event_bus",
+      "path": "src/projection/event-bus.ts",
+      "summary": "Typed event bus for projection lifecycle (CONTENT_PROJECTED, CONTENT_CLEARED, PROJECTOR_CONNECTED, etc.)."
+    },
+    {
+      "id": "file:stores/projection.store.ts",
+      "label": "src/stores/projection.store.ts",
+      "type": "store",
+      "path": "src/stores/projection.store.ts",
+      "summary": "Zustand store for BroadcastChannel cross-window IPC and Screen Details API window positioning."
+    },
+    {
+      "id": "file:lib/broadcast.ts",
+      "label": "src/lib/broadcast.ts",
+      "type": "protocol",
+      "path": "src/lib/broadcast.ts",
+      "summary": "BroadcastChannel ('church-projection') command and state wire protocol definitions, TextStyle, GroupedStyles, BackgroundConfig."
+    },
+    {
+      "id": "file:features/projection/ProjectionWindow.tsx",
+      "label": "src/features/projection/ProjectionWindow.tsx",
+      "type": "component",
+      "path": "src/features/projection/ProjectionWindow.tsx",
+      "summary": "The external projector window popup; renders BackgroundLayer, TextOverlayRenderer, and ProjectionRenderer in true fullscreen."
+    },
+    {
+      "id": "file:components/ProjectionRenderer.tsx",
+      "label": "src/components/ProjectionRenderer.tsx",
+      "type": "component",
+      "path": "src/components/ProjectionRenderer.tsx",
+      "summary": "Universal 16:9 canvas stage mirror rendering text overlays, backgrounds, and media scaling on any device."
+    },
+    {
+      "id": "file:components/TextOverlayRenderer.tsx",
+      "label": "src/components/TextOverlayRenderer.tsx",
+      "type": "component",
+      "path": "src/components/TextOverlayRenderer.tsx",
+      "summary": "Layered text renderer with auto-fit binary-search font scaling for Tamil, English, and bilingual scriptures/lyrics."
+    },
+    {
+      "id": "file:projection/adapters/bible.adapter.ts",
+      "label": "src/projection/adapters/bible.adapter.ts",
+      "type": "adapter",
+      "path": "src/projection/adapters/bible.adapter.ts",
+      "summary": "Translates Bible verse selection into LOAD_TEXT commands and registers with ProjectionEngine."
+    },
+    {
+      "id": "file:projection/adapters/song.adapter.ts",
+      "label": "src/projection/adapters/song.adapter.ts",
+      "type": "adapter",
+      "path": "src/projection/adapters/song.adapter.ts",
+      "summary": "Translates Song slide lyrics into LOAD_TEXT commands and registers with ProjectionEngine."
+    },
+    {
+      "id": "file:projection/adapters/media.adapter.ts",
+      "label": "src/projection/adapters/media.adapter.ts",
+      "type": "adapter",
+      "path": "src/projection/adapters/media.adapter.ts",
+      "summary": "Translates image/video projection and playlist cues into LOAD/LOAD_PLAYLIST commands."
+    },
+    {
+      "id": "file:projection/adapters/text.adapter.ts",
+      "label": "src/projection/adapters/text.adapter.ts",
+      "type": "adapter",
+      "path": "src/projection/adapters/text.adapter.ts",
+      "summary": "Translates ad-hoc live text items into LOAD_TEXT commands."
+    },
+    {
+      "id": "file:db/schema.ts",
+      "label": "src/db/schema.ts",
+      "type": "database_schema",
+      "path": "src/db/schema.ts",
+      "summary": "Dexie IndexedDB database 'church-media-db' with tables: folders, media, blobs, playlists, settings, logs, sessions, session_events."
+    },
+    {
+      "id": "file:db/repo.ts",
+      "label": "src/db/repo.ts",
+      "type": "database_repo",
+      "path": "src/db/repo.ts",
+      "summary": "CRUD operations for folders, media, playlists, blobs, and settings with thumbnail caching."
+    },
+    {
+      "id": "file:db/cache.ts",
+      "label": "src/db/cache.ts",
+      "type": "cache",
+      "path": "src/db/cache.ts",
+      "summary": "In-memory cache for folders, media, playlists to eliminate duplicate IndexedDB queries during render."
+    },
+    {
+      "id": "file:lib/bible/loader.ts",
+      "label": "src/lib/bible/loader.ts",
+      "type": "loader",
+      "path": "src/lib/bible/loader.ts",
+      "summary": "IndexedDB-first Bible loader (idb-keyval); cold-boot parallel downloads 31,102 verses from Supabase tables (english_bible, tamil_bible)."
+    },
+    {
+      "id": "file:lib/bible/search.ts",
+      "label": "src/lib/bible/search.ts",
+      "type": "search_engine",
+      "path": "src/lib/bible/search.ts",
+      "summary": "Passage reference parser and full-text verse search engine across Tamil and English books."
+    },
+    {
+      "id": "file:lib/bible/books.ts",
+      "label": "src/lib/bible/books.ts",
+      "type": "dataset",
+      "path": "src/lib/bible/books.ts",
+      "summary": "Canon of 66 Bible books with English and Tamil names, aliases, and chapter verse counts."
+    },
+    {
+      "id": "file:lib/songs/loader.ts",
+      "label": "src/lib/songs/loader.ts",
+      "type": "loader",
+      "path": "src/lib/songs/loader.ts",
+      "summary": "Offline-first precomputed song dataset loader with delta-sync from Supabase 'songs' table."
+    },
+    {
+      "id": "file:lib/songs/search.ts",
+      "label": "src/lib/songs/search.ts",
+      "type": "search_engine",
+      "path": "src/lib/songs/search.ts",
+      "summary": "Search scoring algorithms with Tanglish transliteration matching, title/lyrics stemming, and ranking."
+    },
+    {
+      "id": "file:lib/songs/song-search.worker.ts",
+      "label": "src/lib/songs/song-search.worker.ts",
+      "type": "web_worker",
+      "path": "src/lib/songs/song-search.worker.ts",
+      "summary": "Dedicated Web Worker running search against ~17,000 songs off the main UI thread."
+    },
+    {
+      "id": "file:lib/text/tanglish.ts",
+      "label": "src/lib/text/tanglish.ts",
+      "type": "transliteration",
+      "path": "src/lib/text/tanglish.ts",
+      "summary": "Phonetic Tanglish-to-Tamil conversion using church dictionary and Tamil phonetic map."
+    },
+    {
+      "id": "file:features/remote/remote-host.store.ts",
+      "label": "src/features/remote/remote-host.store.ts",
+      "type": "store",
+      "path": "src/features/remote/remote-host.store.ts",
+      "summary": "Laptop host controller managing remote sessions, Supabase Realtime broadcast 'vp_remote_{id}', device auth, and state sync."
+    },
+    {
+      "id": "file:features/remote/remote-client.store.ts",
+      "label": "src/features/remote/remote-client.store.ts",
+      "type": "store",
+      "path": "src/features/remote/remote-client.store.ts",
+      "summary": "Mobile remote phone controller connecting to host session, dispatching projection commands."
+    },
+    {
+      "id": "file:features/remote/remote-crypto.ts",
+      "label": "src/features/remote/remote-crypto.ts",
+      "type": "security",
+      "path": "src/features/remote/remote-crypto.ts",
+      "summary": "Web Crypto API implementation of SHA-256 salted zero-knowledge challenge-response authentication."
+    },
+    {
+      "id": "file:features/remote/types.ts",
+      "label": "src/features/remote/types.ts",
+      "type": "protocol",
+      "path": "src/features/remote/types.ts",
+      "summary": "Wire message payloads (AUTH_REQUEST, AUTH_RESPONSE, STATE_SYNC, COMMAND, HEARTBEAT)."
+    },
+    {
+      "id": "file:features/live-qr/live-qr-host.store.ts",
+      "label": "src/features/live-qr/live-qr-host.store.ts",
+      "type": "store",
+      "path": "src/features/live-qr/live-qr-host.store.ts",
+      "summary": "Laptop live QR streaming host broadcasting authoritative presentation state over channel 'vp_live_{token}'."
+    },
+    {
+      "id": "file:features/live-qr/live-qr-client.store.ts",
+      "label": "src/features/live-qr/live-qr-client.store.ts",
+      "type": "store",
+      "path": "src/features/live-qr/live-qr-client.store.ts",
+      "summary": "Congregation live viewer client store receiving read-only live projection frames."
+    },
+    {
+      "id": "file:features/live-qr/types.ts",
+      "label": "src/features/live-qr/types.ts",
+      "type": "protocol",
+      "path": "src/features/live-qr/types.ts",
+      "summary": "Live projection QR token model, payload definitions, and duration presets."
+    },
+    {
+      "id": "file:features/history/session-recorder.ts",
+      "label": "src/features/history/session-recorder.ts",
+      "type": "service",
+      "path": "src/features/history/session-recorder.ts",
+      "summary": "Singleton logger listening to projectionEvents bus and logging structured events to IndexedDB."
+    },
+    {
+      "id": "file:features/history/session-history.repo.ts",
+      "label": "src/features/history/session-history.repo.ts",
+      "type": "database_repo",
+      "path": "src/features/history/session-history.repo.ts",
+      "summary": "Dexie queries for active/ended sessions, filtering, event logging, and session deletion."
+    },
+    {
+      "id": "file:features/backup/backup.ts",
+      "label": "src/features/backup/backup.ts",
+      "type": "service",
+      "path": "src/features/backup/backup.ts",
+      "summary": "Client-side backup exporter/importer creating and extracting fflate ZIP files of database records and media blobs."
+    },
+    {
+      "id": "file:lib/shortcuts/manager.ts",
+      "label": "src/lib/shortcuts/manager.ts",
+      "type": "keyboard_engine",
+      "path": "src/lib/shortcuts/manager.ts",
+      "summary": "Scoped keyboard shortcut registry with chord detection, category filtering, and modal isolation."
+    },
+    {
+      "id": "file:lib/supabase.ts",
+      "label": "src/lib/supabase.ts",
+      "type": "backend_client",
+      "path": "src/lib/supabase.ts",
+      "summary": "Supabase client configured with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+    }
+  ],
+  "edges": [
+    { "source": "file:routes/__root.tsx", "target": "file:components/AppShell.tsx", "relation": "RENDERS" },
+    { "source": "file:routes/project.tsx", "target": "file:workspace/ProjectionWorkspace.tsx", "relation": "RENDERS_OPERATOR" },
+    { "source": "file:routes/project.tsx", "target": "file:features/projection/ProjectionWindow.tsx", "relation": "RENDERS_POPUP" },
+    { "source": "file:workspace/ProjectionWorkspace.tsx", "target": "file:workspace/WorkspaceTabsPanel.tsx", "relation": "CONTAINS" },
+    { "source": "file:workspace/WorkspaceTabsPanel.tsx", "target": "file:projection/adapters/bible.adapter.ts", "relation": "INVOKES" },
+    { "source": "file:workspace/WorkspaceTabsPanel.tsx", "target": "file:projection/adapters/song.adapter.ts", "relation": "INVOKES" },
+    { "source": "file:workspace/WorkspaceTabsPanel.tsx", "target": "file:projection/adapters/media.adapter.ts", "relation": "INVOKES" },
+    { "source": "file:workspace/WorkspaceTabsPanel.tsx", "target": "file:projection/adapters/text.adapter.ts", "relation": "INVOKES" },
+    { "source": "file:projection/adapters/bible.adapter.ts", "target": "file:stores/projection.store.ts", "relation": "DISPATCHES_COMMAND" },
+    { "source": "file:projection/adapters/song.adapter.ts", "target": "file:stores/projection.store.ts", "relation": "DISPATCHES_COMMAND" },
+    { "source": "file:projection/adapters/media.adapter.ts", "target": "file:stores/projection.store.ts", "relation": "DISPATCHES_COMMAND" },
+    { "source": "file:projection/adapters/text.adapter.ts", "target": "file:stores/projection.store.ts", "relation": "DISPATCHES_COMMAND" },
+    { "source": "file:stores/projection.store.ts", "target": "file:lib/broadcast.ts", "relation": "TRANSMITS_ON_CHANNEL" },
+    { "source": "file:features/projection/ProjectionWindow.tsx", "target": "file:lib/broadcast.ts", "relation": "RECEIVES_ON_CHANNEL" },
+    { "source": "file:features/projection/ProjectionWindow.tsx", "target": "file:components/ProjectionRenderer.tsx", "relation": "RENDERS" },
+    { "source": "file:features/projection/ProjectionWindow.tsx", "target": "file:components/TextOverlayRenderer.tsx", "relation": "RENDERS" },
+    { "source": "file:projection/adapters/bible.adapter.ts", "target": "file:projection/event-bus.ts", "relation": "EMITS_EVENT" },
+    { "source": "file:projection/adapters/song.adapter.ts", "target": "file:projection/event-bus.ts", "relation": "EMITS_EVENT" },
+    { "source": "file:features/history/session-recorder.ts", "target": "file:projection/event-bus.ts", "relation": "LISTENS_TO" },
+    { "source": "file:features/history/session-recorder.ts", "target": "file:features/history/session-history.repo.ts", "relation": "WRITES_HISTORY" },
+    { "source": "file:features/history/session-history.repo.ts", "target": "file:db/schema.ts", "relation": "PERSISTS_IN_DEXIE" },
+    { "source": "file:features/remote/remote-host.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
+    { "source": "file:features/remote/remote-client.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
+    { "source": "file:features/remote/remote-host.store.ts", "target": "file:features/remote/remote-crypto.ts", "relation": "VERIFIES_AUTH" },
+    { "source": "file:features/remote/remote-client.store.ts", "target": "file:features/remote/remote-crypto.ts", "relation": "COMPUTES_AUTH" },
+    { "source": "file:features/live-qr/live-qr-host.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
+    { "source": "file:features/live-qr/live-qr-client.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
+    { "source": "file:lib/bible/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_VERSES" },
+    { "source": "file:lib/songs/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_SONGS" }
+  ],
+  "quickLookup": {
+    "byTask": {
+      "bible_search_and_projection": [
+        "src/features/bible/BiblePanel.tsx",
+        "src/lib/bible/search.ts",
+        "src/lib/bible/loader.ts",
+        "src/lib/bible/books.ts",
+        "src/projection/adapters/bible.adapter.ts",
+        "src/lib/bible/store.ts"
+      ],
+      "song_search_and_lyrics": [
+        "src/features/songs/SongsPanel.tsx",
+        "src/lib/songs/search.ts",
+        "src/lib/songs/loader.ts",
+        "src/lib/songs/song-search.worker.ts",
+        "src/lib/text/tanglish.ts",
+        "src/projection/adapters/song.adapter.ts",
+        "src/lib/songs/store.ts"
+      ],
+      "media_library_and_files": [
+        "src/features/library/FileManagerLayout.tsx",
+        "src/features/library/LibraryShell.tsx",
+        "src/features/library/LibraryExplorerGrid.tsx",
+        "src/db/repo.ts",
+        "src/db/schema.ts",
+        "src/projection/adapters/media.adapter.ts"
+      ],
+      "projector_popup_and_scaling": [
+        "src/routes/project.tsx",
+        "src/features/projection/ProjectionWindow.tsx",
+        "src/components/ProjectionRenderer.tsx",
+        "src/components/TextOverlayRenderer.tsx",
+        "src/stores/projection.store.ts",
+        "src/lib/display/screen-manager.ts",
+        "src/lib/projection-scaling.ts"
+      ],
+      "remote_control": [
+        "src/features/remote/remote-host.store.ts",
+        "src/features/remote/remote-client.store.ts",
+        "src/features/remote/remote-crypto.ts",
+        "src/features/remote/types.ts",
+        "src/features/remote/RemoteControlDialog.tsx",
+        "src/routes/remote.tsx"
+      ],
+      "live_qr_streaming": [
+        "src/features/live-qr/live-qr-host.store.ts",
+        "src/features/live-qr/live-qr-client.store.ts",
+        "src/features/live-qr/types.ts",
+        "src/features/live-qr/components/LiveQrDialog.tsx",
+        "src/features/live-qr/components/LiveViewerPage.tsx",
+        "src/routes/live.tsx"
+      ],
+      "session_history": [
+        "src/features/history/session-recorder.ts",
+        "src/features/history/session-history.repo.ts",
+        "src/features/history/session-history.store.ts",
+        "src/features/history/SessionListPage.tsx",
+        "src/features/history/SessionDetailPage.tsx"
+      ],
+      "styling_and_themes": [
+        "src/features/workspace/TextFormattingPanel.tsx",
+        "src/lib/text-format/store.ts",
+        "src/stores/background.store.ts",
+        "src/stores/logo.store.ts",
+        "src/features/workspace/ThemeGalleryDialog.tsx",
+        "src/lib/templates/presets.ts"
+      ]
+    }
+  }
+}

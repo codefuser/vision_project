@@ -133,4 +133,8 @@ mac-unpacked/
 
 # Auto-generated update manifest
 app-update.yml
-dev-app-update.yml
+dev-app-update.yml
+
+
+# .knowledge
+# .agents
