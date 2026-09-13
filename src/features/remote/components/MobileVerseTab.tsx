@@ -38,6 +38,26 @@ export function MobileVerseTab() {
   const [showChapterPicker, setShowChapterPicker] = useState(false);
   const [activeTestament, setActiveTestament] = useState<"OT" | "NT">("NT");
   const [bookFilterQuery, setBookFilterQuery] = useState("");
+  const [optimisticLiveVerse, setOptimisticLiveVerse] = useState<{
+    book: number;
+    chapter: number;
+    verse: number;
+  } | null>(null);
+
+  // Clear optimistic override once currentLive catches up or switches
+  useEffect(() => {
+    if (!optimisticLiveVerse) return;
+    if (
+      currentLive?.type === "bible_verse" &&
+      currentLive.metadata?.book === optimisticLiveVerse.book &&
+      currentLive.metadata?.chapter === optimisticLiveVerse.chapter &&
+      currentLive.metadata?.verse === optimisticLiveVerse.verse
+    ) {
+      setOptimisticLiveVerse(null);
+    } else if (currentLive && currentLive.type !== "bible_verse") {
+      setOptimisticLiveVerse(null);
+    }
+  }, [currentLive, optimisticLiveVerse]);
 
   const debouncedQuery = useDebounce(query, 150);
 
@@ -151,6 +171,11 @@ export function MobileVerseTab() {
   }, [debouncedQuery, searchResults, chapterVerses, activeBook, activeChapter, lang]);
 
   const handleProject = (hit: VerseItem) => {
+    setOptimisticLiveVerse({
+      book: hit.book,
+      chapter: hit.chapter,
+      verse: hit.verse,
+    });
     sendCommand({
       action: "PROJECT_VERSE",
       verseData: {
@@ -290,14 +315,22 @@ export function MobileVerseTab() {
           </div>
         ) : (
           results.map((hit) => {
-            const isLive =
+            const isOptimisticMatch =
+              optimisticLiveVerse !== null &&
+              optimisticLiveVerse.book === hit.book &&
+              optimisticLiveVerse.chapter === hit.chapter &&
+              optimisticLiveVerse.verse === hit.verse;
+
+            const isHostLiveMatch =
               currentLive?.type === "bible_verse" &&
-              (currentLive.details?.includes(`${hit.bookNameLocal} ${hit.chapter}:${hit.verse}`) ||
+              ((currentLive.metadata?.book === hit.book &&
+                currentLive.metadata?.chapter === hit.chapter &&
+                currentLive.metadata?.verse === hit.verse) ||
                 currentLive.title.includes(`${hit.bookNameLocal} ${hit.chapter}:${hit.verse}`) ||
                 currentLive.title.includes(`${hit.bookName} ${hit.chapter}:${hit.verse}`) ||
-                (currentLive.metadata?.book === hit.book &&
-                  currentLive.metadata?.chapter === hit.chapter &&
-                  currentLive.metadata?.verse === hit.verse));
+                currentLive.title.includes(`${hit.chapter}:${hit.verse}`));
+
+            const isLive = isOptimisticMatch || (!optimisticLiveVerse && isHostLiveMatch);
 
             return (
               <div

@@ -30,8 +30,9 @@ export interface ProjectionContent<TBody extends ProjectionBody = ProjectionBody
 The `ProjectionEngine` is a **framework-free, UI-agnostic singleton** (pure TypeScript, zero React coupling). This guarantees it can be executed from web workers, node scripts, or an Electron main process.
 
 ### Primary Lifecycle Methods:
-* `bootstrap()`: Idempotent. Wires the engine to the underlying `useProjection` store and BroadcastChannel.
+* `bootstrap()`: Idempotent. Wires the engine to the underlying `useProjection` store and BroadcastChannel. Automatically called on module load.
 * `project(content)`: Projects a single item, replacing current output. Dispatches wire command, emits bus events, and records history.
+* `setCurrent(content)`: Explicitly updates the engine's active content pointer (`this.currentContent`) without triggering extra wire commands. Used by projection adapters (`bible`, `song`, `text`) so that text projections register immediately and override previous media projections.
 * `projectQueue(items, startIndex)`: Projects an ordered sequence (e.g. playlist or song slides).
 * `replace(patch)`: Live edit-in-place without reloading media. Used for real-time font, background, or alignment adjustments.
 * `clear()`: Sends `STOP` command to projector and blanks the screen.

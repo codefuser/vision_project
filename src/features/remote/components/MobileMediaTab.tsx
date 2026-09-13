@@ -17,10 +17,21 @@ export function MobileMediaTab() {
   const query = searchQuery.media || "";
   const [filterType, setFilterType] = useState<"all" | "image" | "video">("all");
   const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
+  const [optimisticLiveMediaId, setOptimisticLiveMediaId] = useState<string | null>(null);
 
   useEffect(() => {
     requestMediaThumbnails();
   }, [requestMediaThumbnails]);
+
+  useEffect(() => {
+    if (currentLive) {
+      if (currentLive.type !== "image" && currentLive.type !== "video") {
+        setOptimisticLiveMediaId(null);
+      } else if (currentLive.metadata?.mediaId && currentLive.metadata.mediaId !== optimisticLiveMediaId) {
+        setOptimisticLiveMediaId(null);
+      }
+    }
+  }, [currentLive]);
 
   const filtered = useMemo(() => {
     return mediaList.filter((item) => {
@@ -31,6 +42,7 @@ export function MobileMediaTab() {
   }, [mediaList, query, filterType]);
 
   const handleProject = (mediaId: string) => {
+    setOptimisticLiveMediaId(mediaId);
     sendCommand({
       action: "PROJECT_MEDIA",
       mediaId,
@@ -121,10 +133,11 @@ export function MobileMediaTab() {
         ) : (
           filtered.map((item) => {
             const isLive =
-              (currentLive?.type === "image" || currentLive?.type === "video") &&
-              (currentLive.title === item.name ||
-                currentLive.id === `media:${item.id}` ||
-                currentLive.metadata?.mediaId === item.id);
+              optimisticLiveMediaId === item.id ||
+              ((currentLive?.type === "image" || currentLive?.type === "video") &&
+                (currentLive.title === item.name ||
+                  currentLive.id === `media:${item.id}` ||
+                  currentLive.metadata?.mediaId === item.id));
 
             const thumbSrc = mediaThumbnails[item.id] || item.thumbnailUrl;
             const hasPreview = Boolean(thumbSrc) && !imageErrors[item.id];
@@ -142,7 +155,7 @@ export function MobileMediaTab() {
               >
                 {/* Image Preview Container (16:9 aspect ratio) */}
                 <div
-                  className="relative w-full bg-slate-950/90 flex items-center justify-center overflow-hidden"
+                  className="relative w-full bg-slate-950 flex items-center justify-center overflow-hidden"
                   style={{ aspectRatio: "16 / 9" }}
                 >
                   {hasPreview ? (
@@ -150,7 +163,7 @@ export function MobileMediaTab() {
                       src={thumbSrc}
                       alt={item.name}
                       onError={() => handleImageError(item.id)}
-                      className="w-full h-full object-cover transition duration-200"
+                      className="w-full h-full object-contain transition duration-200"
                       loading="lazy"
                     />
                   ) : (

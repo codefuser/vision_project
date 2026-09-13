@@ -26,6 +26,25 @@ export function MobileSongTab() {
   const [songs, setSongs] = useState<RemoteSong[]>([]);
   const [loading, setLoading] = useState(false);
   const [activeSlideIndex, setActiveSlideIndex] = useState<number>(0);
+  const [optimisticLiveSlide, setOptimisticLiveSlide] = useState<{
+    songId: number;
+    slideIndex: number;
+  } | null>(null);
+
+  // Clear optimistic override once currentLive catches up
+  useEffect(() => {
+    if (!optimisticLiveSlide) return;
+    if (
+      currentLive?.type === "song_slide" &&
+      currentLive.metadata?.songId === optimisticLiveSlide.songId &&
+      currentLive.metadata?.slideIndex === optimisticLiveSlide.slideIndex
+    ) {
+      setOptimisticLiveSlide(null);
+    } else if (currentLive && currentLive.type !== "song_slide") {
+      setOptimisticLiveSlide(null);
+    }
+  }, [currentLive, optimisticLiveSlide]);
+
   const debouncedQuery = useDebounce(query, 150);
 
   // Search or load initial song list on demand
@@ -84,6 +103,7 @@ export function MobileSongTab() {
 
   const handleProjectSlide = (song: RemoteSong, slideIdx: number) => {
     setActiveSlideIndex(slideIdx);
+    setOptimisticLiveSlide({ songId: song.id, slideIndex: slideIdx });
     const text = song.slides[slideIdx] || "";
     sendCommand({
       action: "PROJECT_SONG_SLIDE",
@@ -146,13 +166,19 @@ export function MobileSongTab() {
         {/* Slides List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2.5 pb-28">
           {selectedSong.slides.map((slideText, idx) => {
-            const isLive =
+            const isOptimisticMatch =
+              optimisticLiveSlide !== null &&
+              optimisticLiveSlide.songId === selectedSong.id &&
+              optimisticLiveSlide.slideIndex === idx;
+
+            const isHostLiveMatch =
               currentLive?.type === "song_slide" &&
               ((currentLive.metadata?.songId === selectedSong.id &&
                 currentLive.metadata?.slideIndex === idx) ||
                 (currentLive.title.includes(selectedSong.title) &&
-                  currentLive.title.includes(`slide ${idx + 1}`)) ||
-                (activeSlideIndex === idx && currentLive.metadata?.songId === selectedSong.id));
+                  currentLive.title.includes(`slide ${idx + 1}`)));
+
+            const isLive = isOptimisticMatch || (!optimisticLiveSlide && isHostLiveMatch);
 
             return (
               <div
@@ -293,8 +319,9 @@ export function MobileSongTab() {
         ) : (
           songs.map((song) => {
             const isLive =
-              currentLive?.type === "song_slide" &&
-              (currentLive.metadata?.songId === song.id || currentLive.title.includes(song.title));
+              (optimisticLiveSlide !== null && optimisticLiveSlide.songId === song.id) ||
+              (currentLive?.type === "song_slide" &&
+                (currentLive.metadata?.songId === song.id || currentLive.title.includes(song.title)));
 
             return (
               <div

@@ -257,11 +257,14 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           }
         } else if (msg.type === "STATE_SYNC") {
           const sync = msg.syncState;
+          const shouldSyncTab = get().remoteControlMode === "full" && Boolean(sync.activeTab);
           set((s) => ({
-            // Keep mobile activeTab intact; tab switching is driven by explicit STATE_DELTA / user action
+            activeTab: shouldSyncTab ? sync.activeTab! : s.activeTab,
             currentLive: sync.currentLive,
             blackScreen: sync.blackScreen,
             recentHistory: sync.recentHistory ?? s.recentHistory,
+            selectedSongId: sync.selectedSongId ?? s.selectedSongId,
+            selectedTextId: sync.selectedTextId ?? s.selectedTextId,
             mediaList: sync.mediaList ?? s.mediaList,
             mediaThumbnails: sync.mediaThumbnails
               ? { ...s.mediaThumbnails, ...sync.mediaThumbnails }
@@ -272,7 +275,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
           // Delta received from host
           if (msg.origin === "host") {
             const delta = msg.delta;
-            const isFromOtherClient = msg.originClientId !== get().clientId;
+            const isFromOtherClient = !msg.originClientId || msg.originClientId !== get().clientId;
             const shouldSyncTab =
               get().remoteControlMode === "full" &&
               Boolean(delta.activeTab) &&
@@ -280,6 +283,10 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
 
             set((s) => ({
               activeTab: shouldSyncTab ? delta.activeTab! : s.activeTab,
+              selectedSongId:
+                delta.selectedSongId !== undefined ? delta.selectedSongId : s.selectedSongId,
+              selectedTextId:
+                delta.selectedTextId !== undefined ? delta.selectedTextId : s.selectedTextId,
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,
@@ -413,8 +420,10 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   },
 
   setSelectedSongId: (songId: number | null) => {
-    // Local browsing selection
     set({ selectedSongId: songId });
+    if (get().remoteControlMode === "full" && get().status === "connected" && songId !== null) {
+      void get().sendCommand({ action: "SYNC_SELECT_SONG", songId });
+    }
   },
 
   setLiveModalOpen: (open: boolean) => {
@@ -595,9 +604,30 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
       if (action.directInput) {
         set({
           currentLive: {
+            id: `bible:${action.directInput.translation}:${action.directInput.reference}`,
             type: "bible_verse",
             title: action.directInput.reference,
             details: action.directInput.text,
+            metadata: {
+              book: action.directInput.book,
+              chapter: action.directInput.chapter,
+              verse: action.directInput.verse,
+            },
+          },
+          blackScreen: false,
+        });
+      } else if (action.verseData) {
+        set({
+          currentLive: {
+            id: `bible:coord:${action.verseData.book}:${action.verseData.chapter}:${action.verseData.verse}`,
+            type: "bible_verse",
+            title: `Bible Verse ${action.verseData.chapter}:${action.verseData.verse}`,
+            details: "",
+            metadata: {
+              book: action.verseData.book,
+              chapter: action.verseData.chapter,
+              verse: action.verseData.verse,
+            },
           },
           blackScreen: false,
         });

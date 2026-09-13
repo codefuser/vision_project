@@ -64,7 +64,7 @@ export function projectTextSlide(input: ProjectTextInput): ProjectionContent<Liv
     createdAt: now,
     updatedAt: now,
   };
-  projectionEngine.project(content);
+  projectionEngine.setCurrent(content);
   projectionEvents.emit({ type: "CONTENT_PROJECTED", content, previous: null });
   projectionHistory.append(content);
   return content;

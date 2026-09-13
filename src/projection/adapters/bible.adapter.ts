@@ -4,6 +4,7 @@
  * styles so the projector renders identically on first frame.
  */
 import { useProjection } from "@/stores/projection.store";
+import { projectionEngine } from "../engine";
 import { projectionEvents } from "../event-bus";
 import { projectionHistory } from "../history";
 import type { ProjectionContent, BibleVerseBody } from "../content.types";
@@ -48,9 +49,6 @@ export function projectVerse(input: ProjectVerseInput): ProjectionContent<BibleV
   const send = () =>
     useProjection.getState().send({ type: "LOAD_TEXT", overlay, style, styles: groups });
   send();
-  if (!store.projectorOpen) {
-    setTimeout(send, 300);
-  }
 
   const now = Date.now();
   const content: ProjectionContent<BibleVerseBody> = {
@@ -69,6 +67,7 @@ export function projectVerse(input: ProjectVerseInput): ProjectionContent<BibleV
     createdAt: now,
     updatedAt: now,
   };
+  projectionEngine.setCurrent(content);
   projectionEvents.emit({ type: "CONTENT_PROJECTED", content, previous: null });
   projectionHistory.append(content);
   return content;
