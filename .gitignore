@@ -136,5 +136,5 @@ app-update.yml
 dev-app-update.yml
 
 
-.knowledge
-.agents
+# .knowledge
+# .agents
