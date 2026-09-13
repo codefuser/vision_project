@@ -39,8 +39,8 @@ export interface LiveProjectionPayload {
   totalSlides?: number;
   lines?: string[];
   // Media specifics
-  mediaType?: "image" | "video";
-  imageDataUrl?: string; // High-efficiency preview data URL for images
+  mediaType?: "image" | "video" | null;
+  imageDataUrl?: string | null; // High-efficiency preview data URL for images
   // Live text specifics
   textContent?: string;
   // Transport state

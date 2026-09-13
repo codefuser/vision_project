@@ -7,6 +7,7 @@
  * (no book/chapter for free text).
  */
 import { useProjection } from "@/stores/projection.store";
+import { projectionEngine } from "../engine";
 import { projectionEvents } from "../event-bus";
 import { projectionHistory } from "../history";
 import type { ProjectionContent, LiveTextBody } from "../content.types";
@@ -23,14 +24,14 @@ export interface ProjectTextInput {
 
 export function projectTextSlide(input: ProjectTextInput): ProjectionContent<LiveTextBody> {
   const overlay: TextOverlay = {
-    reference: "",
-    referenceEn: "",
-    referenceTa: "",
+    reference: input.title,
+    referenceEn: input.title,
+    referenceTa: input.title,
     text: input.text,
-    textEn: "",
+    textEn: input.text,
     textTa: input.text,
     translation: "",
-    mode: "ta",
+    mode: "both",
     kind: "live_text",
   };
   const groups = useTextFormat.getState().groups;
@@ -40,9 +41,6 @@ export function projectTextSlide(input: ProjectTextInput): ProjectionContent<Liv
   const send = () =>
     useProjection.getState().send({ type: "LOAD_TEXT", overlay, style, styles: groups });
   send();
-  if (!store.projectorOpen) {
-    setTimeout(send, 300);
-  }
 
   const now = Date.now();
   const content: ProjectionContent<LiveTextBody> = {
@@ -50,7 +48,12 @@ export function projectTextSlide(input: ProjectTextInput): ProjectionContent<Liv
     type: "live_text",
     title: `${input.title} (slide ${input.slideIndex + 1}/${input.totalSlides})`,
     source: { module: "text" },
-    metadata: { itemId: input.itemId, slideIndex: input.slideIndex },
+    metadata: {
+      itemId: input.itemId,
+      slideIndex: input.slideIndex,
+      totalSlides: input.totalSlides,
+      title: input.title,
+    },
     style: {
       background: style.background,
       color: style.color,
@@ -61,6 +64,7 @@ export function projectTextSlide(input: ProjectTextInput): ProjectionContent<Liv
     createdAt: now,
     updatedAt: now,
   };
+  projectionEngine.project(content);
   projectionEvents.emit({ type: "CONTENT_PROJECTED", content, previous: null });
   projectionHistory.append(content);
   return content;

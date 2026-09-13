@@ -20,6 +20,8 @@ import {
   Maximize2,
   Minimize2,
   Loader2,
+  Smartphone,
+  Monitor,
 } from "lucide-react";
 
 interface LiveViewerPageProps {
@@ -31,6 +33,13 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
     useViewerLiveQr();
 
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [fitMode, setFitMode] = useState<"fill" | "stage">(() => {
+    if (typeof window !== "undefined") {
+      const isMobile = window.innerWidth < 768 || window.innerHeight > window.innerWidth;
+      return isMobile ? "fill" : "stage";
+    }
+    return "fill";
+  });
   const mountedRef = useRef(false);
 
   // Extract token from prop or URL search param (?t=TOKEN)
@@ -187,6 +196,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
         mediaType={liveState?.mediaType}
         black={isBlack}
         scalingMode={liveState?.scalingMode ?? "auto"}
+        fitMode={fitMode}
         idleMessage="Vision Projector"
         className="h-full w-full"
       />
@@ -205,16 +215,36 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
         </div>
       )}
 
-      {/* ── MINIMAL FLOATING FULLSCREEN TOGGLE (NON-INTRUSIVE, AUTO-BLENDING) ────────── */}
-      <div className="absolute top-3 right-3 z-50 pointer-events-auto">
+      {/* ── MINIMAL FLOATING CONTROLS (FIT MODE TOGGLE + FULLSCREEN) ────────── */}
+      <div className="absolute top-3 right-3 z-50 pointer-events-auto flex items-center gap-2">
+        {/* Toggle between Phone Full Screen Fit and 16:9 Stage Mirror */}
+        <button
+          type="button"
+          onClick={() => setFitMode((m) => (m === "fill" ? "stage" : "fill"))}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 hover:bg-black/85 border border-white/15 text-[11px] font-medium text-white/80 hover:text-white backdrop-blur-md transition-all shadow-xl active:scale-95 cursor-pointer"
+          title={fitMode === "fill" ? "Switch to 16:9 Projector Mirror" : "Switch to Phone Full Screen"}
+        >
+          {fitMode === "fill" ? (
+            <>
+              <Smartphone className="h-3.5 w-3.5 text-sky-400" />
+              <span>Phone Fit</span>
+            </>
+          ) : (
+            <>
+              <Monitor className="h-3.5 w-3.5 text-amber-400" />
+              <span>16:9 Stage</span>
+            </>
+          )}
+        </button>
+
         <button
           type="button"
           onClick={toggleFullscreen}
-          className="h-9 w-9 rounded-full bg-black/50 hover:bg-black/85 border border-white/15 text-white/50 hover:text-white backdrop-blur-xs flex items-center justify-center transition-all opacity-40 hover:opacity-100 cursor-pointer shadow-xl active:scale-95"
+          className="h-8 w-8 rounded-full bg-black/60 hover:bg-black/85 border border-white/15 text-white/70 hover:text-white backdrop-blur-md flex items-center justify-center transition-all cursor-pointer shadow-xl active:scale-95"
           title={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           aria-label="Toggle fullscreen"
         >
-          {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          {isFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
         </button>
       </div>
     </div>

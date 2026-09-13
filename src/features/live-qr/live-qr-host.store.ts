@@ -44,8 +44,8 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
     const rec = await db().blobs.get(blobId);
     if (!rec?.blob) return undefined;
 
-    // Small images (<= 40KB): encode directly without transcoding
-    if (rec.blob.size <= 40 * 1024) {
+    // Small images (<= 25KB): encode directly without transcoding
+    if (rec.blob.size <= 25 * 1024 && rec.blob.type.startsWith("image/")) {
       return new Promise((resolve) => {
         const reader = new FileReader();
         reader.onloadend = () => {
@@ -58,16 +58,16 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
       });
     }
 
-    // High-resolution image: render to compact 800px canvas preserving aspect ratio (~25KB payload)
-    if (typeof window !== "undefined" && (rec.blob.type.startsWith("image/") || rec.kind === "original" || rec.kind === "thumb")) {
+    // High-resolution image/thumb: render to compact 640px JPEG canvas (<25KB payload)
+    if (typeof window !== "undefined") {
       return new Promise((resolve) => {
         const url = URL.createObjectURL(rec.blob);
         const img = new Image();
         img.onload = () => {
           try {
-            const maxDim = 800;
-            let w = img.naturalWidth || img.width;
-            let h = img.naturalHeight || img.height;
+            const maxDim = 640;
+            let w = img.naturalWidth || img.width || 640;
+            let h = img.naturalHeight || img.height || 360;
             if (w > maxDim || h > maxDim) {
               if (w > h) {
                 h = Math.round((h * maxDim) / w);
@@ -78,8 +78,8 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
               }
             }
             const canvas = document.createElement("canvas");
-            canvas.width = w;
-            canvas.height = h;
+            canvas.width = Math.max(1, w);
+            canvas.height = Math.max(1, h);
             const ctx = canvas.getContext("2d");
             if (!ctx) {
               URL.revokeObjectURL(url);
@@ -91,7 +91,7 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
             ctx.drawImage(img, 0, 0, w, h);
             URL.revokeObjectURL(url);
 
-            const result = canvas.toDataURL("image/jpeg", 0.70);
+            const result = canvas.toDataURL("image/jpeg", 0.65);
             liveThumbCache.set(blobId, result);
             resolve(result);
           } catch {
@@ -112,7 +112,7 @@ async function getOptimizedMediaDataUrl(blobId?: string | null): Promise<string 
       const reader = new FileReader();
       reader.onloadend = () => {
         const result = reader.result as string;
-        if (result && result.length < 500000) {
+        if (result && result.length < 150000) {
           liveThumbCache.set(blobId, result);
         }
         resolve(result);
@@ -241,55 +241,7 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
       }
     : null;
 
-  // ── Source 1: Active textOverlay from useProjection state ──
-  if (
-    projState?.textOverlay &&
-    (projState.textOverlay.text ||
-      projState.textOverlay.textTa ||
-      projState.textOverlay.textEn ||
-      projState.textOverlay.reference)
-  ) {
-    const ov = projState.textOverlay;
-    const isSong = ov.kind === "song_slide";
-    const isBible = ov.kind === "bible_verse";
-    const rawText = ov.text || ov.textTa || ov.textEn || "";
-    const lines = rawText ? rawText.split("\n") : [];
-
-    const songTitleFromCur = cur?.title?.replace(/\s*\(slide\s*\d+\)$/i, "");
-    const slideIdxFromCur =
-      typeof (cur?.body as any)?.slideIndex === "number"
-        ? (cur?.body as any).slideIndex + 1
-        : typeof (cur?.metadata as any)?.slideIndex === "number"
-          ? (cur?.metadata as any).slideIndex + 1
-          : undefined;
-    const totalSlidesFromCur =
-      typeof (cur?.metadata as any)?.totalSlides === "number"
-        ? (cur?.metadata as any).totalSlides
-        : undefined;
-
-    return {
-      isLive: true,
-      title: ov.reference || (isSong ? cur?.title || "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
-      type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
-      reference: ov.reference || (isSong ? songTitleFromCur : undefined),
-      verseText: rawText,
-      translation: ov.translation || "Bible",
-      songTitle: songTitleFromCur || ov.reference || "Song",
-      slideIndex: slideIdxFromCur,
-      totalSlides: totalSlidesFromCur,
-      lines,
-      textContent: rawText,
-      textOverlay: ov,
-      textStyle: effectiveStyle,
-      groupedStyles: effectiveGroups,
-      logo: sanitizedLogo,
-      scalingMode: effectiveScaling,
-      blackScreen,
-      updatedAt: Date.now(),
-    };
-  }
-
-  // ── Source 2: Universal ProjectionContent (from engine or adapter event) ──
+  // ── Source 1: Universal ProjectionContent (Engine / Adapter authoritative state) ──
   if (cur) {
     const basePayload: Partial<LiveProjectionPayload> = {
       isLive: true,
@@ -304,73 +256,10 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
     };
 
     switch (cur.type) {
-      case "bible_verse": {
-        const body = cur.body as any;
-        const overlay: TextOverlay = projState?.textOverlay ?? {
-          reference: body?.reference || cur.title,
-          text: body?.text || "",
-          translation: body?.translation || "Bible",
-          subtext: body?.subtext,
-          subtranslation: body?.subtranslation,
-          referenceEn: body?.referenceEn,
-          referenceTa: body?.referenceTa,
-          textEn: body?.textEn,
-          textTa: body?.textTa,
-          mode: body?.mode,
-          kind: "bible_verse",
-        };
-        return {
-          ...basePayload,
-          isLive: true,
-          title: cur.title,
-          type: "bible_verse",
-          reference: body?.reference || cur.title,
-          verseText: body?.text || "",
-          translation: body?.translation || "Bible",
-          textOverlay: overlay,
-          blackScreen,
-          updatedAt: Date.now(),
-        };
-      }
-
-      case "song_slide": {
-        const body = cur.body as any;
-        const lines = Array.isArray(body?.lines)
-          ? body.lines
-          : typeof body?.text === "string"
-            ? body.text.split("\n")
-            : [];
-        const joinedText = lines.join("\n");
-        const overlay: TextOverlay = projState?.textOverlay ?? {
-          reference: "",
-          referenceEn: "",
-          referenceTa: "",
-          text: joinedText,
-          textEn: "",
-          textTa: joinedText,
-          translation: "",
-          mode: "ta",
-          kind: "song_slide",
-        };
-        return {
-          ...basePayload,
-          isLive: true,
-          title: cur.title,
-          type: "song_slide",
-          songTitle: cur.title,
-          slideIndex: typeof body?.slideIndex === "number" ? body.slideIndex + 1 : undefined,
-          lines,
-          textOverlay: overlay,
-          blackScreen,
-          updatedAt: Date.now(),
-        };
-      }
-
       case "image": {
         const body = cur.body as any;
         let imageDataUrl: string | undefined;
 
-        // Prioritize original high-res blobId over low-res thumbnail
         if (body?.blobId) {
           imageDataUrl = await getOptimizedMediaDataUrl(body.blobId);
         }
@@ -402,10 +291,15 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
         const body = cur.body as any;
         let posterDataUrl: string | undefined;
 
-        if (body?.mediaId) {
+        if (body?.blobId) {
+          posterDataUrl = await getOptimizedMediaDataUrl(body.blobId);
+        }
+        if (!posterDataUrl && body?.mediaId) {
           const mediaItem = await db().media.get(body.mediaId);
           if (mediaItem?.thumbBlobId) {
             posterDataUrl = await getOptimizedMediaDataUrl(mediaItem.thumbBlobId);
+          } else if (mediaItem?.blobId) {
+            posterDataUrl = await getOptimizedMediaDataUrl(mediaItem.blobId);
           }
         }
 
@@ -427,19 +321,136 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
       case "announcement":
       case "sermon_point": {
         const body = cur.body as any;
-        const rawText = body?.text || body?.heading || cur.title;
-        const overlay: TextOverlay = projState?.textOverlay ?? {
-          reference: cur.title,
+        const meta = cur.metadata as any;
+        const rawText = body?.text || body?.heading || cur.title || "";
+        const lines = rawText ? rawText.split("\n") : [];
+        const slideIdx =
+          typeof body?.slideIndex === "number"
+            ? body.slideIndex + 1
+            : typeof meta?.slideIndex === "number"
+              ? meta.slideIndex + 1
+              : undefined;
+        const totalSlides =
+          typeof meta?.totalSlides === "number" ? meta.totalSlides : undefined;
+        const cleanTitle =
+          meta?.title ||
+          cur.title?.replace(/\s*\(slide\s*\d+(\/\d+)?\)$/i, "") ||
+          "Announcement";
+
+        const overlay: TextOverlay = {
+          reference: cleanTitle,
+          referenceTa: cleanTitle,
+          referenceEn: cleanTitle,
           text: rawText,
-          kind: cur.type as any,
+          textTa: rawText,
+          textEn: rawText,
+          mode: "both",
+          kind: "live_text",
         };
+
+        return {
+          ...basePayload,
+          isLive: true,
+          title: cur.title || cleanTitle,
+          type: "live_text",
+          reference: cleanTitle,
+          verseText: rawText,
+          textContent: rawText,
+          lines,
+          slideIndex: slideIdx,
+          totalSlides,
+          textOverlay: overlay,
+          mediaUrl: null,
+          imageDataUrl: null,
+          mediaType: null,
+          blackScreen,
+          updatedAt: Date.now(),
+        };
+      }
+
+      case "song_slide": {
+        const body = cur.body as any;
+        const meta = cur.metadata as any;
+        const lines = Array.isArray(body?.lines)
+          ? body.lines
+          : typeof body?.text === "string"
+            ? body.text.split("\n")
+            : [];
+        const joinedText = lines.join("\n");
+        const songTitle =
+          cur.title?.replace(/\s*\(slide\s*\d+\)$/i, "") || "Song Lyrics";
+        const slideIdx =
+          typeof body?.slideIndex === "number"
+            ? body.slideIndex + 1
+            : typeof meta?.slideIndex === "number"
+              ? meta.slideIndex + 1
+              : undefined;
+        const totalSlides =
+          typeof meta?.totalSlides === "number" ? meta.totalSlides : undefined;
+
+        const overlay: TextOverlay = projState?.textOverlay ?? {
+          reference: "",
+          referenceEn: "",
+          referenceTa: "",
+          text: joinedText,
+          textEn: "",
+          textTa: joinedText,
+          translation: "",
+          mode: "ta",
+          kind: "song_slide",
+        };
+
         return {
           ...basePayload,
           isLive: true,
           title: cur.title,
-          type: cur.type,
-          textContent: rawText,
+          type: "song_slide",
+          songTitle,
+          reference: songTitle,
+          verseText: joinedText,
+          textContent: joinedText,
+          slideIndex: slideIdx,
+          totalSlides,
+          lines,
           textOverlay: overlay,
+          mediaUrl: null,
+          imageDataUrl: null,
+          mediaType: null,
+          blackScreen,
+          updatedAt: Date.now(),
+        };
+      }
+
+      case "bible_verse": {
+        const body = cur.body as any;
+        const rawText = body?.text || "";
+        const overlay: TextOverlay = projState?.textOverlay ?? {
+          reference: body?.reference || cur.title,
+          text: rawText,
+          translation: body?.translation || "Bible",
+          subtext: body?.subtext,
+          subtranslation: body?.subtranslation,
+          referenceEn: body?.referenceEn,
+          referenceTa: body?.referenceTa,
+          textEn: body?.textEn,
+          textTa: body?.textTa,
+          mode: body?.mode,
+          kind: "bible_verse",
+        };
+
+        return {
+          ...basePayload,
+          isLive: true,
+          title: cur.title,
+          type: "bible_verse",
+          reference: body?.reference || cur.title,
+          verseText: rawText,
+          textContent: rawText,
+          translation: body?.translation || "Bible",
+          textOverlay: overlay,
+          mediaUrl: null,
+          imageDataUrl: null,
+          mediaType: null,
           blackScreen,
           updatedAt: Date.now(),
         };
@@ -451,11 +462,50 @@ async function resolveCurrentLivePayload(): Promise<LiveProjectionPayload> {
           isLive: true,
           title: cur.title,
           type: cur.type,
+          mediaUrl: null,
+          imageDataUrl: null,
           blackScreen,
           updatedAt: Date.now(),
         };
       }
     }
+  }
+
+  // ── Source 2: Active textOverlay from useProjection state (fallback) ──
+  if (
+    projState?.textOverlay &&
+    (projState.textOverlay.text ||
+      projState.textOverlay.textTa ||
+      projState.textOverlay.textEn ||
+      projState.textOverlay.reference)
+  ) {
+    const ov = projState.textOverlay;
+    const isSong = ov.kind === "song_slide";
+    const isBible = ov.kind === "bible_verse";
+    const rawText = ov.text || ov.textTa || ov.textEn || "";
+    const lines = rawText ? rawText.split("\n") : [];
+
+    return {
+      isLive: true,
+      title: ov.reference || (isSong ? "Song Lyrics" : isBible ? "Bible Verse" : "Text"),
+      type: isSong ? "song_slide" : isBible ? "bible_verse" : "live_text",
+      reference: ov.reference,
+      verseText: rawText,
+      translation: ov.translation || "Bible",
+      songTitle: ov.reference || "Song",
+      lines,
+      textContent: rawText,
+      textOverlay: ov,
+      textStyle: effectiveStyle,
+      groupedStyles: effectiveGroups,
+      logo: sanitizedLogo,
+      scalingMode: effectiveScaling,
+      mediaUrl: null,
+      imageDataUrl: null,
+      mediaType: null,
+      blackScreen,
+      updatedAt: Date.now(),
+    };
   }
 
   // ── Source 3: Active currentMediaId from useProjection ──
@@ -683,6 +733,15 @@ export const useHostLiveQr = create<HostLiveQrState>((set, get) => ({
         totalSlides: payload.totalSlides,
         lines: payload.lines,
         textContent: payload.textContent,
+        mediaType: payload.mediaType,
+        mediaUrl:
+          payload.mediaUrl && payload.mediaUrl.length <= 35000
+            ? payload.mediaUrl
+            : undefined,
+        imageDataUrl:
+          payload.imageDataUrl && payload.imageDataUrl.length <= 35000
+            ? payload.imageDataUrl
+            : undefined,
         textOverlay: payload.textOverlay,
         textStyle: payload.textStyle,
         groupedStyles: payload.groupedStyles,
