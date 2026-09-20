@@ -69,8 +69,11 @@ Implemented using the standard Web Crypto API in `src/features/remote/remote-cry
 
 The mobile remote app is optimized for single-thumb smartphone operation during live church services:
 * **Bidirectional Tab & Song Synchronization**: When **Sync** mode (`remoteControlMode === "full"`) is enabled, switching tabs on the phone dispatches `SYNC_TAB` to switch the laptop view, and switching tabs on the laptop dispatches `STATE_DELTA { activeTab }` to switch the phone view. Selecting a song on the phone dispatches `SYNC_SELECT_SONG` which immediately switches the laptop to the Songs tab and selects the song to display its lyric slides.
+* **Full Song Slide Delivery (`selectedSongData`)**: When the laptop selects a song, the host broadcasts `STATE_DELTA { selectedSongId, selectedSongData: { id, title, slides[], scale } }`. The phone's `MobileSongTab` uses this to auto-open the slide view with **all slides** instantly — no phone-side search needed. This fixes the "only 1 slide" bug that occurred when the laptop-selected song wasn't in the phone's search results.
 * **0ms Optimistic Feedback & Anti-Jitter**: Verse cards, song slides, and media cards use local optimistic live state (`optimisticLiveVerse`, `optimisticLiveSlide`, `optimisticLiveMediaId`). Tapping a verse or slide instantly renders the glowing `LIVE` badge in 0ms without waiting for WebSocket roundtrips or being reverted by out-of-order in-flight network packets.
 * **Lightweight Delta Broadcasting**: Fast projection actions (`PROJECT_VERSE`, `PROJECT_SONG_SLIDE`, `PROJECT_MEDIA`, `PROJECT_TEXT`) bypass heavy Dexie database queries and broadcast sub-kilobyte `STATE_DELTA` packets directly to connected clients for near-instant latency.
+* **Debounced Full-Sync (50ms coalesce)**: `projectionEngine.onAny()`, `projectionEvents.on("CONTENT_PROJECTED")`, and `useProjection.subscribe()` all share a single `makeDebouncedSync(50)` debouncer. All rapid-fire events collapse into one `broadcastSyncState()` per 50ms burst — eliminating the 3× redundant full-syncs that previously fired per projection action.
+* **Fast-Projection Suppression Guard**: After every `broadcastDelta()` for a `PROJECT_*` action, `suppressNextDebouncedSync(120)` is called. This suppresses the debounced full-sync for 120ms, preventing a redundant full STATE_SYNC from following a fast STATE_DELTA.
 * **Bottom Navigation**: Fixed thumb-zone navigation bar switching between **Verse**, **Song**, **Media**, and **Text**.
 * **Docked "Now Playing" Mini-Bar**: Docked above the bottom navigation, providing real-time live projection status, current slide counters (`Slide X/Y`), and inline `Prev`/`Next` slide triggers without opening a modal.
 * **Bible Tab**: Book picker with instant text filtering, dedicated rapid Chapter Picker Grid modal, and Tamil/English bilingual switching.
@@ -79,6 +82,14 @@ The mobile remote app is optimized for single-thumb smartphone operation during 
 * **Text Tab**: Quick one-tap preset announcement chips (*Welcome*, *Opening Prayer*, *Offering & Tithes*, *Benediction*), custom message authoring, and saved church announcements.
 * **Transport Dock**: Dedicated Blackout toggle, Stage Clear, and instant stage simulation preview.
 * **Offloaded Host Search**: Mobile phones do not download the 30MB+ Bible or song datasets. Instead, search queries are transmitted to the laptop host (`SEARCH_SONGS`, `SEARCH_VERSES`), and only the matching results are broadcast back to the phone!
+
+### Key Invariants (added 2026-09-20)
+| Invariant | Detail |
+|---|---|
+| `selectedSongData` in `RemoteHostSyncState` | Carries `{ id, title, slides[], scale? }` — always populated when `selectedSongId` is set and songs are loaded |
+| `suppressNextDebouncedSync(ms)` | Must be called after every `PROJECT_*` `broadcastDelta()` in the host COMMAND handler |
+| `debouncedSync` coalesces 3 listeners | `projectionEngine.onAny`, `CONTENT_PROJECTED`, `useProjection.subscribe` — all share one 50ms debouncer |
+| `MobileSongTab` auto-opens slide view | `useEffect([selectedSongData])` auto-sets `activeSong` when host pushes new `selectedSongData` |
 
 ---
 

@@ -19,6 +19,7 @@ export function MobileSongTab() {
     setSearchQuery,
     selectedSongId,
     setSelectedSongId,
+    selectedSongData,
     requestSongSearch,
   } = useRemoteClient();
 
@@ -74,18 +75,38 @@ export function MobileSongTab() {
 
   const [activeSong, setActiveSong] = useState<RemoteSong | null>(null);
 
-  // Synchronized selected song from local list or context
+  // When the host pushes selectedSongData (laptop selected a song), auto-open its slide view
+  useEffect(() => {
+    if (!selectedSongData) return;
+    // Only auto-open if we're not already viewing this song
+    setActiveSong((prev) => {
+      if (prev && prev.id === selectedSongData.id) return prev;
+      return {
+        id: selectedSongData.id,
+        title: selectedSongData.title,
+        slides: selectedSongData.slides,
+        scale: selectedSongData.scale,
+      };
+    });
+  }, [selectedSongData]);
+
+  // Synchronized selected song from local list or host-pushed data
   const selectedSong = useMemo(() => {
     if (activeSong) return activeSong;
+    if (selectedSongData && selectedSongId === selectedSongData.id) {
+      return selectedSongData as RemoteSong;
+    }
     if (!selectedSongId) return null;
     return songs.find((s) => s.id === selectedSongId) ?? null;
-  }, [activeSong, songs, selectedSongId]);
+  }, [activeSong, songs, selectedSongId, selectedSongData]);
 
   // Context song from laptop (either currently live song or laptop selected song)
   const contextSong = useMemo(() => {
     if (currentLive?.type === "song_slide" && currentLive.metadata?.songId) {
-      const match = songs.find((s) => s.id === currentLive.metadata?.songId);
-      if (match) return match;
+      const match =
+        songs.find((s) => s.id === currentLive.metadata?.songId) ||
+        (selectedSongData?.id === currentLive.metadata?.songId ? selectedSongData : undefined);
+      if (match) return match as RemoteSong;
       if (currentLive.title) {
         return {
           id: currentLive.metadata.songId as number,
@@ -96,10 +117,13 @@ export function MobileSongTab() {
       }
     }
     if (selectedSongId) {
-      return songs.find((s) => s.id === selectedSongId) ?? null;
+      return (
+        songs.find((s) => s.id === selectedSongId) ??
+        (selectedSongData?.id === selectedSongId ? (selectedSongData as RemoteSong) : null)
+      );
     }
     return null;
-  }, [songs, currentLive, selectedSongId]);
+  }, [songs, currentLive, selectedSongId, selectedSongData]);
 
   const handleProjectSlide = (song: RemoteSong, slideIdx: number) => {
     setActiveSlideIndex(slideIdx);

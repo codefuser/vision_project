@@ -587,6 +587,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                     },
                     blackScreen: false,
                   });
+                  suppressNextDebouncedSync();
                 }
                 break;
               }
@@ -604,6 +605,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                   },
                   blackScreen: false,
                 });
+                suppressNextDebouncedSync();
                 break;
               }
 
@@ -620,6 +622,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                     },
                     blackScreen: false,
                   });
+                  suppressNextDebouncedSync();
                 }
                 break;
               }
@@ -637,6 +640,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                   },
                   blackScreen: false,
                 });
+                suppressNextDebouncedSync();
                 break;
               }
 
@@ -944,10 +948,26 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
     content: (t.content || "").slice(0, 200),
   }));
 
+  // Selected song full data — carry all slides so mobile never has to search for the active song
+  let selectedSongData: RemoteHostSyncState["selectedSongData"] = null;
+  if (ws.selectedSongId) {
+    const songs = getSongs();
+    const match = songs?.find((s) => s.id === ws.selectedSongId);
+    if (match) {
+      selectedSongData = {
+        id: match.id,
+        title: match.title,
+        slides: match.slides,
+        scale: match.scale,
+      };
+    }
+  }
+
   return {
     activeTab,
     selectedSongId: ws.selectedSongId,
     selectedTextId: ws.selectedTextId,
+    selectedSongData,
     currentLive,
     blackScreen: Boolean(projState?.black),
     recentHistory,
@@ -958,6 +978,43 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
 }
 
 // ── Workspace State Subscriptions (Laptop User -> Mobile Remote) ───────────────
+
+// Debounce helper: collapses rapid-fire sync triggers into one broadcast per 50ms
+function makeDebouncedSync(delayMs: number) {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let suppressUntil = 0; // epoch ms — suppress if a fast delta was already sent
+
+  const trigger = () => {
+    if (Date.now() < suppressUntil) return; // fast projection delta already sent — skip
+    if (timer !== null) return; // already scheduled
+    timer = setTimeout(() => {
+      timer = null;
+      if (Date.now() < suppressUntil) return;
+      const { session, channel } = useHostRemote.getState();
+      if (session && channel) {
+        void useHostRemote.getState().broadcastSyncState();
+      }
+    }, delayMs);
+  };
+
+  /** Call after a fast broadcastDelta() was already dispatched for a projection action */
+  const suppressFor = (ms: number) => {
+    suppressUntil = Date.now() + ms;
+    if (timer !== null) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  };
+
+  return { trigger, suppressFor };
+}
+
+const debouncedSync = makeDebouncedSync(50);
+
+/** Call this after every fast PROJECT_* broadcastDelta to prevent the debounced full-sync from firing redundantly */
+export function suppressNextDebouncedSync(ms = 120) {
+  debouncedSync.suppressFor(ms);
+}
 
 if (typeof window !== "undefined") {
   let prevSelectedSongId = useWorkspace.getState().selectedSongId;
@@ -979,43 +1036,36 @@ if (typeof window !== "undefined") {
       void broadcastDelta({ activeTab: remoteTab });
     }
 
-    // Selected song changed on laptop (shared song context for remote browsing)
+    // Selected song changed on laptop -> broadcast song data (all slides) to remotes immediately
     if (state.selectedSongId !== prevSelectedSongId) {
       prevSelectedSongId = state.selectedSongId;
-      void broadcastDelta({ selectedSongId: state.selectedSongId });
+      const songs = getSongs();
+      const match = songs?.find((s) => s.id === state.selectedSongId);
+      const selectedSongData = match
+        ? { id: match.id, title: match.title, slides: match.slides, scale: match.scale }
+        : null;
+      void broadcastDelta({ selectedSongId: state.selectedSongId, selectedSongData });
     }
   });
 
-  // Projection Engine listener: auto-sync state when projection changes
+  // Projection Engine listener: debounced — only one sync per 50ms burst
   projectionEngine.onAny(() => {
-    const { session, channel } = useHostRemote.getState();
-    if (session && channel) {
-      void useHostRemote.getState().broadcastSyncState();
-    }
+    debouncedSync.trigger();
   });
 
-  // Projection Events listener: when song slide, bible verse, or text slide is projected
+  // Projection Events: capture latest content + debounced sync
   projectionEvents.on("CONTENT_PROJECTED", (e) => {
     latestEmittedContent = e.content;
-    const { session, channel } = useHostRemote.getState();
-    if (session && channel) {
-      void useHostRemote.getState().broadcastSyncState();
-    }
+    debouncedSync.trigger();
   });
 
   projectionEvents.on("CONTENT_CLEARED", () => {
     latestEmittedContent = null;
-    const { session, channel } = useHostRemote.getState();
-    if (session && channel) {
-      void useHostRemote.getState().broadcastSyncState();
-    }
+    debouncedSync.trigger();
   });
 
-  // Projection Store subscriber: when black screen, clear, or overlay changes
+  // Projection Store subscriber: debounced sync on overlay/black/clear changes
   useProjection.subscribe(() => {
-    const { session, channel } = useHostRemote.getState();
-    if (session && channel) {
-      void useHostRemote.getState().broadcastSyncState();
-    }
+    debouncedSync.trigger();
   });
 }
