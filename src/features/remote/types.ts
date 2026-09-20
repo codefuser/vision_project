@@ -54,6 +54,13 @@ export interface RemoteHostSyncState {
     slides: string[];
     scale?: string;
   } | null;
+  /** Chapter verses pushed from host when a verse is projected — phone uses this directly without a GET_CHAPTER_VERSES round-trip */
+  selectedVerseData?: {
+    book: number;
+    chapter: number;
+    lang: "ta" | "en";
+    verses: string[];
+  } | null;
   currentLive: {
     id?: string;
     title: string;

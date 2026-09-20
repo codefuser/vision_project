@@ -569,14 +569,40 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
 
               case "PROJECT_VERSE": {
                 let content: ProjectionContent | null = null;
+                let verseBook: number | undefined;
+                let verseChapter: number | undefined;
+                let verseLang: "ta" | "en" = "ta";
+
                 if (command.directInput) {
                   content = projectVerse(command.directInput);
+                  verseBook = command.directInput.book;
+                  verseChapter = command.directInput.chapter;
+                  verseLang = command.directInput.translation === "English" ? "en" : "ta";
                 } else if (command.verseData) {
                   projectVerseAt(command.verseData);
                   content = latestEmittedContent;
+                  verseBook = command.verseData.book;
+                  verseChapter = command.verseData.chapter;
                 }
                 triggerHostLiveBroadcast();
+
                 if (content) {
+                  // Fast delta: currentLive update + chapter verses in one payload
+                  let verseDataPayload: RemoteHostSyncState["selectedVerseData"] = null;
+                  if (verseBook !== undefined && verseChapter !== undefined) {
+                    let bibleData = getBible(verseLang);
+                    if (!bibleData) bibleData = await loadBible(verseLang);
+                    const chapterVerses = bibleData?.[verseBook]?.[verseChapter - 1];
+                    if (chapterVerses && chapterVerses.length > 0) {
+                      verseDataPayload = {
+                        book: verseBook,
+                        chapter: verseChapter,
+                        lang: verseLang,
+                        verses: chapterVerses,
+                      };
+                    }
+                  }
+
                   void get().broadcastDelta({
                     currentLive: {
                       id: content.id,
@@ -585,6 +611,7 @@ export const useHostRemote = create<HostRemoteState>((set, get) => ({
                       details: (content.body as any)?.text?.slice(0, 300),
                       metadata: content.metadata as any,
                     },
+                    selectedVerseData: verseDataPayload,
                     blackScreen: false,
                   });
                   suppressNextDebouncedSync();
@@ -963,11 +990,32 @@ async function buildSyncState(): Promise<RemoteHostSyncState> {
     }
   }
 
+  // Selected verse data — carry chapter verses from current live bible verse so mobile can display instantly
+  let selectedVerseData: RemoteHostSyncState["selectedVerseData"] = null;
+  if (cur?.type === "bible_verse" && cur.metadata) {
+    const vBook = (cur.metadata as any).book as number | undefined;
+    const vChapter = (cur.metadata as any).chapter as number | undefined;
+    if (vBook !== undefined && vChapter !== undefined) {
+      // Determine lang from the live content title (contains "Tamil" or "English")
+      const isEnglish = cur.title?.toLowerCase().includes("english");
+      const vLang: "ta" | "en" = isEnglish ? "en" : "ta";
+      let bibleData = getBible(vLang);
+      if (!bibleData) {
+        try { bibleData = await loadBible(vLang); } catch { /* ignore */ }
+      }
+      const chapterVerses = bibleData?.[vBook]?.[vChapter - 1];
+      if (chapterVerses && chapterVerses.length > 0) {
+        selectedVerseData = { book: vBook, chapter: vChapter, lang: vLang, verses: chapterVerses };
+      }
+    }
+  }
+
   return {
     activeTab,
     selectedSongId: ws.selectedSongId,
     selectedTextId: ws.selectedTextId,
     selectedSongData,
+    selectedVerseData,
     currentLive,
     blackScreen: Boolean(projState?.black),
     recentHistory,

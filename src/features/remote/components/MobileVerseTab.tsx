@@ -24,6 +24,7 @@ export function MobileVerseTab() {
     setSearchQuery,
     requestVerseSearch,
     requestChapterVerses,
+    selectedVerseData,
   } = useRemoteClient();
 
   const query = searchQuery.verse || "";
@@ -61,10 +62,46 @@ export function MobileVerseTab() {
 
   const debouncedQuery = useDebounce(query, 150);
 
+  // Auto-navigate to the book+chapter when laptop projects a verse
+  // This ensures the phone mirrors the laptop without the user having to search
+  useEffect(() => {
+    if (currentLive?.type !== "bible_verse") return;
+    const book = currentLive.metadata?.book as number | undefined;
+    const chapter = currentLive.metadata?.chapter as number | undefined;
+    if (book === undefined || !chapter) return;
+    const bookMeta = BIBLE_BOOKS[book];
+    if (!bookMeta) return;
+    // Only auto-navigate when not actively searching
+    if (debouncedQuery.trim()) return;
+    setActiveBook((prev) => (prev.index === book ? prev : bookMeta));
+    setActiveChapter((prev) => (prev === chapter ? prev : chapter));
+  }, [currentLive, debouncedQuery]);
+
+  // Use host-pushed chapter verses instantly (skip GET_CHAPTER_VERSES round-trip)
+  useEffect(() => {
+    if (!selectedVerseData) return;
+    if (
+      selectedVerseData.book === activeBook.index &&
+      selectedVerseData.chapter === activeChapter
+    ) {
+      setChapterVerses(selectedVerseData.verses);
+      setLoading(false);
+    }
+  }, [selectedVerseData, activeBook.index, activeChapter]);
+
   // 1. Fetch verses for selected book & chapter when not searching
   useEffect(() => {
     let active = true;
     if (debouncedQuery.trim()) return;
+
+    // Skip network call if the host already pushed this chapter's verses
+    if (
+      selectedVerseData &&
+      selectedVerseData.book === activeBook.index &&
+      selectedVerseData.chapter === activeChapter
+    ) {
+      return;
+    }
 
     async function loadChapter() {
       setLoading(true);
@@ -84,7 +121,8 @@ export function MobileVerseTab() {
     return () => {
       active = false;
     };
-  }, [activeBook.index, activeChapter, lang, debouncedQuery, requestChapterVerses]);
+  }, [activeBook.index, activeChapter, lang, debouncedQuery, requestChapterVerses, selectedVerseData]);
+
 
   // 2. Perform search when query changes
   useEffect(() => {
