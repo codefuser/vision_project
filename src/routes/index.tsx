@@ -6,9 +6,22 @@ import { useSettings } from "@/stores/settings.store";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "VersoLyn — Presentation Software" },
-      { name: "description", content: "Media presentation software for churches." },
+      { title: "VersoLyn - Church Presentation Software" },
+      {
+        name: "description",
+        content:
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content. Built for modern churches.",
+      },
+      { name: "robots", content: "index, follow" },
+      { property: "og:url", content: "https://versolyn.vercel.app/" },
+      { property: "og:title", content: "VersoLyn - Church Presentation Software" },
+      {
+        property: "og:description",
+        content:
+          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content.",
+      },
     ],
+    links: [{ rel: "canonical", href: "https://versolyn.vercel.app/" }],
   }),
   component: IndexRoute,
 });

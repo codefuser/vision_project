@@ -1,6 +1,9 @@
 {
-  "name": "VersoLyn",
+  "name": "VersoLyn - Church Presentation Software",
   "short_name": "VersoLyn",
+  "description": "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content.",
+  "start_url": "/",
+  "lang": "en",
   "icons": [
     {
       "src": "/favicon-192x192.png",
