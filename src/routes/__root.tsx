@@ -127,6 +127,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { name: "keywords", content: "church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software" },
       { name: "robots", content: "index, follow" },
+      { name: "google-site-verification", content: "MFh43OIJgQvNHdHLomg8gcEjRUQa8-HxZSt_1vCe-HE" },
       { name: "theme-color", content: "#0a0a0a" },
       // ── Canonical ────────────────────────────────────────────────────────────
       // Per-page canonical is set in each route's head(). Root provides fallback.
