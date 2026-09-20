@@ -88,6 +88,8 @@ interface RemoteClientState {
   selectedTextId: string | null;
   /** Full song data pushed from host — carries slides[] so mobile doesn't need to search */
   selectedSongData: { id: number; title: string; slides: string[]; scale?: string } | null;
+  /** Chapter verses pushed from host when a verse is projected — phone displays instantly, no GET_CHAPTER_VERSES round-trip */
+  selectedVerseData: { book: number; chapter: number; lang: "ta" | "en"; verses: string[] } | null;
   currentLive: RemoteHostSyncState["currentLive"];
   blackScreen: boolean;
   recentHistory: RemoteRecentItem[];
@@ -137,6 +139,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
   selectedSongId: null,
   selectedTextId: null,
   selectedSongData: null,
+  selectedVerseData: null,
   currentLive: null,
   blackScreen: false,
   recentHistory: [],
@@ -223,6 +226,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 selectedSongId: sync?.selectedSongId ?? null,
                 selectedTextId: sync?.selectedTextId ?? null,
                 selectedSongData: sync?.selectedSongData ?? null,
+                selectedVerseData: sync?.selectedVerseData ?? null,
                 currentLive: sync?.currentLive ?? null,
                 blackScreen: Boolean(sync?.blackScreen),
                 recentHistory: sync?.recentHistory ?? [],
@@ -271,6 +275,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             selectedTextId: sync.selectedTextId ?? s.selectedTextId,
             selectedSongData:
               sync.selectedSongData !== undefined ? sync.selectedSongData : s.selectedSongData,
+            selectedVerseData:
+              sync.selectedVerseData !== undefined ? sync.selectedVerseData : s.selectedVerseData,
             mediaList: sync.mediaList ?? s.mediaList,
             mediaThumbnails: sync.mediaThumbnails
               ? { ...s.mediaThumbnails, ...sync.mediaThumbnails }
@@ -295,6 +301,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 delta.selectedTextId !== undefined ? delta.selectedTextId : s.selectedTextId,
               selectedSongData:
                 delta.selectedSongData !== undefined ? delta.selectedSongData : s.selectedSongData,
+              selectedVerseData:
+                delta.selectedVerseData !== undefined ? delta.selectedVerseData : s.selectedVerseData,
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,

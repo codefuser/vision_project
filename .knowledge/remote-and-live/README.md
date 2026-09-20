@@ -87,9 +87,12 @@ The mobile remote app is optimized for single-thumb smartphone operation during 
 | Invariant | Detail |
 |---|---|
 | `selectedSongData` in `RemoteHostSyncState` | Carries `{ id, title, slides[], scale? }` — always populated when `selectedSongId` is set and songs are loaded |
+| `selectedVerseData` in `RemoteHostSyncState` | Carries `{ book, chapter, lang, verses[] }` — populated from `PROJECT_VERSE` fast delta AND `buildSyncState()` when `currentLive` is `bible_verse` |
 | `suppressNextDebouncedSync(ms)` | Must be called after every `PROJECT_*` `broadcastDelta()` in the host COMMAND handler |
 | `debouncedSync` coalesces 3 listeners | `projectionEngine.onAny`, `CONTENT_PROJECTED`, `useProjection.subscribe` — all share one 50ms debouncer |
 | `MobileSongTab` auto-opens slide view | `useEffect([selectedSongData])` auto-sets `activeSong` when host pushes new `selectedSongData` |
+| `MobileVerseTab` auto-navigates on verse project | `useEffect([currentLive, debouncedQuery])` sets `activeBook`+`activeChapter` when `currentLive.type === "bible_verse"` and not actively searching |
+| `MobileVerseTab` skips GET_CHAPTER_VERSES | `useEffect([selectedVerseData])` populates `chapterVerses` directly; chapter load effect short-circuits when `selectedVerseData` matches current book+chapter |
 
 ---
 
