@@ -47,6 +47,13 @@ export interface RemoteHostSyncState {
   };
   selectedSongId: number | null;
   selectedTextId: string | null;
+  /** Full song data for the currently selected song — carries all slides to mobile so the phone doesn't need to search */
+  selectedSongData?: {
+    id: number;
+    title: string;
+    slides: string[];
+    scale?: string;
+  } | null;
   currentLive: {
     id?: string;
     title: string;

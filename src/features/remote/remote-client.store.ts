@@ -86,6 +86,8 @@ interface RemoteClientState {
   // Globally synchronized state from host
   selectedSongId: number | null;
   selectedTextId: string | null;
+  /** Full song data pushed from host — carries slides[] so mobile doesn't need to search */
+  selectedSongData: { id: number; title: string; slides: string[]; scale?: string } | null;
   currentLive: RemoteHostSyncState["currentLive"];
   blackScreen: boolean;
   recentHistory: RemoteRecentItem[];
@@ -134,6 +136,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
 
   selectedSongId: null,
   selectedTextId: null,
+  selectedSongData: null,
   currentLive: null,
   blackScreen: false,
   recentHistory: [],
@@ -219,6 +222,7 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 activeTab: shouldSyncTab ? sync!.activeTab! : get().activeTab,
                 selectedSongId: sync?.selectedSongId ?? null,
                 selectedTextId: sync?.selectedTextId ?? null,
+                selectedSongData: sync?.selectedSongData ?? null,
                 currentLive: sync?.currentLive ?? null,
                 blackScreen: Boolean(sync?.blackScreen),
                 recentHistory: sync?.recentHistory ?? [],
@@ -265,6 +269,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
             recentHistory: sync.recentHistory ?? s.recentHistory,
             selectedSongId: sync.selectedSongId ?? s.selectedSongId,
             selectedTextId: sync.selectedTextId ?? s.selectedTextId,
+            selectedSongData:
+              sync.selectedSongData !== undefined ? sync.selectedSongData : s.selectedSongData,
             mediaList: sync.mediaList ?? s.mediaList,
             mediaThumbnails: sync.mediaThumbnails
               ? { ...s.mediaThumbnails, ...sync.mediaThumbnails }
@@ -287,6 +293,8 @@ export const useRemoteClient = create<RemoteClientState>((set, get) => ({
                 delta.selectedSongId !== undefined ? delta.selectedSongId : s.selectedSongId,
               selectedTextId:
                 delta.selectedTextId !== undefined ? delta.selectedTextId : s.selectedTextId,
+              selectedSongData:
+                delta.selectedSongData !== undefined ? delta.selectedSongData : s.selectedSongData,
               currentLive: delta.currentLive !== undefined ? delta.currentLive : s.currentLive,
               blackScreen: delta.blackScreen !== undefined ? delta.blackScreen : s.blackScreen,
               recentHistory: delta.recentHistory ?? s.recentHistory,
