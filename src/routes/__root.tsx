@@ -61,6 +61,53 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const SITE_URL = "https://versolyn.vercel.app";
+const OG_IMAGE = `${SITE_URL}/favicon-512x512.png`;
+
+const JSON_LD = JSON.stringify([
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "VersoLyn",
+    url: SITE_URL,
+    logo: `${SITE_URL}/favicon-512x512.png`,
+    description:
+      "VersoLyn is a modern church presentation software for projecting Bible verses, Tamil Christian songs, English songs, images, videos, live text, themes and worship service content.",
+    sameAs: [`${SITE_URL}/developer-hub`],
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "VersoLyn",
+    url: SITE_URL,
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  },
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "VersoLyn",
+    applicationCategory: "MultimediaApplication",
+    operatingSystem: "Web",
+    url: SITE_URL,
+    description:
+      "Church presentation software for projecting Bible verses, Tamil Christian songs, English songs, images, videos, live text, themes and worship service content.",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    keywords:
+      "church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software",
+  },
+]);
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -71,21 +118,47 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co data: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
       },
-      { title: "VersoLyn — Church Presentation Software" },
+      // ── Primary SEO ──────────────────────────────────────────────────────────
+      { title: "VersoLyn - Church Presentation Software" },
       {
         name: "description",
         content:
-          "VersoLyn is a modern church presentation software. Tamil & English Bible verses, song lyrics, media, and service flow management.",
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
+      { name: "keywords", content: "church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software" },
+      { name: "robots", content: "index, follow" },
+      { name: "google-site-verification", content: "MFh43OIJgQvNHdHLomg8gcEjRUQa8-HxZSt_1vCe-HE" },
       { name: "theme-color", content: "#0a0a0a" },
-      { property: "og:title", content: "VersoLyn — Church Presentation Software" },
+      // ── Canonical ────────────────────────────────────────────────────────────
+      // Per-page canonical is set in each route's head(). Root provides fallback.
+      // ── Open Graph ───────────────────────────────────────────────────────────
+      { property: "og:site_name", content: "VersoLyn" },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:title", content: "VersoLyn - Church Presentation Software" },
       {
         property: "og:description",
-        content: "VersoLyn church presentation software.",
+        content:
+          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
-      { property: "og:type", content: "website" },
+      { property: "og:image", content: OG_IMAGE },
+      { property: "og:image:width", content: "512" },
+      { property: "og:image:height", content: "512" },
+      { property: "og:image:alt", content: "VersoLyn church presentation software logo" },
+      { property: "og:locale", content: "en_US" },
+      // ── Twitter / X Card ─────────────────────────────────────────────────────
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "VersoLyn - Church Presentation Software" },
+      {
+        name: "twitter:description",
+        content:
+          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
+      },
+      { name: "twitter:image", content: OG_IMAGE },
+      { name: "twitter:image:alt", content: "VersoLyn church presentation software logo" },
     ],
     links: [
+      { rel: "canonical", href: SITE_URL },
       { rel: "icon", href: "/favicon.ico" },
       { rel: "icon", type: "image/png", sizes: "128x128", href: "/favicon-128x128.png" },
       { rel: "icon", type: "image/png", sizes: "64x64", href: "/favicon-64x64.png" },
@@ -114,6 +187,11 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" className="dark">
       <head>
         <HeadContent />
+        {/* JSON-LD Structured Data: Organization + WebSite + SoftwareApplication */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON_LD }}
+        />
       </head>
       <body>
         {children}

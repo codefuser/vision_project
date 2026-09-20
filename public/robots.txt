@@ -1,0 +1,21 @@
+# VersoLyn — robots.txt
+# https://versolyn.vercel.app/
+
+User-agent: *
+Allow: /
+Allow: /developer-hub
+Allow: /roadmap
+Allow: /contact
+Allow: /live
+
+# App-internal routes — not useful for search engines
+Disallow: /library
+Disallow: /playlists
+Disallow: /project
+Disallow: /service/
+Disallow: /history
+Disallow: /settings
+Disallow: /shortcuts
+Disallow: /remote
+
+Sitemap: https://versolyn.vercel.app/sitemap.xml

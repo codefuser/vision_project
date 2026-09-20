@@ -10,6 +10,7 @@ export const Route = createFileRoute("/history/")({
         content:
           "View and search all past service sessions with complete event timelines.",
       },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: () => <SessionListPage />,

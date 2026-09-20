@@ -45,6 +45,7 @@ export const Route = createFileRoute("/shortcuts")({
         content:
           "Complete keyboard shortcut reference for VersoLyn. Search, filter, and explore every shortcut.",
       },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: ShortcutsPage,

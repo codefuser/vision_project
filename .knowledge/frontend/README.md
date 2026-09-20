@@ -94,3 +94,47 @@ Configured in `src/styles.css` and loaded from Google Fonts:
 * **English Fonts**:
   * `Inter` (primary UI & slide default)
   * `Roboto`, `Outfit`, `Montserrat`, `Cinzel`, `Playfair Display`
+
+---
+
+## 6. SEO Architecture
+
+### Static SEO Files (`public/`)
+| File | Purpose |
+| :--- | :--- |
+| `robots.txt` | Allows `/`, `/developer-hub`, `/roadmap`, `/contact`, `/live`; Disallows all app-internal routes; References sitemap |
+| `sitemap.xml` | 5 public indexable pages with canonical absolute URLs |
+| `site.webmanifest` | PWA manifest with `description`, `start_url`, `lang` fields added |
+
+### Root-Level Metadata (`src/routes/__root.tsx`)
+All pages inherit these global tags (per-page `head()` can override):
+* **Title**: `"VersoLyn - Church Presentation Software"`
+* **Description**: 155-char keyword-rich copy
+* **`<meta name="keywords">`**: 7 core church/worship software keywords
+* **`<meta name="robots">`**: `index, follow` (public pages override with `noindex, nofollow`)
+* **Open Graph**: `og:site_name`, `og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:image:width/height/alt`, `og:locale`
+* **Twitter/X Card**: `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`, `twitter:image:alt`
+* **JSON-LD** (injected in `RootShell` via `dangerouslySetInnerHTML`): Array of 3 schemas:
+  * `Organization` — name, url, logo, description
+  * `WebSite` — name, url, `SearchAction` potentialAction
+  * `SoftwareApplication` — category `MultimediaApplication`, free offer, keywords
+
+### Per-Route SEO Policy
+| Route | Indexable | Canonical | Notes |
+| :--- | :--- | :--- | :--- |
+| `/` | ✅ `index, follow` | `https://versolyn.vercel.app/` | Primary landing page |
+| `/developer-hub` | ✅ `index, follow` | `https://versolyn.vercel.app/developer-hub` | |
+| `/roadmap` | ✅ `index, follow` | `https://versolyn.vercel.app/roadmap` | |
+| `/contact` | ✅ `index, follow` | `https://versolyn.vercel.app/contact` | |
+| `/live` | ❌ `noindex, nofollow` | — | Token-gated congregation viewer |
+| `/settings` | ❌ `noindex, nofollow` | — | App-internal |
+| `/shortcuts` | ❌ `noindex, nofollow` | — | App-internal |
+| `/playlists` | ❌ `noindex, nofollow` | — | App-internal |
+| `/history` | ❌ `noindex, nofollow` | — | App-internal |
+| `/library`, `/project`, `/service/:id`, `/remote` | ❌ (via robots.txt Disallow) | — | App-internal |
+
+### Sitemap URL
+`https://versolyn.vercel.app/sitemap.xml`
+
+### Robots URL
+`https://versolyn.vercel.app/robots.txt`

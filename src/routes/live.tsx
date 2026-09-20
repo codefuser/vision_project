@@ -9,8 +9,9 @@ export const Route = createFileRoute("/live")({
   },
   head: () => ({
     meta: [
-      { title: "Vision Projector — Live" },
+      { title: "VersoLyn Live - Congregation Viewer" },
       { name: "description", content: "Live projection stream for congregation and online viewers." },
+      { name: "robots", content: "noindex, nofollow" },
       {
         name: "viewport",
         content: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
