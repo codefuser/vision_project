@@ -646,6 +646,21 @@ function AboutSection() {
           <div className="flex items-center justify-between px-4 py-3">
             <div className="min-w-0 flex-1">
               <span className="text-[13px] font-medium text-foreground/90">
+                Software
+              </span>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">
+                VersoLyn — Church Presentation Software
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-[13px] font-semibold text-foreground/90">
+                VersoLyn
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="min-w-0 flex-1">
+              <span className="text-[13px] font-medium text-foreground/90">
                 Application Version
               </span>
               <p className="mt-0.5 text-[11px] leading-relaxed text-muted-foreground/55">

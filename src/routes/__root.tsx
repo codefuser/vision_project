@@ -69,8 +69,13 @@ const JSON_LD = JSON.stringify([
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "VersoLyn",
+    legalName: "VersoLyn",
     url: SITE_URL,
     logo: `${SITE_URL}/favicon-512x512.png`,
+    brand: {
+      "@type": "Brand",
+      name: "VersoLyn",
+    },
     description:
       "VersoLyn is a modern church presentation software for projecting Bible verses, Tamil Christian songs, English songs, images, videos, live text, themes and worship service content.",
     sameAs: [`${SITE_URL}/developer-hub`],
@@ -79,7 +84,13 @@ const JSON_LD = JSON.stringify([
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "VersoLyn",
+    alternateName: "VersoLyn Church Presentation Software",
     url: SITE_URL,
+    publisher: {
+      "@type": "Organization",
+      name: "VersoLyn",
+      url: SITE_URL,
+    },
     potentialAction: {
       "@type": "SearchAction",
       target: {
@@ -94,17 +105,33 @@ const JSON_LD = JSON.stringify([
     "@type": "SoftwareApplication",
     name: "VersoLyn",
     applicationCategory: "MultimediaApplication",
+    applicationSubCategory: "Church Presentation Software",
     operatingSystem: "Web",
     url: SITE_URL,
     description:
-      "Church presentation software for projecting Bible verses, Tamil Christian songs, English songs, images, videos, live text, themes and worship service content.",
+      "VersoLyn is free church presentation software for projecting Bible verses, Tamil Christian songs, English songs, images, videos, live text, themes and worship service content.",
     offers: {
       "@type": "Offer",
       price: "0",
       priceCurrency: "USD",
     },
+    publisher: {
+      "@type": "Organization",
+      name: "VersoLyn",
+      url: SITE_URL,
+      logo: OG_IMAGE,
+    },
+    author: {
+      "@type": "Organization",
+      name: "VersoLyn",
+      url: SITE_URL,
+    },
+    brand: {
+      "@type": "Brand",
+      name: "VersoLyn",
+    },
     keywords:
-      "church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software",
+      "VersoLyn, church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software",
   },
 ]);
 
@@ -125,8 +152,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
-      { name: "keywords", content: "church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software" },
+      { name: "keywords", content: "VersoLyn, church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software" },
       { name: "robots", content: "index, follow" },
+      { name: "application-name", content: "VersoLyn" },
+      { name: "apple-mobile-web-app-title", content: "VersoLyn" },
       { name: "google-site-verification", content: "MFh43OIJgQvNHdHLomg8gcEjRUQa8-HxZSt_1vCe-HE" },
       { name: "theme-color", content: "#0a0a0a" },
       // ── Canonical ────────────────────────────────────────────────────────────
@@ -139,7 +168,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         property: "og:description",
         content:
-          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
       { property: "og:image", content: OG_IMAGE },
       { property: "og:image:width", content: "512" },
@@ -152,7 +181,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "twitter:description",
         content:
-          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
       { name: "twitter:image", content: OG_IMAGE },
       { name: "twitter:image:alt", content: "VersoLyn church presentation software logo" },

@@ -8,7 +8,7 @@ export const Route = createFileRoute("/project")({
   head: () => ({
     meta: [
       { title: "Project — VersoLyn" },
-      { name: "description", content: "Live projection control room." },
+      { name: "description", content: "VersoLyn live projection control room." },
     ],
   }),
   component: ProjectRoute,

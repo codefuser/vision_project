@@ -1229,6 +1229,8 @@ export function LibraryShell() {
       {/* Status Bar Footer */}
       <footer className="flex h-6 items-center justify-between border-t border-border px-3 text-[11px] text-muted-foreground bg-muted/20 select-none">
         <div className="flex items-center gap-3">
+          <span className="font-semibold text-foreground/80">VersoLyn</span>
+          <span>·</span>
           <span>{filteredItems.length} items</span>
           <span>·</span>
           <span>{currentSubfolders.length} folders</span>

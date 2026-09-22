@@ -49,7 +49,7 @@ export const PROJECT_INFO = {
   name: "VersoLyn",
   tagline: "Free & Open Source Church Presentation Web Application",
   shortDescription:
-    "Modern web presentation software built for churches. Project Bible verses in Tamil and English, song lyrics, media, and sermon content with real-time control.",
+    "VersoLyn is a modern church presentation web application built for worship services. Project Bible verses in Tamil and English, song lyrics, media, and sermon content with real-time control.",
   version: "In Development",
   buildStatus: "Active Development",
   badges: [

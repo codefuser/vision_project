@@ -201,7 +201,7 @@ export function RoadmapPage() {
             <History className="w-8 h-8 text-primary" />
           </div>
           <h1 className="devhub-gradient-text text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            Development Status
+            VersoLyn Development Status
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground font-medium">{CURRENT_VERSION}</p>
           <p className="text-md text-muted-foreground/80 max-w-2xl mx-auto leading-relaxed mt-4">

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/playlists")({
   head: () => ({
     meta: [
       { title: "Playlists — VersoLyn" },
-      { name: "description", content: "Create and manage media playlists for church services." },
+      { name: "description", content: "Create and manage VersoLyn service playlists and cues for church services." },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),

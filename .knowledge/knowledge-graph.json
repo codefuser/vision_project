@@ -27,7 +27,8 @@
     "live_qr_streaming",
     "session_history",
     "styling_and_themes",
-    "system_and_shell"
+    "system_and_shell",
+    "seo_and_branding"
   ],
   "nodes": [
     {
@@ -436,6 +437,17 @@
         "src/stores/logo.store.ts",
         "src/features/workspace/ThemeGalleryDialog.tsx",
         "src/lib/templates/presets.ts"
+      ],
+      "seo_and_branding": [
+        "src/routes/__root.tsx",
+        "src/routes/index.tsx",
+        "src/components/AppShell.tsx",
+        "src/features/devhub/DeveloperHubPage.tsx",
+        "src/features/devhub/RoadmapPage.tsx",
+        "src/features/devhub/ContactPage.tsx",
+        "public/site.webmanifest",
+        "public/robots.txt",
+        "public/sitemap.xml"
       ]
     }
   }

@@ -115,7 +115,7 @@ export function ProjectionRenderer({
   onLoadedMetadata,
   onTimeUpdate,
   onDurationChange,
-  idleMessage = "Vision Projector",
+  idleMessage = "VersoLyn",
   className,
 }: ProjectionRendererProps) {
   const hostRef = useRef<HTMLDivElement>(null);

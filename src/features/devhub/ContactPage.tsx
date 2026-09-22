@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { VersoLynLogo } from "@/components/ui/VersoLynLogo";
 import {
   Mail,
   Send,
@@ -806,10 +807,10 @@ export function ContactPage() {
             <Mail className="w-8 h-8 text-primary" />
           </div>
           <h1 className="devhub-gradient-text text-4xl md:text-6xl font-bold tracking-tight mb-4">
-            Contact Us
+            Contact VersoLyn
           </h1>
           <p className="text-lg md:text-xl text-muted-foreground">
-            Have a question, bug report, or feature idea? We'd love to hear from you.
+            Have a question, bug report, or feature idea for VersoLyn? We'd love to hear from you.
           </p>
         </div>
       </section>
@@ -860,6 +861,19 @@ export function ContactPage() {
           <CommunityLinksSection />
         </div>
       </section>
+
+      <footer className="border-t border-border/40 py-10 px-6">
+        <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <VersoLynLogo className="w-5 h-5 rounded-full" />
+            <span className="font-medium">VersoLyn</span>
+            <span className="text-muted-foreground/50">&middot; Church Presentation Software</span>
+          </div>
+          <p className="text-xs text-muted-foreground/50">
+            VersoLyn &middot; Free &amp; Open Source
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
