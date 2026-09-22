@@ -13,12 +13,21 @@ export const Route = createFileRoute("/")({
           "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content. Built for modern churches.",
       },
       { name: "robots", content: "index, follow" },
+      { property: "og:site_name", content: "VersoLyn" },
+      { property: "og:type", content: "website" },
       { property: "og:url", content: "https://versolyn.vercel.app/" },
       { property: "og:title", content: "VersoLyn - Church Presentation Software" },
       {
         property: "og:description",
         content:
-          "Free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content.",
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content. Built for modern churches.",
+      },
+      { name: "twitter:card", content: "summary" },
+      { name: "twitter:title", content: "VersoLyn - Church Presentation Software" },
+      {
+        name: "twitter:description",
+        content:
+          "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content. Built for modern churches.",
       },
     ],
     links: [{ rel: "canonical", href: "https://versolyn.vercel.app/" }],

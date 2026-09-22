@@ -171,14 +171,14 @@ export function AppShell({ children }: { children: ReactNode }) {
                 <VersoLynLogo className="h-full w-full rounded-full" />
               </button>
 
-              <div
+              <h1
                 className={cn(
                   "min-w-0 flex-1 truncate whitespace-nowrap text-sm font-semibold tracking-tight text-sidebar-foreground transition-opacity duration-200",
                   isEffectiveCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
                 )}
               >
                 VersoLyn
-              </div>
+              </h1>
               <button
                 type="button"
                 onClick={() => setCollapsed(!collapsed)}
@@ -225,6 +225,14 @@ export function AppShell({ children }: { children: ReactNode }) {
             {/* Pinned bottom: Settings */}
             <div className="overflow-hidden border-t border-sidebar-border/50 p-2">
               {renderNavItem(SETTINGS_NAV)}
+              <div
+                className={cn(
+                  "mt-1 px-2.5 text-[10px] font-medium text-muted-foreground/40 transition-opacity duration-200 truncate",
+                  isEffectiveCollapsed ? "pointer-events-none opacity-0" : "opacity-100",
+                )}
+              >
+                VersoLyn
+              </div>
             </div>
           </aside>
         </div>

@@ -6,7 +6,7 @@ export const Route = createFileRoute("/library")({
   head: () => ({
     meta: [
       { title: "Media Library — VersoLyn" },
-      { name: "description", content: "Manage images, posters, and videos for projection." },
+      { name: "description", content: "Manage VersoLyn media files, images, posters, and videos for projection." },
     ],
   }),
   component: () => <LibraryPage />,

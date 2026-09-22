@@ -108,16 +108,23 @@ Configured in `src/styles.css` and loaded from Google Fonts:
 
 ### Root-Level Metadata (`src/routes/__root.tsx`)
 All pages inherit these global tags (per-page `head()` can override):
-* **Title**: `"VersoLyn - Church Presentation Software"`
-* **Description**: 155-char keyword-rich copy
-* **`<meta name="keywords">`**: 7 core church/worship software keywords
+* **Title**: `"VersoLyn - Church Presentation Software"` (Exact brand capitalization: `VersoLyn`)
+* **Description**: 155-char keyword-rich copy beginning with `"VersoLyn is free church presentation software..."`
+* **`<meta name="keywords">`**: `VersoLyn` as primary keyword followed by core church/worship projection terms
 * **`<meta name="robots">`**: `index, follow` (public pages override with `noindex, nofollow`)
-* **Open Graph**: `og:site_name`, `og:type`, `og:url`, `og:title`, `og:description`, `og:image`, `og:image:width/height/alt`, `og:locale`
-* **Twitter/X Card**: `twitter:card`, `twitter:title`, `twitter:description`, `twitter:image`, `twitter:image:alt`
-* **JSON-LD** (injected in `RootShell` via `dangerouslySetInnerHTML`): Array of 3 schemas:
-  * `Organization` — name, url, logo, description
-  * `WebSite` — name, url, `SearchAction` potentialAction
-  * `SoftwareApplication` — category `MultimediaApplication`, free offer, keywords
+* **App Metadata**: `application-name="VersoLyn"`, `apple-mobile-web-app-title="VersoLyn"`
+* **Open Graph**: `og:site_name="VersoLyn"`, `og:type`, `og:url`, `og:title`, `og:description` (explicitly naming VersoLyn), `og:image`, `og:image:width/height/alt`, `og:locale`
+* **Twitter/X Card**: `twitter:card="summary"`, `twitter:title`, `twitter:description` (explicitly naming VersoLyn), `twitter:image`, `twitter:image:alt`
+* **JSON-LD** (injected in `RootShell` via `dangerouslySetInnerHTML`): Array of 3 interconnected schemas:
+  * `Organization` — `name: "VersoLyn"`, `legalName: "VersoLyn"`, `brand: { "@type": "Brand", "name": "VersoLyn" }`, `url`, `logo`, `description`, `sameAs`
+  * `WebSite` — `name: "VersoLyn"`, `alternateName: "VersoLyn Church Presentation Software"`, `url`, `publisher` referencing VersoLyn Organization, `SearchAction` potentialAction
+  * `SoftwareApplication` — `name: "VersoLyn"`, `applicationCategory: "MultimediaApplication"`, `applicationSubCategory: "Church Presentation Software"`, `publisher` & `author` referencing VersoLyn, `brand`, free offer, keywords
+* **Semantic H1 & Footer Branding**:
+  * Root `AppShell` header uses semantic `<h1>VersoLyn</h1>` with identical styling
+  * Developer Hub Hero: `<h1>{PROJECT_INFO.name}</h1>` (`VersoLyn`)
+  * Roadmap Hero: `<h1>VersoLyn Development Status</h1>`
+  * Contact Hero: `<h1>Contact VersoLyn</h1>`
+  * Footer: Status bar footer brand badge (`VersoLyn`), DevHub & Contact page brand footers
 
 ### Per-Route SEO Policy
 | Route | Indexable | Canonical | Notes |

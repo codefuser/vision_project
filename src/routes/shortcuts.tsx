@@ -493,7 +493,7 @@ function ShortcutsPage() {
 
         {/* Footer */}
         <div className="mt-8 text-center text-[10px] text-muted-foreground/40 print:hidden">
-          Showing {filtered.length} of {all.length} shortcuts · Press{" "}
+          VersoLyn · Showing {filtered.length} of {all.length} shortcuts · Press{" "}
           <kbd className="rounded border border-border/40 bg-muted/30 px-1 py-0.5 font-mono text-[9px]">Ctrl+Shift+Space</kbd> for the Command Palette
         </div>
       </div>

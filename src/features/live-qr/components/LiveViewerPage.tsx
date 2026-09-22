@@ -111,7 +111,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-sky-500/15 border border-sky-500/30 text-sky-400">
             <Radio className="h-7 w-7 animate-pulse" />
           </div>
-          <h1 className="text-lg font-bold tracking-tight text-white">Vision Projector Live</h1>
+          <h1 className="text-lg font-bold tracking-tight text-white">VersoLyn Live</h1>
           <p className="mt-2 text-xs text-neutral-400">
             Please scan a valid Live Projection QR code to watch the livestream mirror.
           </p>
@@ -197,7 +197,7 @@ export function LiveViewerPage({ tokenFromQuery }: LiveViewerPageProps) {
         black={isBlack}
         scalingMode={liveState?.scalingMode ?? "auto"}
         fitMode={fitMode}
-        idleMessage="Vision Projector"
+        idleMessage="VersoLyn"
         className="h-full w-full"
       />
 

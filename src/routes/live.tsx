@@ -10,7 +10,7 @@ export const Route = createFileRoute("/live")({
   head: () => ({
     meta: [
       { title: "VersoLyn Live - Congregation Viewer" },
-      { name: "description", content: "Live projection stream for congregation and online viewers." },
+      { name: "description", content: "VersoLyn live projection stream for congregation and online viewers." },
       { name: "robots", content: "noindex, nofollow" },
       {
         name: "viewport",

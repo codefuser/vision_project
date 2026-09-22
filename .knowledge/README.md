@@ -38,6 +38,7 @@ When starting a task, consult the table below to jump directly to the files you 
 | **Congregation Live QR** | `src/features/live-qr/live-qr-host.store.ts`<br>`src/features/live-qr/live-qr-client.store.ts`<br>`src/features/live-qr/components/LiveViewerPage.tsx`<br>`src/routes/live.tsx` | `useHostLiveQr`<br>`useClientLiveQr` |
 | **Service History Logging** | `src/features/history/session-recorder.ts`<br>`src/features/history/session-history.repo.ts`<br>`src/features/history/SessionListPage.tsx` | `useSessionHistory` |
 | **Service Mode & Playlists** | `src/features/playlists/PlaylistsPage.tsx`<br>`src/features/playlists/PlaylistEditor.tsx`<br>`src/features/service/ServiceMode.tsx` | `db().playlists` (Dexie) |
+| **SEO & Brand Recognition** | `src/routes/__root.tsx`<br>`src/routes/index.tsx`<br>`src/components/AppShell.tsx`<br>`public/site.webmanifest` | Head meta / JSON-LD |
 
 ---
 
