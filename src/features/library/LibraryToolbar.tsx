@@ -130,6 +130,21 @@ export function LibraryToolbar({
   const currentPercent = Math.round(zoomLevel * 100);
   const [zoomInputText, setZoomInputText] = useState(String(currentPercent));
 
+  // Debounced search to prevent heavy filter runs on every keystroke
+  const [localSearch, setLocalSearch] = useState(search);
+  useEffect(() => {
+    setLocalSearch(search);
+  }, [search]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (localSearch !== search) {
+        onSearchChange(localSearch);
+      }
+    }, 150);
+    return () => clearTimeout(timer);
+  }, [localSearch, search, onSearchChange]);
+
   useEffect(() => {
     setZoomInputText(String(currentPercent));
   }, [currentPercent]);
@@ -380,8 +395,8 @@ export function LibraryToolbar({
             <input
               type="text"
               placeholder="Search library…"
-              value={search}
-              onChange={(e) => onSearchChange(e.target.value)}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
               className="h-7 w-full rounded-md border border-border bg-background pl-8 pr-2 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary"
             />
           </div>

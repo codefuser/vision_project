@@ -110,3 +110,33 @@ A dedicated public broadcast service completely decoupled from the remote contro
 * **Text Priority Overlays**: Text projections (`bible_verse`, `song_slide`, `live_text`) immediately take precedence over earlier background media in the live QR broadcast resolver.
 * **Text Mirroring**: Verses and lyrics are transmitted as raw text objects with typographic styling tokens. The phone reconstructs the exact visual layout on its local GPU without consuming video streaming bandwidth.
 * **Auto-Expiration**: Presets for 1 hour, 3 hours, 6 hours, 12 hours, 1 day, 3 days, or 7 days.
+
+---
+
+## 5. Browser-Based Remote Desktop Control (`src/features/remote-desktop/`)
+
+VersoLyn features a secure peer-to-peer browser-based Remote Desktop system (`/remote-desktop`):
+* **Signaling**: Supabase Realtime channel `vp_rd_{code}` exchanges SDP offers, answers, and ICE candidates.
+* **Media Streaming**: WebRTC `RTCPeerConnection` with H.264/VP9 screen capture (`getDisplayMedia`).
+* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting mouse movements, clicks, wheel scrolls, drag-and-drop, and keystrokes.
+* **Security & Approval**:
+  * 6-digit numeric pairing PIN with automatic expiry.
+  * Explicit host approval modal (`HostApprovalModal`) showing controller device details before establishing connection.
+  * Controller control toggle: Host can revoke or resume controller input at any second.
+* **Native Companion Agent (`native-agent/`)**:
+  * Zero-dependency Node.js bridge communicating with Windows OS via Win32 `SendInput` using PowerShell.
+  * Enables hardware mouse/keyboard control across external desktop apps, File Explorer, and system windows.
+
+---
+
+## 6. Performance Architecture & Instant Tab Navigation
+
+To prevent UI thread freezes during tab transitions, the application employs:
+* **Route-Level Code Splitting**: All major routes (`/library`, `/playlists`, `/project`, `/settings`, `/remote-desktop`) are lazy loaded with React `Suspense` and render instant (<16ms) glassmorphic skeletons (`src/components/skeletons/RouteSkeletons.tsx`).
+* **Internal Workspace Tab Isolation**: `WorkspaceTabsPanel.tsx` dynamically loads `LibraryPage`, `BiblePanel`, `SongsPanel`, and `TextPanel` on-demand using `React.lazy()` with `LazyKeepAlive` preservation so inactive tabs don't consume memory or block tab switching.
+* **Progressive Dataset Streaming**:
+  * Songs (`src/lib/songs/loader.ts`): Immediate tier-1 batch of 150 songs unblocks search UI in ~80ms; remaining ~17,000 songs stream in the background with micro-yield thread pauses. Removed synchronous 85,000-line slide stemming loop from the main thread.
+  * Bible (`src/lib/bible/loader.ts`): Foundation batch (2,000 verses in ~120ms) loads instantly; remaining books background stream without 32 concurrent request spikes. `ensureChapterLoaded(lang, book, chapter)` delivers <30ms on-demand lookups.
+* **Startup Contention Elimination**: `startup-manager.ts` deferred bulk downloads to idle time via `requestIdleCallback` (4.5s delay).
+* **Search Debouncing**: Library toolbar search queries are debounced by 150ms.
+* **Playlist Thumbnail Caching**: `PlaylistCard` prioritizes the first 4 items for thumbnail mosaics with an in-memory `Map<string, MediaRecord>` cache, avoiding hundreds of concurrent IndexedDB queries.

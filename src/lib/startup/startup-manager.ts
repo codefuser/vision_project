@@ -111,14 +111,20 @@ export function buildSteps(): StartupStep[] {
         }
         preloadAllPageData();
 
-        // Non-blocking background cache warmup
+        // Non-blocking background cache warmup deferred to browser idle time
         if (typeof window !== "undefined") {
-          setTimeout(() => {
+          const warmUp = () => {
             import("@/lib/songs/loader").then(({ loadSongs }) => loadSongs().catch(() => {}));
             import("@/lib/bible/loader").then(({ loadBible }) => {
               loadBible("en").catch(() => {});
             });
-          }, 300);
+          };
+
+          if ("requestIdleCallback" in window) {
+            (window as any).requestIdleCallback(warmUp, { timeout: 6000 });
+          } else {
+            setTimeout(warmUp, 4500);
+          }
         }
       },
     },

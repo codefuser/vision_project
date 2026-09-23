@@ -1,0 +1,16 @@
+{
+  "name": "versolyn-native-host-agent",
+  "version": "1.0.0",
+  "description": "Lightweight Host Companion Agent for OS-level Remote Desktop Control in VersoLyn",
+  "main": "server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

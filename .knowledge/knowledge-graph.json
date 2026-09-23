@@ -28,7 +28,9 @@
     "session_history",
     "styling_and_themes",
     "system_and_shell",
-    "seo_and_branding"
+    "seo_and_branding",
+    "remote_desktop_control",
+    "performance_and_skeletons"
   ],
   "nodes": [
     {
@@ -338,6 +340,48 @@
       "type": "backend_client",
       "path": "src/lib/supabase.ts",
       "summary": "Supabase client configured with VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY."
+    },
+    {
+      "id": "file:components/skeletons/RouteSkeletons.tsx",
+      "label": "src/components/skeletons/RouteSkeletons.tsx",
+      "type": "ui_component",
+      "path": "src/components/skeletons/RouteSkeletons.tsx",
+      "summary": "Instant <16ms glassmorphic route and tab skeletons for Playlists, Library, Workspace, Settings, and Remote Desktop."
+    },
+    {
+      "id": "file:routes/remote-desktop.tsx",
+      "label": "src/routes/remote-desktop.tsx",
+      "type": "route",
+      "path": "src/routes/remote-desktop.tsx",
+      "summary": "Lazy-loaded route for Host/Controller Remote Desktop paired screen sharing and control."
+    },
+    {
+      "id": "file:features/remote-desktop/RemoteDesktopPage.tsx",
+      "label": "src/features/remote-desktop/RemoteDesktopPage.tsx",
+      "type": "component",
+      "path": "src/features/remote-desktop/RemoteDesktopPage.tsx",
+      "summary": "Top-level UI orchestrator for Host session creation, Controller PIN pairing, and interactive Remote Desktop HUD."
+    },
+    {
+      "id": "file:features/remote-desktop/remote-desktop-session.store.ts",
+      "label": "src/features/remote-desktop/remote-desktop-session.store.ts",
+      "type": "store",
+      "path": "src/features/remote-desktop/remote-desktop-session.store.ts",
+      "summary": "Zustand store managing peer session states, host approval modals, latency metrics, and input toggles."
+    },
+    {
+      "id": "file:features/remote-desktop/remote-desktop-channel.ts",
+      "label": "src/features/remote-desktop/remote-desktop-channel.ts",
+      "type": "webrtc_service",
+      "path": "src/features/remote-desktop/remote-desktop-channel.ts",
+      "summary": "WebRTC P2P signaling manager over Supabase Realtime, RTCDataChannel input sync, and native companion bridge."
+    },
+    {
+      "id": "file:native-agent/agent.js",
+      "label": "native-agent/agent.js",
+      "type": "companion_agent",
+      "path": "native-agent/agent.js",
+      "summary": "Lightweight Node.js companion script using PowerShell Win32 SendInput to control the Windows desktop without heavy C++ binaries."
     }
   ],
   "edges": [
@@ -369,7 +413,16 @@
     { "source": "file:features/live-qr/live-qr-host.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
     { "source": "file:features/live-qr/live-qr-client.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
     { "source": "file:lib/bible/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_VERSES" },
-    { "source": "file:lib/songs/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_SONGS" }
+    { "source": "file:lib/songs/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_SONGS" },
+    { "source": "file:routes/remote-desktop.tsx", "target": "file:features/remote-desktop/RemoteDesktopPage.tsx", "relation": "LAZY_LOADS" },
+    { "source": "file:features/remote-desktop/RemoteDesktopPage.tsx", "target": "file:features/remote-desktop/remote-desktop-session.store.ts", "relation": "MANAGES_SESSION" },
+    { "source": "file:features/remote-desktop/remote-desktop-session.store.ts", "target": "file:features/remote-desktop/remote-desktop-channel.ts", "relation": "DISPATCHES_WEBRTC" },
+    { "source": "file:features/remote-desktop/remote-desktop-channel.ts", "target": "file:native-agent/agent.js", "relation": "BRIDGES_NATIVE_INPUT" },
+    { "source": "file:routes/playlists.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
+    { "source": "file:routes/library.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
+    { "source": "file:routes/project.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
+    { "source": "file:routes/settings.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
+    { "source": "file:workspace/WorkspaceTabsPanel.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" }
   ],
   "quickLookup": {
     "byTask": {
@@ -448,6 +501,24 @@
         "public/site.webmanifest",
         "public/robots.txt",
         "public/sitemap.xml"
+      ],
+      "remote_desktop_control": [
+        "src/routes/remote-desktop.tsx",
+        "src/features/remote-desktop/RemoteDesktopPage.tsx",
+        "src/features/remote-desktop/remote-desktop-session.store.ts",
+        "src/features/remote-desktop/remote-desktop-channel.ts",
+        "src/features/remote-desktop/remote-desktop-types.ts",
+        "native-agent/agent.js"
+      ],
+      "performance_and_skeletons": [
+        "src/components/skeletons/RouteSkeletons.tsx",
+        "src/features/workspace/WorkspaceTabsPanel.tsx",
+        "src/lib/songs/loader.ts",
+        "src/lib/bible/loader.ts",
+        "src/lib/startup/startup-manager.ts",
+        "src/features/library/LibraryToolbar.tsx",
+        "src/features/playlists/PlaylistsPage.tsx",
+        "src/stores/library.store.ts"
       ]
     }
   }

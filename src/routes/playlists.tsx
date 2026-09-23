@@ -1,6 +1,10 @@
+import React, { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell } from "@/components/AppShell";
-import { PlaylistsPage } from "@/features/playlists/PlaylistsPage";
+import { PlaylistsSkeleton } from "@/components/skeletons/RouteSkeletons";
+
+const PlaylistsPage = React.lazy(() =>
+  import("@/features/playlists/PlaylistsPage").then((m) => ({ default: m.PlaylistsPage })),
+);
 
 export const Route = createFileRoute("/playlists")({
   head: () => ({
@@ -10,5 +14,9 @@ export const Route = createFileRoute("/playlists")({
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: () => <PlaylistsPage />,
+  component: () => (
+    <Suspense fallback={<PlaylistsSkeleton />}>
+      <PlaylistsPage />
+    </Suspense>
+  ),
 });

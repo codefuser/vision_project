@@ -1,8 +1,13 @@
+import React, { Suspense, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { AppShell } from "@/components/AppShell";
-import { ProjectionWorkspace } from "@/features/workspace/ProjectionWorkspace";
 import { ProjectionWindow } from "@/features/projection/ProjectionWindow";
+import { WorkspaceSkeleton } from "@/components/skeletons/RouteSkeletons";
+
+const ProjectionWorkspace = React.lazy(() =>
+  import("@/features/workspace/ProjectionWorkspace").then((m) => ({
+    default: m.ProjectionWorkspace,
+  })),
+);
 
 export const Route = createFileRoute("/project")({
   head: () => ({
@@ -20,6 +25,12 @@ function ProjectRoute() {
     if (typeof window === "undefined") return "control";
     return window.opener && window.name === "church-projector" ? "popup" : "control";
   });
+
   if (mode === "popup") return <ProjectionWindow />;
-  return <ProjectionWorkspace />;
+
+  return (
+    <Suspense fallback={<WorkspaceSkeleton />}>
+      <ProjectionWorkspace />
+    </Suspense>
+  );
 }
