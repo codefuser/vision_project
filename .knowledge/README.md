@@ -38,6 +38,8 @@ When starting a task, consult the table below to jump directly to the files you 
 | **Congregation Live QR** | `src/features/live-qr/live-qr-host.store.ts`<br>`src/features/live-qr/live-qr-client.store.ts`<br>`src/features/live-qr/components/LiveViewerPage.tsx`<br>`src/routes/live.tsx` | `useHostLiveQr`<br>`useClientLiveQr` |
 | **Service History Logging** | `src/features/history/session-recorder.ts`<br>`src/features/history/session-history.repo.ts`<br>`src/features/history/SessionListPage.tsx` | `useSessionHistory` |
 | **Service Mode & Playlists** | `src/features/playlists/PlaylistsPage.tsx`<br>`src/features/playlists/PlaylistEditor.tsx`<br>`src/features/service/ServiceMode.tsx` | `db().playlists` (Dexie) |
+| **Remote Desktop Control** | `src/routes/remote-desktop.tsx`<br>`src/features/remote-desktop/RemoteDesktopPage.tsx`<br>`src/features/remote-desktop/remote-desktop-session.store.ts`<br>`src/features/remote-desktop/remote-desktop-channel.ts`<br>`native-agent/agent.js` | `useRemoteDesktopSession` |
+| **Performance & Skeletons** | `src/components/skeletons/RouteSkeletons.tsx`<br>`src/features/workspace/WorkspaceTabsPanel.tsx`<br>`src/lib/songs/loader.ts`<br>`src/lib/bible/loader.ts`<br>`src/lib/startup/startup-manager.ts` | Lazy Suspense & Cache |
 | **SEO & Brand Recognition** | `src/routes/__root.tsx`<br>`src/routes/index.tsx`<br>`src/components/AppShell.tsx`<br>`public/site.webmanifest` | Head meta / JSON-LD |
 
 ---

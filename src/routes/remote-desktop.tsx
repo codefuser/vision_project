@@ -1,5 +1,12 @@
+import React, { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { RemoteDesktopPage } from "@/features/remote-desktop/RemoteDesktopPage";
+import { SettingsSkeleton } from "@/components/skeletons/RouteSkeletons";
+
+const RemoteDesktopPage = React.lazy(() =>
+  import("@/features/remote-desktop/RemoteDesktopPage").then((m) => ({
+    default: m.RemoteDesktopPage,
+  })),
+);
 
 export const Route = createFileRoute("/remote-desktop")({
   head: () => ({
@@ -12,5 +19,9 @@ export const Route = createFileRoute("/remote-desktop")({
       },
     ],
   }),
-  component: () => <RemoteDesktopPage />,
+  component: () => (
+    <Suspense fallback={<SettingsSkeleton />}>
+      <RemoteDesktopPage />
+    </Suspense>
+  ),
 });

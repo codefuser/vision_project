@@ -30,43 +30,45 @@ interface LibraryStore {
   selectAll: (ids: string[]) => void;
 }
 
-export const useLibrary = create<LibraryStore>((set, get) => ({
-  folders: [],
-  media: [],
-  currentFolderId: null,
-  selection: new Set(),
-  search: "",
-  filter: "all",
-  loading: false,
-  loaded: false,
-  refreshFolders: async () => {
-    const folders = await listFolders();
-    setCachedFolders(folders);
-    set({ folders });
-  },
-  refreshMedia: async () => {
-    set({ loading: true });
-    const { currentFolderId, filter } = get();
-    let media: MediaRecord[];
-    if (filter === "recent-added") {
-      media = (await listAllMedia()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
-    } else if (filter === "recent-used") {
-      media = (await listAllMedia())
-        .filter((m) => m.lastUsedAt)
-        .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
-        .slice(0, 200);
-    } else if (currentFolderId === null) {
-      media = await listAllMedia();
-    } else {
-      media = await listMediaInFolder(currentFolderId);
-    }
-    setCachedMedia(media);
-    set({ media, loading: false, loaded: true });
-  },
-  refreshAll: async () => {
-    await get().refreshFolders();
-    await get().refreshMedia();
-  },
+export const useLibrary = create<LibraryStore>((set, get) => {
+  const cachedFolders = getCachedFolders();
+  const cachedMedia = getCachedMedia();
+  return {
+    folders: cachedFolders.loaded ? cachedFolders.data : [],
+    media: cachedMedia.loaded ? cachedMedia.data : [],
+    currentFolderId: null,
+    selection: new Set(),
+    search: "",
+    filter: "all",
+    loading: false,
+    loaded: cachedFolders.loaded && cachedMedia.loaded,
+    refreshFolders: async () => {
+      const folders = await listFolders();
+      setCachedFolders(folders);
+      set({ folders });
+    },
+    refreshMedia: async () => {
+      set({ loading: true });
+      const { currentFolderId, filter } = get();
+      let media: MediaRecord[];
+      if (filter === "recent-added") {
+        media = (await listAllMedia()).sort((a, b) => b.createdAt - a.createdAt).slice(0, 200);
+      } else if (filter === "recent-used") {
+        media = (await listAllMedia())
+          .filter((m) => m.lastUsedAt)
+          .sort((a, b) => (b.lastUsedAt ?? 0) - (a.lastUsedAt ?? 0))
+          .slice(0, 200);
+      } else if (currentFolderId === null) {
+        media = await listAllMedia();
+      } else {
+        media = await listMediaInFolder(currentFolderId);
+      }
+      setCachedMedia(media);
+      set({ media, loading: false, loaded: true });
+    },
+    refreshAll: async () => {
+      await Promise.all([get().refreshFolders(), get().refreshMedia()]);
+    },
   setFolder: async (id) => {
     set({ currentFolderId: id, selection: new Set() });
     await get().refreshMedia();
@@ -84,7 +86,8 @@ export const useLibrary = create<LibraryStore>((set, get) => ({
   },
   clearSelection: () => set({ selection: new Set() }),
   selectAll: (ids) => set({ selection: new Set(ids) }),
-}));
+  };
+});
 
 export function filterMedia(
   items: MediaRecord[],

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import {
   Image as ImageIcon,
   BookOpen,
@@ -8,15 +8,27 @@ import {
   PanelRightOpen,
 } from "lucide-react";
 import { useWorkspace, type WorkspaceTab } from "./workspace.store";
-import { LibraryPage } from "@/features/library/LibraryPage";
-import { BiblePanel } from "@/features/bible/BiblePanel";
-import { SongsPanel } from "@/features/songs/SongsPanel";
-import { TextPanel } from "@/features/text/TextPanel";
+import { TabPanelSkeleton } from "@/components/skeletons/RouteSkeletons";
 import { useFocusZone, type FocusZone } from "./focus-manager";
 import { useShortcutScope } from "@/lib/shortcuts/use-shortcut";
 import { ShortcutTooltip } from "@/components/ShortcutTooltip";
 import { Tooltip } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+
+// Lazy load each internal tab module independently so opening /project
+// does not evaluate or initialize all 4 heavy subsystems simultaneously.
+const LibraryPage = React.lazy(() =>
+  import("@/features/library/LibraryPage").then((m) => ({ default: m.LibraryPage })),
+);
+const BiblePanel = React.lazy(() =>
+  import("@/features/bible/BiblePanel").then((m) => ({ default: m.BiblePanel })),
+);
+const SongsPanel = React.lazy(() =>
+  import("@/features/songs/SongsPanel").then((m) => ({ default: m.SongsPanel })),
+);
+const TextPanel = React.lazy(() =>
+  import("@/features/text/TextPanel").then((m) => ({ default: m.TextPanel })),
+);
 
 const TABS: {
   id: WorkspaceTab;
@@ -31,15 +43,25 @@ const TABS: {
   { id: "text", label: "Text", icon: Type, focus: "text", shortcutId: "tab.text" },
 ];
 
-function LazyKeepAlive({ active, children }: { active: boolean, children: React.ReactNode }) {
+function LazyKeepAlive({
+  active,
+  fallback,
+  children,
+}: {
+  active: boolean;
+  fallback?: React.ReactNode;
+  children: React.ReactNode;
+}) {
   const [hasRendered, setHasRendered] = useState(active);
   if (active && !hasRendered) setHasRendered(true);
-  
+
   if (!hasRendered) return null;
-  
+
   return (
     <div className={cn("h-full overflow-hidden", !active && "hidden")}>
-      {children}
+      <Suspense fallback={fallback || <div className="h-full w-full bg-card animate-pulse" />}>
+        {children}
+      </Suspense>
     </div>
   );
 }
@@ -50,7 +72,8 @@ export function WorkspaceTabsPanel() {
   const toggleCollapsed = useWorkspace((s) => s.toggleTabsCollapsed);
   const active = TABS.find((t) => t.id === activeTab) ?? TABS[0];
   const focus = useFocusZone(active.focus);
-  // Activate the "bible" shortcut scope only while the bible tab is showing.
+
+  // Activate the shortcut scope only while that tab is showing
   useShortcutScope("bible", activeTab === "bible");
   useShortcutScope("songs", activeTab === "songs");
   useShortcutScope("text", activeTab === "text");
@@ -94,7 +117,11 @@ export function WorkspaceTabsPanel() {
       onMouseDown={focus.onFocus}
       tabIndex={focus.tabIndex}
     >
-      <div role="tablist" aria-label="Workspace tabs" className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-muted/30 px-1">
+      <div
+        role="tablist"
+        aria-label="Workspace tabs"
+        className="flex h-9 shrink-0 items-center gap-0.5 border-b border-border bg-muted/30 px-1"
+      >
         {TABS.map((t) => (
           <TabBarButton
             key={t.id}
@@ -114,44 +141,35 @@ export function WorkspaceTabsPanel() {
         </Tooltip>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden" role="tabpanel" aria-label={`${activeTab} panel`}>
-        <LazyKeepAlive active={activeTab === "media"}>
+      <div
+        className="min-h-0 flex-1 overflow-hidden"
+        role="tabpanel"
+        aria-label={`${activeTab} panel`}
+      >
+        <LazyKeepAlive
+          active={activeTab === "media"}
+          fallback={<TabPanelSkeleton type="media" />}
+        >
           <LibraryPage />
         </LazyKeepAlive>
-        <LazyKeepAlive active={activeTab === "bible"}>
+        <LazyKeepAlive
+          active={activeTab === "bible"}
+          fallback={<TabPanelSkeleton type="bible" />}
+        >
           <BiblePanel />
         </LazyKeepAlive>
-        <LazyKeepAlive active={activeTab === "songs"}>
+        <LazyKeepAlive
+          active={activeTab === "songs"}
+          fallback={<TabPanelSkeleton type="songs" />}
+        >
           <SongsPanel />
         </LazyKeepAlive>
-        <LazyKeepAlive active={activeTab === "text"}>
+        <LazyKeepAlive
+          active={activeTab === "text"}
+          fallback={<TabPanelSkeleton type="text" />}
+        >
           <TextPanel />
         </LazyKeepAlive>
-      </div>
-    </div>
-  );
-}
-
-function ComingSoon({
-  icon: Icon,
-  title,
-  description,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="flex h-full items-center justify-center overflow-y-auto p-8">
-      <div className="max-w-sm text-center">
-        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="text-base font-semibold">{title}</div>
-        <div className="mt-1 text-sm text-muted-foreground">{description}</div>
-        <div className="mt-4 inline-block rounded-full border border-dashed border-border px-3 py-1 text-[10px] uppercase tracking-wide text-muted-foreground">
-          Module reserved
-        </div>
       </div>
     </div>
   );

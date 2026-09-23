@@ -154,6 +154,15 @@ export function PlaylistsPage() {
   );
 }
 
+const playlistMediaCache = new Map<string, MediaRecord>();
+async function getPlaylistMediaCached(id: string): Promise<MediaRecord | null> {
+  const existing = playlistMediaCache.get(id);
+  if (existing) return existing;
+  const m = await getMedia(id);
+  if (m) playlistMediaCache.set(id, m);
+  return m ?? null;
+}
+
 function PlaylistCard({
   playlist,
   onProject,
@@ -175,11 +184,27 @@ function PlaylistCard({
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const records = await Promise.all(playlist.items.map((i) => getMedia(i.mediaId)));
-      const filtered = records.filter((m): m is MediaRecord => !!m);
+      // 1. Prioritize first 4 items immediately for fast thumbnail mosaic rendering
+      const thumbItems = playlist.items.slice(0, 4);
+      const thumbRecords = (
+        await Promise.all(thumbItems.map((i) => getPlaylistMediaCached(i.mediaId)))
+      ).filter((m): m is MediaRecord => !!m);
+
       if (!cancelled) {
-        setAllItems(filtered);
-        setThumbs(filtered.slice(0, 4));
+        setThumbs(thumbRecords);
+        setAllItems(thumbRecords);
+      }
+
+      // 2. Fetch remaining items asynchronously for counts without blocking mosaic
+      if (playlist.items.length > 4) {
+        const remainingItems = playlist.items.slice(4);
+        const remainingRecords = (
+          await Promise.all(remainingItems.map((i) => getPlaylistMediaCached(i.mediaId)))
+        ).filter((m): m is MediaRecord => !!m);
+
+        if (!cancelled) {
+          setAllItems([...thumbRecords, ...remainingRecords]);
+        }
       }
     })();
     return () => {

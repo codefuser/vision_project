@@ -1,6 +1,10 @@
+import React, { Suspense } from "react";
 import { createFileRoute } from "@tanstack/react-router";
-import { AppShell } from "@/components/AppShell";
-import { SettingsPage } from "@/features/settings/SettingsPage";
+import { SettingsSkeleton } from "@/components/skeletons/RouteSkeletons";
+
+const SettingsPage = React.lazy(() =>
+  import("@/features/settings/SettingsPage").then((m) => ({ default: m.SettingsPage })),
+);
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -10,5 +14,9 @@ export const Route = createFileRoute("/settings")({
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: () => <SettingsPage />,
+  component: () => (
+    <Suspense fallback={<SettingsSkeleton />}>
+      <SettingsPage />
+    </Suspense>
+  ),
 });
