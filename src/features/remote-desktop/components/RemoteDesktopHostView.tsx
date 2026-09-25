@@ -28,6 +28,8 @@ import { cn } from "@/lib/utils";
 import { useHostRemoteDesktop } from "../stores/rd-host.store";
 import { toast } from "sonner";
 
+import { Button } from "@/components/ui/button";
+
 export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
   const {
     session,
@@ -43,10 +45,12 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
     emergencyStop,
     toggleControlEnabled,
     initNativeAgent,
+    authenticateNativeAgent,
   } = useHostRemoteDesktop();
 
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedPin, setCopiedPin] = useState(false);
+  const [pairingPinInput, setPairingPinInput] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
@@ -69,7 +73,11 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
         sessionId: session.sessionId,
         pin: session.pin,
       });
-      QRCode.toDataURL(payload, { width: 180, margin: 1, color: { dark: "#0f172a", light: "#ffffff" } })
+      QRCode.toDataURL(payload, {
+        width: 180,
+        margin: 1,
+        color: { dark: "#0f172a", light: "#ffffff" },
+      })
         .then((url) => setQrDataUrl(url))
         .catch(() => setQrDataUrl(null));
     } else {
@@ -146,7 +154,11 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                   : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20",
               )}
             >
-              {controlEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
+              {controlEnabled ? (
+                <Pause className="h-3.5 w-3.5" />
+              ) : (
+                <Play className="h-3.5 w-3.5" />
+              )}
               <span>{controlEnabled ? "Pause Input" : "Resume Input"}</span>
             </button>
 
@@ -176,30 +188,77 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
           "rounded-xl border p-4 transition-all duration-200",
           nativeAgent.connected
             ? "bg-emerald-950/20 border-emerald-500/30 text-emerald-300"
-            : "bg-amber-950/20 border-amber-500/30 text-amber-300",
+            : nativeAgent.requiresAuth
+              ? "bg-blue-950/20 border-blue-500/30 text-blue-300"
+              : "bg-amber-950/20 border-amber-500/30 text-amber-300",
         )}
       >
         <div className="flex items-start gap-3">
           <Terminal className="h-5 w-5 mt-0.5 shrink-0" />
           <div className="flex-1 text-sm space-y-1">
             <div className="flex items-center gap-2 font-semibold">
-              <span>{nativeAgent.connected ? "Native OS Agent Active" : "In-Browser Mode (Companion Ready)"}</span>
+              <span>
+                {nativeAgent.connected
+                  ? "Native OS Agent Active"
+                  : nativeAgent.requiresAuth
+                    ? "Companion Agent Detected (Pairing Required)"
+                    : "In-Browser Mode (Companion Ready)"}
+              </span>
               <span
                 className={cn(
                   "text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full font-bold",
                   nativeAgent.connected
                     ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                    : "bg-amber-500/20 text-amber-400 border border-amber-500/30",
+                    : nativeAgent.requiresAuth
+                      ? "bg-blue-500/20 text-blue-400 border border-blue-500/30"
+                      : "bg-amber-500/20 text-amber-400 border border-amber-500/30",
                 )}
               >
-                {nativeAgent.connected ? "Hardware Input Enabled" : "Companion Optional"}
+                {nativeAgent.connected
+                  ? "Hardware Input Enabled"
+                  : nativeAgent.requiresAuth
+                    ? "Authentication Required"
+                    : "Companion Optional"}
               </span>
             </div>
             <p className="text-xs opacity-90">
               {nativeAgent.connected
-                ? `Connected to local input bridge on 127.0.0.1:48123 (${nativeAgent.os?.toUpperCase()} - ${nativeAgent.screenWidth}x${nativeAgent.screenHeight}). Outside OS windows (File Explorer, Settings, Desktop) will receive real clicks and keystrokes.`
-                : "Screen streaming works natively in-browser! For full OS hardware clicks into outside desktop windows (e.g. File Explorer or desktop shortcuts), run 'native-agent/run-agent.bat' on this machine."}
+                ? `Connected to authenticated local input bridge on 127.0.0.1:48123 (${nativeAgent.os?.toUpperCase()} - ${nativeAgent.screenWidth}x${nativeAgent.screenHeight}). Outside OS windows (File Explorer, Settings, Desktop) will receive real clicks and keystrokes.`
+                : nativeAgent.requiresAuth
+                  ? "The local agent is running. Enter the 6-digit Pairing PIN displayed in the terminal window to authorize hardware control."
+                  : "Screen streaming works natively in-browser! For full OS hardware clicks into outside desktop windows (e.g. File Explorer or desktop shortcuts), run 'native-agent/run-agent.bat' on this machine."}
             </p>
+            {nativeAgent.requiresAuth && (
+              <div className="pt-2 flex items-center gap-2">
+                <input
+                  type="password"
+                  value={pairingPinInput}
+                  onChange={(e) => setPairingPinInput(e.target.value)}
+                  placeholder="Enter 6-digit PIN"
+                  className="px-2.5 py-1 text-xs rounded-lg border border-blue-500/40 bg-background text-foreground w-36 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && pairingPinInput.trim()) {
+                      authenticateNativeAgent(pairingPinInput.trim());
+                    }
+                  }}
+                />
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs border-blue-500/40 hover:bg-blue-500/20"
+                  onClick={() => {
+                    if (pairingPinInput.trim()) {
+                      authenticateNativeAgent(pairingPinInput.trim());
+                    }
+                  }}
+                >
+                  Authorize Agent
+                </Button>
+                {nativeAgent.authError && (
+                  <span className="text-[11px] text-destructive">{nativeAgent.authError}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -242,7 +301,11 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                       className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition"
                       title="Copy Session ID"
                     >
-                      {copiedCode ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      {copiedCode ? (
+                        <Check className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -261,7 +324,11 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                       className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer transition"
                       title="Copy Security PIN"
                     >
-                      {copiedPin ? <Check className="h-4 w-4 text-emerald-400" /> : <Copy className="h-4 w-4" />}
+                      {copiedPin ? (
+                        <Check className="h-4 w-4 text-emerald-400" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </button>
                   </div>
                 </div>
@@ -298,7 +365,9 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                 <span>Zero-Knowledge & End-to-End Encrypted</span>
               </div>
               <p>
-                Remote desktop streaming operates strictly over peer-to-peer WebRTC (DTLS-SRTP). No screen images, keystrokes, or private files are stored on any server. You can sever access at any time using the Emergency Stop button.
+                Remote desktop streaming operates strictly over peer-to-peer WebRTC (DTLS-SRTP). No
+                screen images, keystrokes, or private files are stored on any server. You can sever
+                access at any time using the Emergency Stop button.
               </p>
             </div>
           </div>
@@ -345,7 +414,8 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
             </div>
             <h3 className="font-semibold text-base">Select Entire Screen</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Click &quot;Create Remote Session&quot; and choose &quot;Entire Screen&quot; in the browser picker to share your desktop, open apps, File Explorer, and system windows.
+              Click &quot;Create Remote Session&quot; and choose &quot;Entire Screen&quot; in the
+              browser picker to share your desktop, open apps, File Explorer, and system windows.
             </p>
           </div>
 
@@ -355,7 +425,8 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
             </div>
             <h3 className="font-semibold text-base">Share Pairing PIN</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              A unique temporary Session ID and 6-digit PIN are generated. Enter these on the Controller laptop to request access.
+              A unique temporary Session ID and 6-digit PIN are generated. Enter these on the
+              Controller laptop to request access.
             </p>
           </div>
 
@@ -365,7 +436,8 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
             </div>
             <h3 className="font-semibold text-base">Explicit Approval</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              No controller can view or interact with your screen until you explicitly review their device name and click &quot;Approve Connection&quot;.
+              No controller can view or interact with your screen until you explicitly review their
+              device name and click &quot;Approve Connection&quot;.
             </p>
           </div>
         </div>
@@ -380,9 +452,7 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                 <ShieldAlert className="h-6 w-6" />
               </div>
               <div>
-                <h3 className="text-lg font-bold text-foreground">
-                  Remote Control Request
-                </h3>
+                <h3 className="text-lg font-bold text-foreground">Remote Control Request</h3>
                 <p className="text-xs text-muted-foreground">
                   An external controller is requesting access to your desktop.
                 </p>
@@ -413,7 +483,8 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
             <div className="rounded-lg bg-amber-500/10 border border-amber-500/20 p-3 text-xs text-amber-300 flex items-start gap-2">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>
-                Approving grants this controller the ability to view your screen and remotely control your mouse and keyboard.
+                Approving grants this controller the ability to view your screen and remotely
+                control your mouse and keyboard.
               </span>
             </div>
 

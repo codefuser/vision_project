@@ -48,10 +48,11 @@ interface HostState {
   emergencyStop: () => Promise<void>;
   toggleControlEnabled: (enabled?: boolean) => void;
   initNativeAgent: () => void;
+  authenticateNativeAgent: (token: string) => void;
 }
 
 let signaling: WebRTCSignalingManager | null = null;
-let hostId = `host_${Math.random().toString(36).substring(2, 9)}`;
+const hostId = `host_${Math.random().toString(36).substring(2, 9)}`;
 
 export const useHostRemoteDesktop = create<HostState>((set, get) => ({
   session: null,
@@ -68,6 +69,10 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
       set({ nativeAgent: status });
     };
     nativeAgentClient.connect();
+  },
+
+  authenticateNativeAgent: (token: string) => {
+    nativeAgentClient.authenticate(token);
   },
 
   createSession: async (customPin?: string) => {
@@ -157,7 +162,11 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
     signaling.onInputEvent = (inputEvent: RemoteDesktopInputEvent) => {
       if (!get().controlEnabled) return;
 
-      if (inputEvent.type === "MOUSE_MOVE" && inputEvent.u !== undefined && inputEvent.v !== undefined) {
+      if (
+        inputEvent.type === "MOUSE_MOVE" &&
+        inputEvent.u !== undefined &&
+        inputEvent.v !== undefined
+      ) {
         set({
           virtualCursor: {
             u: inputEvent.u,

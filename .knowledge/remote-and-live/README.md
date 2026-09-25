@@ -124,8 +124,12 @@ VersoLyn features a secure peer-to-peer browser-based Remote Desktop system (`/r
   * Explicit host approval modal (`HostApprovalModal`) showing controller device details before establishing connection.
   * Controller control toggle: Host can revoke or resume controller input at any second.
 * **Native Companion Agent (`native-agent/`)**:
-  * Zero-dependency Node.js bridge communicating with Windows OS via Win32 `SendInput` using PowerShell.
+  * Lightweight Node.js bridge communicating with Windows OS via Win32 `SendInput` using PowerShell.
   * Enables hardware mouse/keyboard control across external desktop apps, File Explorer, and system windows.
+  * **Security Protections**:
+    - Strict WebSocket `Origin` validation restricting connections to `https://versolyn.vercel.app` and local dev hosts (`localhost`, `127.0.0.1`).
+    - Pairing PIN/Token handshake requirement issuing ephemeral `sessionToken` before accepting privileged commands.
+    - Base64 clipboard data transport to PowerShell with strict character validation (`/^[A-Za-z0-9+/=]+$/`), preventing command injection and quote breakout.
 
 ---
 

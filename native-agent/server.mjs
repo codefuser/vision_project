@@ -1,12 +1,20 @@
 /**
  * VersoLyn Native Host Companion Agent
  * Lightweight Node.js local WebSocket server providing OS-level mouse and keyboard injection
- * for Windows, macOS, and Linux without requiring heavy native build tools.
+ * for Windows, macOS, and Linux with strict Origin validation, session pairing authentication,
+ * and safe Base64 clipboard transport.
  */
 
 import { WebSocketServer } from "ws";
 import { spawn } from "child_process";
 import os from "os";
+import fs from "fs";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const TOKEN_FILE = path.join(__dirname, ".agent-token");
 
 const PORT = 48123;
 const HOST = "127.0.0.1";
@@ -14,6 +22,56 @@ const HOST = "127.0.0.1";
 let screenWidth = 1920;
 let screenHeight = 1080;
 let winProcess = null;
+
+// ── Origin Validation Policy ──────────────────────────────────────────────────
+function isAllowedOrigin(origin) {
+  if (!origin) return false;
+  try {
+    const parsed = new URL(origin);
+    // Allow VersoLyn production domains
+    if (
+      parsed.protocol === "https:" &&
+      (parsed.hostname === "versolyn.vercel.app" || parsed.hostname.endsWith(".versolyn.vercel.app"))
+    ) {
+      return true;
+    }
+    // Allow localhost and 127.0.0.1 on any port for local development
+    if (
+      (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+      (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1")
+    ) {
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+// ── Persistent Pairing Token Management ───────────────────────────────────────
+function getOrCreatePairingToken() {
+  if (process.env.VERSOLYN_AGENT_TOKEN && process.env.VERSOLYN_AGENT_TOKEN.trim()) {
+    return process.env.VERSOLYN_AGENT_TOKEN.trim();
+  }
+  if (fs.existsSync(TOKEN_FILE)) {
+    try {
+      const saved = fs.readFileSync(TOKEN_FILE, "utf-8").trim();
+      if (saved) return saved;
+    } catch {
+      /* ignore file read error */
+    }
+  }
+  // Generate random 6-digit pairing PIN for convenient operator entry
+  const token = Math.floor(100000 + crypto.randomInt(900000)).toString();
+  try {
+    fs.writeFileSync(TOKEN_FILE, token, "utf-8");
+  } catch (err) {
+    console.warn("[Native Agent] Warning: Could not write token file:", err.message);
+  }
+  return token;
+}
+
+const pairingToken = getOrCreatePairingToken();
 
 // ── Windows P/Invoke Subsystem (Zero-Build-Tools Fast Native Runner) ─────────
 function initWindowsSubsystem() {
@@ -57,7 +115,7 @@ Write-Output "READY"
       }
     });
 
-    winProcess.stderr.on("data", (err) => {
+    winProcess.stderr.on("data", () => {
       // suppress benign warnings
     });
 
@@ -102,14 +160,21 @@ const VK = {
 
 // ── Input Execution Router ───────────────────────────────────────────────────
 function executeInput(event) {
-  if (!event || !event.type) return;
+  if (!event || typeof event !== "object" || !event.type) return;
 
   if (process.platform === "win32") {
     switch (event.type) {
       case "MOUSE_MOVE": {
-        if (event.u !== undefined && event.v !== undefined) {
-          const x = Math.round(event.u * screenWidth);
-          const y = Math.round(event.v * screenHeight);
+        if (
+          typeof event.u === "number" &&
+          typeof event.v === "number" &&
+          Number.isFinite(event.u) &&
+          Number.isFinite(event.v)
+        ) {
+          const u = Math.max(0, Math.min(1, event.u));
+          const v = Math.max(0, Math.min(1, event.v));
+          const x = Math.round(u * screenWidth);
+          const y = Math.round(v * screenHeight);
           sendToWindowsSubsystem(`[WinInput]::SetCursorPos(${x}, ${y})`);
         }
         break;
@@ -128,7 +193,6 @@ function executeInput(event) {
       }
 
       case "DOUBLE_CLICK": {
-        // Two clicks: Down, Up, Down, Up
         sendToWindowsSubsystem(
           `[WinInput]::mouse_event(0x0002, 0, 0, 0, 0); [WinInput]::mouse_event(0x0004, 0, 0, 0, 0); Start-Sleep -Milliseconds 40; [WinInput]::mouse_event(0x0002, 0, 0, 0, 0); [WinInput]::mouse_event(0x0004, 0, 0, 0, 0)`,
         );
@@ -136,44 +200,58 @@ function executeInput(event) {
       }
 
       case "MOUSE_WHEEL": {
-        const delta = Math.round(-(event.deltaY || 0) * 2);
-        if (delta !== 0) {
-          sendToWindowsSubsystem(`[WinInput]::mouse_event(0x0800, 0, 0, ${delta}, 0)`);
+        if (typeof event.deltaY === "number" && Number.isFinite(event.deltaY)) {
+          const rawDelta = Math.round(-event.deltaY * 2);
+          const delta = Math.max(-10000, Math.min(10000, rawDelta));
+          if (delta !== 0) {
+            sendToWindowsSubsystem(`[WinInput]::mouse_event(0x0800, 0, 0, ${delta}, 0)`);
+          }
         }
         break;
       }
 
       case "KEY_DOWN": {
-        let vk = getVirtualKeyCode(event.key, event.code);
-        if (vk) {
+        const vk = getVirtualKeyCode(event.key, event.code);
+        if (typeof vk === "number" && Number.isInteger(vk) && vk > 0 && vk < 256) {
           sendToWindowsSubsystem(`[WinInput]::keybd_event(${vk}, 0, 0, 0)`);
         }
         break;
       }
 
       case "KEY_UP": {
-        let vk = getVirtualKeyCode(event.key, event.code);
-        if (vk) {
+        const vk = getVirtualKeyCode(event.key, event.code);
+        if (typeof vk === "number" && Number.isInteger(vk) && vk > 0 && vk < 256) {
           sendToWindowsSubsystem(`[WinInput]::keybd_event(${vk}, 0, 2, 0)`);
         }
         break;
       }
 
       case "SHORTCUT": {
-        handleShortcut(event.shortcut);
+        if (typeof event.shortcut === "string") {
+          handleShortcut(event.shortcut);
+        }
         break;
       }
 
       case "CLIPBOARD_PASTE": {
-        if (event.text) {
-          const escaped = event.text.replace(/'/g, "''");
-          sendToWindowsSubsystem(`
-[System.Windows.Forms.Clipboard]::SetText('${escaped}')
+        if (event.text !== undefined && event.text !== null) {
+          const textStr = String(event.text);
+          if (textStr.length > 0) {
+            // Encode clipboard content as UTF-8 bytes in Base64
+            const base64 = Buffer.from(textStr, "utf-8").toString("base64");
+            // Strict regex verification: only valid Base64 characters are passed to PowerShell
+            if (/^[A-Za-z0-9+/=]+$/.test(base64)) {
+              sendToWindowsSubsystem(`
+[System.Windows.Forms.Clipboard]::SetText([System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String('${base64}')))
 [WinInput]::keybd_event(${VK.CTRL}, 0, 0, 0)
 [WinInput]::keybd_event(${VK.V}, 0, 0, 0)
 [WinInput]::keybd_event(${VK.V}, 0, 2, 0)
 [WinInput]::keybd_event(${VK.CTRL}, 0, 2, 0)
 `);
+            } else {
+              console.warn("[Native Agent] Dropped invalid base64 clipboard payload");
+            }
+          }
         }
         break;
       }
@@ -278,34 +356,114 @@ function getVirtualKeyCode(key, code) {
 // ── WebSocket Server Lifecycle ────────────────────────────────────────────────
 initWindowsSubsystem();
 
-const wss = new WebSocketServer({ port: PORT, host: HOST });
+const wss = new WebSocketServer({
+  port: PORT,
+  host: HOST,
+  verifyClient: (info, callback) => {
+    const origin = info.origin || info.req.headers.origin;
+    if (!isAllowedOrigin(origin)) {
+      console.warn(`[Native Agent] Blocked connection attempt from unauthorized Origin: ${origin}`);
+      callback(false, 403, "Forbidden: Unauthorized Origin");
+      return;
+    }
+    callback(true);
+  },
+});
 
 wss.on("listening", () => {
   console.log(`=======================================================`);
   console.log(`  VersoLyn Native Host Companion Agent Started`);
   console.log(`  Status: Listening on ws://${HOST}:${PORT}`);
+  console.log(`  Security:`);
+  console.log(`    - Origin Validation: Active`);
+  console.log(`    - Allowed: https://versolyn.vercel.app, localhost, 127.0.0.1`);
+  console.log(`    - Pairing PIN: ${pairingToken}`);
   console.log(`  Platform: ${os.platform()} (${os.arch()})`);
   console.log(`=======================================================`);
 });
 
-wss.on("connection", (ws) => {
-  console.log("[Native Agent] Web Host Client Connected via Localhost Bridge");
+wss.on("connection", (ws, req) => {
+  const origin = req.headers.origin;
+  if (!isAllowedOrigin(origin)) {
+    console.warn(`[Native Agent] Rejected connection with invalid origin: ${origin}`);
+    ws.close(1008, "Unauthorized Origin");
+    return;
+  }
+
+  console.log(`[Native Agent] Web Host Client Connected from Origin: ${origin}`);
+
+  let authenticated = false;
+  let sessionToken = null;
 
   ws.on("message", (raw) => {
     try {
       const msg = JSON.parse(raw.toString());
 
       if (msg.type === "HANDSHAKE") {
-        ws.send(
-          JSON.stringify({
-            type: "HANDSHAKE_ACK",
-            version: "1.0.0",
-            os: process.platform,
-            screenWidth,
-            screenHeight,
-          }),
-        );
+        const clientToken = typeof msg.token === "string" ? msg.token.trim() : "";
+        if (clientToken && clientToken === pairingToken) {
+          authenticated = true;
+          sessionToken = crypto.randomBytes(24).toString("hex");
+          console.log("[Native Agent] Client authenticated successfully during HANDSHAKE");
+          ws.send(
+            JSON.stringify({
+              type: "HANDSHAKE_ACK",
+              authenticated: true,
+              sessionToken,
+              version: "1.0.0",
+              os: process.platform,
+              screenWidth,
+              screenHeight,
+            }),
+          );
+        } else {
+          console.log("[Native Agent] Client connected without valid pairing token, requesting authentication");
+          ws.send(
+            JSON.stringify({
+              type: "AUTH_REQUIRED",
+              version: "1.0.0",
+              os: process.platform,
+              message: "Authentication required: please supply valid pairing token or PIN.",
+            }),
+          );
+        }
+      } else if (msg.type === "AUTHENTICATE") {
+        const clientToken = typeof msg.token === "string" ? msg.token.trim() : "";
+        if (clientToken && clientToken === pairingToken) {
+          authenticated = true;
+          sessionToken = crypto.randomBytes(24).toString("hex");
+          console.log("[Native Agent] Client paired successfully via AUTHENTICATE");
+          ws.send(
+            JSON.stringify({
+              type: "AUTH_SUCCESS",
+              authenticated: true,
+              sessionToken,
+              version: "1.0.0",
+              os: process.platform,
+              screenWidth,
+              screenHeight,
+            }),
+          );
+        } else {
+          console.warn("[Native Agent] Authentication failed: invalid pairing token");
+          ws.send(
+            JSON.stringify({
+              type: "AUTH_FAILED",
+              error: "Invalid pairing token/PIN.",
+            }),
+          );
+        }
       } else if (msg.type === "INPUT_EVENT") {
+        if (!authenticated || !sessionToken || msg.sessionToken !== sessionToken) {
+          console.warn("[Native Agent] Dropped unauthenticated INPUT_EVENT (invalid or missing sessionToken)");
+          ws.send(
+            JSON.stringify({
+              type: "ERROR",
+              error: "Unauthorized: Valid sessionToken required",
+            }),
+          );
+          return;
+        }
         executeInput(msg.event);
       } else if (msg.type === "PING") {
         ws.send(JSON.stringify({ type: "PONG" }));
