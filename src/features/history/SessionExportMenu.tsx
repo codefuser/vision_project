@@ -70,20 +70,35 @@ function exportMarkdown(session: SessionRecord, events: SessionEventRecord[]): v
   downloadBlob(blob, `${session.name.replace(/\s+/g, "_")}_${session.date}.md`);
 }
 
+function escapeHtml(str: string | null | undefined): string {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 function exportPDF(session: SessionRecord, events: SessionEventRecord[]): void {
   // Use the browser's print dialog with a temporary print-ready window
   const duration = session.endedAt
     ? formatDurationMs(session.endedAt - session.startedAt)
     : "Ongoing";
 
+  const safeSessionName = escapeHtml(session.name);
+  const safeSessionDate = escapeHtml(session.date);
+  const safeDuration = escapeHtml(duration);
+  const safeStartedTime = escapeHtml(format(new Date(session.startedAt), "hh:mm a"));
+
   const rows = events
     .map(
       (e) =>
         `<tr>
-          <td style="color:#888;white-space:nowrap">${formatTs(e.ts)}</td>
-          <td style="font-weight:600">${e.label}</td>
-          <td style="color:#666;font-size:12px">${e.detail ?? ""}</td>
-          <td style="color:#999;font-size:11px">${e.module}</td>
+          <td style="color:#888;white-space:nowrap">${escapeHtml(formatTs(e.ts))}</td>
+          <td style="font-weight:600">${escapeHtml(e.label)}</td>
+          <td style="color:#666;font-size:12px">${escapeHtml(e.detail ?? "")}</td>
+          <td style="color:#999;font-size:11px">${escapeHtml(e.module)}</td>
         </tr>`,
     )
     .join("");
@@ -91,7 +106,7 @@ function exportPDF(session: SessionRecord, events: SessionEventRecord[]): void {
   const html = `<!DOCTYPE html>
 <html>
 <head>
-  <title>${session.name}</title>
+  <title>${safeSessionName}</title>
   <style>
     body { font-family: -apple-system, sans-serif; padding: 40px; color: #1a1a1a; }
     h1 { font-size: 22px; margin-bottom: 4px; }
@@ -106,21 +121,21 @@ function exportPDF(session: SessionRecord, events: SessionEventRecord[]): void {
   </style>
 </head>
 <body>
-  <h1>${session.name}</h1>
-  <div class="meta">${session.date} · ${format(new Date(session.startedAt), "hh:mm a")} · Duration: ${duration}</div>
+  <h1>${safeSessionName}</h1>
+  <div class="meta">${safeSessionDate} · ${safeStartedTime} · Duration: ${safeDuration}</div>
   <div class="stats">
-    <div class="stat"><strong>${session.bibleCount}</strong>Bible Verses</div>
-    <div class="stat"><strong>${session.songCount}</strong>Songs</div>
-    <div class="stat"><strong>${session.imageCount}</strong>Images</div>
-    <div class="stat"><strong>${session.videoCount}</strong>Videos</div>
-    <div class="stat"><strong>${session.textCount}</strong>Text</div>
-    <div class="stat"><strong>${session.totalEvents}</strong>Total Events</div>
+    <div class="stat"><strong>${Number(session.bibleCount) || 0}</strong>Bible Verses</div>
+    <div class="stat"><strong>${Number(session.songCount) || 0}</strong>Songs</div>
+    <div class="stat"><strong>${Number(session.imageCount) || 0}</strong>Images</div>
+    <div class="stat"><strong>${Number(session.videoCount) || 0}</strong>Videos</div>
+    <div class="stat"><strong>${Number(session.textCount) || 0}</strong>Text</div>
+    <div class="stat"><strong>${Number(session.totalEvents) || 0}</strong>Total Events</div>
   </div>
   <table>
     <thead><tr><th>Time</th><th>Event</th><th>Detail</th><th>Module</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
-  <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }<\/script>
+  <script>window.onload = () => { window.print(); setTimeout(() => window.close(), 500); }</script>
 </body>
 </html>`;
 

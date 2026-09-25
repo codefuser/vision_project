@@ -144,7 +144,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         httpEquiv: "Content-Security-Policy",
         content:
-          "default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://127.0.0.1:* ws://localhost:* data: blob:; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;",
+          "default-src 'self' data: blob:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https:; media-src 'self' data: blob: https:; connect-src 'self' https://*.supabase.co wss://*.supabase.co ws://127.0.0.1:* ws://localhost:* data: blob:; object-src 'none'; base-uri 'self';",
       },
       // ── Primary SEO ──────────────────────────────────────────────────────────
       { title: "VersoLyn - Church Presentation Software" },
@@ -153,7 +153,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content:
           "VersoLyn is free church presentation software for projecting Bible verses, Tamil & English worship songs, media, and live service content on any screen.",
       },
-      { name: "keywords", content: "VersoLyn, church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software" },
+      {
+        name: "keywords",
+        content:
+          "VersoLyn, church presentation software, church projection software, Bible projection software, worship presentation software, Tamil church presentation software, Christian song projection software, church media software",
+      },
       { name: "robots", content: "index, follow" },
       { name: "application-name", content: "VersoLyn" },
       { name: "apple-mobile-web-app-title", content: "VersoLyn" },
@@ -218,10 +222,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
         {/* JSON-LD Structured Data: Organization + WebSite + SoftwareApplication */}
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON_LD }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON_LD }} />
       </head>
       <body>
         {children}

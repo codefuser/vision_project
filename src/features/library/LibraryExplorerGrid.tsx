@@ -83,7 +83,12 @@ export function LibraryExplorerGrid({
 
   const [creatingFolderName, setCreatingFolderName] = useState("New Folder");
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
-  const [dragBox, setDragBox] = useState<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
+  const [dragBox, setDragBox] = useState<{
+    startX: number;
+    startY: number;
+    currentX: number;
+    currentY: number;
+  } | null>(null);
 
   // Initial width estimate fallback so itemsPerRow is > 1 on initial render
   const [containerWidth, setContainerWidth] = useState(() => {
@@ -171,7 +176,7 @@ export function LibraryExplorerGrid({
             currentX: e.clientX - rect.left + containerRef.current!.scrollLeft,
             currentY: e.clientY - rect.top + containerRef.current!.scrollTop,
           }
-        : null
+        : null,
     );
   };
 
@@ -204,7 +209,8 @@ export function LibraryExplorerGrid({
       const endY = Math.max(dragBox.startY, dragBox.currentY);
 
       const isDragSignificant =
-        Math.abs(dragBox.currentX - dragBox.startX) > 5 || Math.abs(dragBox.currentY - dragBox.startY) > 5;
+        Math.abs(dragBox.currentX - dragBox.startX) > 5 ||
+        Math.abs(dragBox.currentY - dragBox.startY) > 5;
 
       if (isDragSignificant) {
         const idsToSelect: string[] = [];
@@ -216,10 +222,10 @@ export function LibraryExplorerGrid({
             viewMode === "small-icons"
               ? 44
               : viewMode === "list" || viewMode === "details"
-              ? 40
-              : viewMode === "gallery"
-              ? itemWidth * 0.75
-              : itemWidth * 0.625 + 75;
+                ? 40
+                : viewMode === "gallery"
+                  ? itemWidth * 0.75
+                  : itemWidth * 0.625 + 75;
           const top = rowIndex * (rowH + gap);
           const left = colIndex * (itemWidth + gap) + 16;
           const bottom = top + rowH;
@@ -245,7 +251,9 @@ export function LibraryExplorerGrid({
     const ghost = document.createElement("div");
     ghost.className =
       "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-purple-600 px-3 py-2 text-white shadow-2xl font-bold text-xs border border-purple-400/40 backdrop-blur";
-    ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} item(s)</span>`;
+    const itemLabel = document.createElement("span");
+    itemLabel.textContent = `📁 Moving ${selectedIds.length} item(s)`;
+    ghost.appendChild(itemLabel);
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 20, 20);
     setTimeout(() => {
@@ -261,7 +269,9 @@ export function LibraryExplorerGrid({
     const ghost = document.createElement("div");
     ghost.className =
       "fixed pointer-events-none z-50 flex items-center gap-2 rounded-xl bg-amber-500 px-3 py-2 text-black shadow-2xl font-bold text-xs border border-amber-300 backdrop-blur";
-    ghost.innerHTML = `<span>📁 Moving ${selectedIds.length} folder(s)</span>`;
+    const folderLabel = document.createElement("span");
+    folderLabel.textContent = `📁 Moving ${selectedIds.length} folder(s)`;
+    ghost.appendChild(folderLabel);
     document.body.appendChild(ghost);
     e.dataTransfer.setDragImage(ghost, 20, 20);
     setTimeout(() => {
@@ -326,7 +336,8 @@ export function LibraryExplorerGrid({
         </div>
         <h3 className="text-base font-bold text-foreground">This Folder is Empty</h3>
         <p className="mt-1 text-xs max-w-sm text-muted-foreground opacity-80">
-          Drag and drop media files directly into this area, or use the shortcuts below to add content.
+          Drag and drop media files directly into this area, or use the shortcuts below to add
+          content.
         </p>
 
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
@@ -395,7 +406,10 @@ export function LibraryExplorerGrid({
         }}
       >
         {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-          const rowNodes = allNodes.slice(virtualRow.index * itemsPerRow, virtualRow.index * itemsPerRow + itemsPerRow);
+          const rowNodes = allNodes.slice(
+            virtualRow.index * itemsPerRow,
+            virtualRow.index * itemsPerRow + itemsPerRow,
+          );
 
           return (
             <div
@@ -465,7 +479,9 @@ export function LibraryExplorerGrid({
                           }}
                           className={cn(
                             "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card/80 px-2.5 shadow-sm transition hover:border-amber-400/60 select-none",
-                            isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400" : "border-border"
+                            isDragOver
+                              ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                              : "border-border",
                           )}
                         >
                           <Folder className="h-4 w-4 shrink-0 text-amber-400" />
@@ -496,7 +512,9 @@ export function LibraryExplorerGrid({
                           }}
                           className={cn(
                             "group flex h-10 cursor-pointer items-center gap-3 rounded-lg border bg-card px-3 shadow-sm transition hover:border-amber-400/60 select-none",
-                            isDragOver ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400" : "border-border"
+                            isDragOver
+                              ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                              : "border-border",
                           )}
                         >
                           <Folder className="h-5 w-5 shrink-0 text-amber-400" />
@@ -507,7 +525,11 @@ export function LibraryExplorerGrid({
                                 autoFocus
                                 defaultValue={folder.name}
                                 onKeyDown={(e) => {
-                                  if (e.key === "Enter") onInlineRenameSubmit(folder.id, (e.target as HTMLInputElement).value);
+                                  if (e.key === "Enter")
+                                    onInlineRenameSubmit(
+                                      folder.id,
+                                      (e.target as HTMLInputElement).value,
+                                    );
                                   if (e.key === "Escape") onInlineCancel();
                                 }}
                                 onBlur={(e) => onInlineRenameSubmit(folder.id, e.target.value)}
@@ -519,7 +541,9 @@ export function LibraryExplorerGrid({
                               </span>
                             )}
                           </div>
-                          <span className="text-[10px] text-muted-foreground">{folderChildCountMap.get(folder.id) || 0} items</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {folderChildCountMap.get(folder.id) || 0} items
+                          </span>
                         </div>
                       </ShortcutTooltip>
                     );
@@ -564,7 +588,7 @@ export function LibraryExplorerGrid({
                           "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40 select-none",
                           isDragOver
                             ? "border-amber-400 bg-amber-500/20 ring-2 ring-amber-400 scale-[1.02]"
-                            : "border-border hover:border-amber-400/60"
+                            : "border-border hover:border-amber-400/60",
                         )}
                       >
                         {/* Top-Left Media Badge */}
@@ -577,9 +601,15 @@ export function LibraryExplorerGrid({
                           {quadItems.length > 0 ? (
                             <div className="grid h-full w-full grid-cols-2 gap-1 p-1 bg-black/40">
                               {quadItems.map((qItem, idx) => (
-                                <div key={idx} className="relative overflow-hidden rounded bg-black/60 flex items-center justify-center">
+                                <div
+                                  key={idx}
+                                  className="relative overflow-hidden rounded bg-black/60 flex items-center justify-center"
+                                >
                                   {qItem.mediaRecord ? (
-                                    <Thumb media={qItem.mediaRecord} className="h-full w-full object-cover" />
+                                    <Thumb
+                                      media={qItem.mediaRecord}
+                                      className="h-full w-full object-cover"
+                                    />
                                   ) : qItem.type === "song" ? (
                                     <Music className="h-3.5 w-3.5 text-purple-400" />
                                   ) : qItem.type === "bible" ? (
@@ -589,9 +619,11 @@ export function LibraryExplorerGrid({
                                   )}
                                 </div>
                               ))}
-                              {Array.from({ length: Math.max(0, 4 - quadItems.length) }).map((_, idx) => (
-                                <div key={`empty-${idx}`} className="rounded bg-muted/40" />
-                              ))}
+                              {Array.from({ length: Math.max(0, 4 - quadItems.length) }).map(
+                                (_, idx) => (
+                                  <div key={`empty-${idx}`} className="rounded bg-muted/40" />
+                                ),
+                              )}
                             </div>
                           ) : (
                             <Folder className="h-12 w-12 text-amber-400/80 group-hover:scale-110 transition-transform duration-200" />
@@ -606,7 +638,11 @@ export function LibraryExplorerGrid({
                               autoFocus
                               defaultValue={folder.name}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") onInlineRenameSubmit(folder.id, (e.target as HTMLInputElement).value);
+                                if (e.key === "Enter")
+                                  onInlineRenameSubmit(
+                                    folder.id,
+                                    (e.target as HTMLInputElement).value,
+                                  );
                                 if (e.key === "Escape") onInlineCancel();
                               }}
                               onBlur={(e) => onInlineRenameSubmit(folder.id, e.target.value)}
@@ -648,12 +684,17 @@ export function LibraryExplorerGrid({
                         }}
                         className={cn(
                           "group flex h-10 cursor-pointer items-center gap-2 rounded-lg border bg-card text-card-foreground px-2.5 text-xs shadow-xs transition hover:bg-accent/50",
-                          selected ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                          selected
+                            ? "border-primary bg-primary/15 ring-1 ring-primary"
+                            : "border-border hover:border-primary/50",
                         )}
                       >
                         <div className="h-5 w-5 shrink-0 overflow-hidden rounded bg-muted/60 flex items-center justify-center">
                           {item.mediaRecord ? (
-                            <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
+                            <Thumb
+                              media={item.mediaRecord}
+                              className="h-full w-full object-cover"
+                            />
                           ) : item.type === "song" ? (
                             <Music className="h-3 w-3 text-purple-400" />
                           ) : item.type === "bible" ? (
@@ -682,12 +723,17 @@ export function LibraryExplorerGrid({
                         }}
                         className={cn(
                           "group relative flex items-center h-10 cursor-pointer overflow-hidden rounded-lg border bg-card text-card-foreground px-3 text-xs shadow-xs transition hover:bg-accent/50",
-                          selected ? "border-primary bg-primary/15 ring-1 ring-primary" : "border-border hover:border-primary/50"
+                          selected
+                            ? "border-primary bg-primary/15 ring-1 ring-primary"
+                            : "border-border hover:border-primary/50",
                         )}
                       >
                         <div className="h-6 w-6 shrink-0 overflow-hidden rounded bg-black/40 flex items-center justify-center mr-3">
                           {item.mediaRecord ? (
-                            <Thumb media={item.mediaRecord} className="h-full w-full object-cover" />
+                            <Thumb
+                              media={item.mediaRecord}
+                              className="h-full w-full object-cover"
+                            />
                           ) : item.type === "song" ? (
                             <Music className="h-3.5 w-3.5 text-purple-400" />
                           ) : item.type === "bible" ? (
@@ -704,7 +750,11 @@ export function LibraryExplorerGrid({
                               autoFocus
                               defaultValue={item.name}
                               onKeyDown={(e) => {
-                                if (e.key === "Enter") onInlineRenameSubmit(item.id, (e.target as HTMLInputElement).value);
+                                if (e.key === "Enter")
+                                  onInlineRenameSubmit(
+                                    item.id,
+                                    (e.target as HTMLInputElement).value,
+                                  );
                                 if (e.key === "Escape") onInlineCancel();
                               }}
                               onBlur={(e) => onInlineRenameSubmit(item.id, e.target.value)}
@@ -717,9 +767,15 @@ export function LibraryExplorerGrid({
 
                         {viewMode === "details" && (
                           <>
-                            <div className="w-24 uppercase text-[10px] font-bold text-muted-foreground">{item.type}</div>
-                            <div className="w-24 text-[11px] text-muted-foreground">{item.size ? formatBytes(item.size) : "-"}</div>
-                            <div className="w-32 text-[11px] text-muted-foreground">{new Date(item.createdAt).toLocaleDateString()}</div>
+                            <div className="w-24 uppercase text-[10px] font-bold text-muted-foreground">
+                              {item.type}
+                            </div>
+                            <div className="w-24 text-[11px] text-muted-foreground">
+                              {item.size ? formatBytes(item.size) : "-"}
+                            </div>
+                            <div className="w-32 text-[11px] text-muted-foreground">
+                              {new Date(item.createdAt).toLocaleDateString()}
+                            </div>
                           </>
                         )}
                       </div>
@@ -742,12 +798,17 @@ export function LibraryExplorerGrid({
                         }}
                         className={cn(
                           "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-md transition hover:-translate-y-0.5 hover:shadow-xl select-none aspect-[4/3]",
-                          selected ? "border-primary ring-2 ring-primary" : "border-border hover:border-primary/60"
+                          selected
+                            ? "border-primary ring-2 ring-primary"
+                            : "border-border hover:border-primary/60",
                         )}
                       >
                         <div className="relative h-full w-full overflow-hidden flex items-center justify-center bg-black/60">
                           {item.mediaRecord ? (
-                            <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition group-hover:scale-105 duration-300" />
+                            <Thumb
+                              media={item.mediaRecord}
+                              className="h-full w-full object-cover transition group-hover:scale-105 duration-300"
+                            />
                           ) : item.type === "song" ? (
                             <div className="flex flex-col items-center justify-center p-3 text-center text-purple-400 bg-purple-950/40 h-full w-full">
                               <Music className="h-10 w-10 mb-2 opacity-90" />
@@ -769,7 +830,13 @@ export function LibraryExplorerGrid({
                           <span
                             className={cn(
                               "absolute top-2 left-2 rounded px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wider text-white backdrop-blur shadow-sm",
-                              item.type === "song" ? "bg-purple-600/80" : item.type === "bible" ? "bg-amber-600/80" : item.type === "video" ? "bg-purple-600/80" : "bg-black/70"
+                              item.type === "song"
+                                ? "bg-purple-600/80"
+                                : item.type === "bible"
+                                  ? "bg-amber-600/80"
+                                  : item.type === "video"
+                                    ? "bg-purple-600/80"
+                                    : "bg-black/70",
                             )}
                           >
                             {item.type}
@@ -777,8 +844,12 @@ export function LibraryExplorerGrid({
 
                           {/* Hover Overlay Title Block */}
                           <div className="absolute inset-x-0 bottom-0 p-2.5 bg-gradient-to-t from-black/95 via-black/70 to-transparent text-white opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex flex-col justify-end">
-                            <p className="line-clamp-2 text-xs font-bold text-white leading-snug">{item.name}</p>
-                            <p className="text-[10px] text-slate-300 mt-0.5">{item.size ? formatBytes(item.size) : item.type}</p>
+                            <p className="line-clamp-2 text-xs font-bold text-white leading-snug">
+                              {item.name}
+                            </p>
+                            <p className="text-[10px] text-slate-300 mt-0.5">
+                              {item.size ? formatBytes(item.size) : item.type}
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -802,7 +873,7 @@ export function LibraryExplorerGrid({
                         "group relative flex flex-col cursor-pointer overflow-hidden rounded-xl border bg-card text-card-foreground shadow-xs transition-all duration-150 hover:-translate-y-0.5 hover:shadow-md hover:bg-accent/40 select-none",
                         selected
                           ? "border-primary bg-primary/15 ring-2 ring-primary/40 shadow-md shadow-primary/20"
-                          : "border-border hover:border-primary/60"
+                          : "border-border hover:border-primary/60",
                       )}
                     >
                       {/* Top-Left Media Type Badge */}
@@ -812,12 +883,12 @@ export function LibraryExplorerGrid({
                           item.type === "image"
                             ? "bg-emerald-600/90"
                             : item.type === "video"
-                            ? "bg-purple-600/90"
-                            : item.type === "song"
-                            ? "bg-purple-600/90"
-                            : item.type === "bible"
-                            ? "bg-amber-600/90"
-                            : "bg-blue-600/90"
+                              ? "bg-purple-600/90"
+                              : item.type === "song"
+                                ? "bg-purple-600/90"
+                                : item.type === "bible"
+                                  ? "bg-amber-600/90"
+                                  : "bg-blue-600/90",
                         )}
                       >
                         {item.type}
@@ -842,7 +913,12 @@ export function LibraryExplorerGrid({
                               }}
                               className="h-6 w-6 rounded-md bg-black/70 hover:bg-amber-500 text-white hover:text-black flex items-center justify-center backdrop-blur transition shadow-xs cursor-pointer"
                             >
-                              <Star className={cn("h-3.5 w-3.5", item.isFavorite ? "fill-amber-400 text-amber-400" : "")} />
+                              <Star
+                                className={cn(
+                                  "h-3.5 w-3.5",
+                                  item.isFavorite ? "fill-amber-400 text-amber-400" : "",
+                                )}
+                              />
                             </button>
                           </ShortcutTooltip>
                         </div>
@@ -852,7 +928,10 @@ export function LibraryExplorerGrid({
                       <div className="relative aspect-[16/10] w-full overflow-hidden bg-muted/60 flex items-center justify-center border-b border-border">
                         {item.mediaRecord ? (
                           <>
-                            <Thumb media={item.mediaRecord} className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                            <Thumb
+                              media={item.mediaRecord}
+                              className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                            />
                             {item.type === "video" && (
                               <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                                 <div className="h-9 w-9 rounded-full bg-black/70 backdrop-blur border border-white/20 flex items-center justify-center text-white shadow-lg group-hover:scale-110 transition-transform duration-200">
@@ -876,7 +955,9 @@ export function LibraryExplorerGrid({
                         ) : (
                           <div className="flex flex-col items-center justify-center p-3 text-center text-blue-400 bg-gradient-to-br from-blue-950 via-blue-900/40 to-black h-full w-full">
                             <Megaphone className="h-9 w-9 mb-1 text-blue-400 opacity-90 group-hover:scale-110 transition-transform duration-200" />
-                            <span className="text-[10px] font-bold text-blue-300">Announcement</span>
+                            <span className="text-[10px] font-bold text-blue-300">
+                              Announcement
+                            </span>
                           </div>
                         )}
 
@@ -900,7 +981,8 @@ export function LibraryExplorerGrid({
                             autoFocus
                             defaultValue={item.name}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter") onInlineRenameSubmit(item.id, (e.target as HTMLInputElement).value);
+                              if (e.key === "Enter")
+                                onInlineRenameSubmit(item.id, (e.target as HTMLInputElement).value);
                               if (e.key === "Escape") onInlineCancel();
                             }}
                             onBlur={(e) => onInlineRenameSubmit(item.id, e.target.value)}
@@ -913,8 +995,14 @@ export function LibraryExplorerGrid({
                             </p>
                             <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground font-mono">
                               <span>{item.size ? formatBytes(item.size) : item.type}</span>
-                              {item.songData && <span className="text-purple-400 font-semibold">Song</span>}
-                              {item.bibleData && <span className="text-amber-400 font-semibold">{bibleLang.toUpperCase()}</span>}
+                              {item.songData && (
+                                <span className="text-purple-400 font-semibold">Song</span>
+                              )}
+                              {item.bibleData && (
+                                <span className="text-amber-400 font-semibold">
+                                  {bibleLang.toUpperCase()}
+                                </span>
+                              )}
                             </div>
                           </>
                         )}

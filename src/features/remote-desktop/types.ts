@@ -21,20 +21,10 @@ export interface ControllerConnectionRequest {
 }
 
 export type HostSessionStatus =
-  | "idle"
-  | "creating"
-  | "waiting_pairing"
-  | "pending_approval"
-  | "connected"
-  | "ended";
+  "idle" | "creating" | "waiting_pairing" | "pending_approval" | "connected" | "ended";
 
 export type ControllerConnectionStatus =
-  | "disconnected"
-  | "connecting"
-  | "waiting_approval"
-  | "connected"
-  | "reconnecting"
-  | "error";
+  "disconnected" | "connecting" | "waiting_approval" | "connected" | "reconnecting" | "error";
 
 export interface RemoteDesktopSession {
   sessionId: string;
@@ -130,6 +120,9 @@ export interface SignalingMessage {
 
 export interface NativeAgentStatus {
   connected: boolean;
+  authenticated?: boolean;
+  requiresAuth?: boolean;
+  authError?: string;
   version?: string;
   os?: string;
   screenWidth?: number;

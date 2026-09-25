@@ -15,6 +15,7 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+.agent-token 
 
 # Wrangler / Cloudflare
 .wrangler/
@@ -38,6 +39,7 @@ dist-ssr
 *.md
 !README.md
 !**/README.md
+!SECURITY_AUDIT.md
 
 # ---------------------------------------
 # Project Analysis
