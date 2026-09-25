@@ -1,7 +1,8 @@
 /**
  * Remote Desktop Controller Store (Zustand)
  * Manages the CONTROLLER machine's connection to the HOST, WebRTC media reception,
- * input dispatching over RTCDataChannel, quality adjustment, and viewer state.
+ * input dispatching over RTCDataChannel, quality adjustment, screen state detection,
+ * and comprehensive diagnostic telemetry.
  */
 
 import { create } from "zustand";
@@ -10,9 +11,11 @@ import { logger } from "@/lib/logger";
 import { WebRTCSignalingManager } from "../services/webrtc-signaling";
 import type {
   ControllerConnectionStatus,
+  HostScreenState,
   QualityPreset,
   RemoteDesktopInputEvent,
   RemoteDesktopMetrics,
+  WebRTCDiagnostics,
   ZoomLevel,
 } from "../types";
 
@@ -22,7 +25,11 @@ interface ControllerState {
   pin: string;
   controllerName: string;
   remoteStream: MediaStream | null;
+  hostScreenState: HostScreenState | null;
   metrics: RemoteDesktopMetrics | null;
+  diagnostics: WebRTCDiagnostics | null;
+  connectionState: RTCPeerConnectionState | "disconnected";
+  iceConnectionState: RTCIceConnectionState | "disconnected";
   quality: QualityPreset;
   zoom: ZoomLevel;
   inputEnabled: boolean;
@@ -37,12 +44,14 @@ interface ControllerState {
   toggleInputEnabled: () => void;
   setIsFullscreen: (full: boolean) => void;
   connect: (sessionId: string, pin: string, name?: string) => Promise<boolean>;
+  retryConnection: () => Promise<boolean>;
+  requestScreenShare: () => Promise<void>;
   sendInput: (event: RemoteDesktopInputEvent) => boolean;
   disconnect: () => Promise<void>;
 }
 
 let signaling: WebRTCSignalingManager | null = null;
-let controllerId = `ctrl_${Math.random().toString(36).substring(2, 9)}`;
+const controllerId = `ctrl_${Math.random().toString(36).substring(2, 9)}`;
 
 export const useControllerRemoteDesktop = create<ControllerState>((set, get) => ({
   status: "disconnected",
@@ -53,7 +62,11 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
       ? localStorage.getItem("vp_rd_controller_name") || "Controller Laptop"
       : "Controller Laptop",
   remoteStream: null,
+  hostScreenState: null,
   metrics: null,
+  diagnostics: null,
+  connectionState: "disconnected",
+  iceConnectionState: "disconnected",
   quality: "auto",
   zoom: "fit",
   inputEnabled: true,
@@ -107,6 +120,10 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
       controllerName: effectiveName,
       errorMessage: null,
       remoteStream: null,
+      hostScreenState: null,
+      diagnostics: null,
+      connectionState: "connecting",
+      iceConnectionState: "new",
     });
 
     if (signaling) {
@@ -122,6 +139,7 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
       set({
         remoteStream: stream,
         status: "connected",
+        hostScreenState: { active: true },
       });
       toast.success("Connected to Host Desktop!");
     };
@@ -129,6 +147,41 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
     // Track metrics
     signaling.onMetricsUpdate = (metrics) => {
       set({ metrics, lastPingMs: metrics.rtt });
+    };
+
+    // Track live connection diagnostics
+    signaling.onDiagnosticsUpdate = (diagnostics) => {
+      set({
+        diagnostics,
+        connectionState: diagnostics.connectionState,
+        iceConnectionState: diagnostics.iceConnectionState,
+      });
+    };
+
+    signaling.onConnectionStateChange = (state) => {
+      set({ connectionState: state });
+      if (state === "failed") {
+        set({
+          errorMessage: "WebRTC connection failed. Check network or retry.",
+        });
+      }
+    };
+
+    signaling.onIceConnectionStateChange = (state) => {
+      set({ iceConnectionState: state });
+    };
+
+    signaling.onTrackEnded = (track) => {
+      if (track.kind === "video") {
+        logger.info("Remote video track ended from host");
+        set({
+          hostScreenState: {
+            active: false,
+            reason: "Host stopped screen sharing.",
+          },
+        });
+        toast.info("Host stopped screen sharing.");
+      }
     };
 
     // Track incoming signals
@@ -147,6 +200,11 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
           });
           toast.error(reason);
           void get().disconnect();
+        }
+      } else if (msg.type === "HOST_SCREEN_STATE") {
+        set({ hostScreenState: msg.payload });
+        if (msg.payload.active === false && msg.payload.reason) {
+          toast.info(msg.payload.reason);
         }
       } else if (msg.type === "SESSION_TERMINATED") {
         const reason = msg.payload?.reason || "Host terminated the session.";
@@ -185,6 +243,22 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
     }
   },
 
+  retryConnection: async () => {
+    const { sessionId, pin, controllerName } = get();
+    if (!sessionId || !pin) return false;
+    toast.info("Retrying connection to Host...");
+    return get().connect(sessionId, pin, controllerName);
+  },
+
+  requestScreenShare: async () => {
+    if (signaling) {
+      await signaling.sendSignal("REQUEST_SCREEN_SHARE", {
+        requestedAt: Date.now(),
+      });
+      toast.info("Requested Host to start/resume screen sharing.");
+    }
+  },
+
   sendInput: (event: RemoteDesktopInputEvent): boolean => {
     if (!get().inputEnabled || get().status !== "connected" || !signaling) {
       return false;
@@ -209,7 +283,11 @@ export const useControllerRemoteDesktop = create<ControllerState>((set, get) => 
     set({
       status: "disconnected",
       remoteStream: null,
+      hostScreenState: null,
       metrics: null,
+      diagnostics: null,
+      connectionState: "disconnected",
+      iceConnectionState: "disconnected",
     });
   },
 }));

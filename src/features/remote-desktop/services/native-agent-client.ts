@@ -73,6 +73,7 @@ export class NativeAgentClient {
               os: data.os || "windows",
               screenWidth: data.screenWidth || 1920,
               screenHeight: data.screenHeight || 1080,
+              monitors: data.monitors || [],
               lastPing: Date.now(),
             };
             if (this.cachedToken && typeof window !== "undefined") {

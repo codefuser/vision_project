@@ -505,10 +505,14 @@
       "remote_desktop_control": [
         "src/routes/remote-desktop.tsx",
         "src/features/remote-desktop/RemoteDesktopPage.tsx",
-        "src/features/remote-desktop/remote-desktop-session.store.ts",
-        "src/features/remote-desktop/remote-desktop-channel.ts",
-        "src/features/remote-desktop/remote-desktop-types.ts",
-        "native-agent/agent.js"
+        "src/features/remote-desktop/stores/rd-host.store.ts",
+        "src/features/remote-desktop/stores/rd-controller.store.ts",
+        "src/features/remote-desktop/services/webrtc-signaling.ts",
+        "src/features/remote-desktop/services/native-agent-client.ts",
+        "src/features/remote-desktop/components/RemoteDesktopViewer.tsx",
+        "src/features/remote-desktop/components/RemoteDesktopHostView.tsx",
+        "src/features/remote-desktop/components/RemoteDesktopControllerView.tsx",
+        "native-agent/server.mjs"
       ],
       "performance_and_skeletons": [
         "src/components/skeletons/RouteSkeletons.tsx",

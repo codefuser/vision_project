@@ -55,6 +55,8 @@ export type ShortcutAction =
   | "TASK_MANAGER"
   | "ESC"
   | "WIN"
+  | "WIN_D"
+  | "SAVE"
   | "ENTER"
   | "BACKSPACE"
   | "CTRL_ALT_DEL";
@@ -99,6 +101,43 @@ export interface RemoteDesktopMetrics {
   streamHeight: number;
 }
 
+export interface WebRTCDiagnostics {
+  connectionState: RTCPeerConnectionState | "disconnected";
+  iceConnectionState: RTCIceConnectionState | "disconnected";
+  signalingState: "connected" | "connecting" | "disconnected";
+  videoTracksCount: number;
+  audioTracksCount: number;
+  hasVideoTrack: boolean;
+  hasAudioTrack: boolean;
+  videoTrackReadyState?: MediaStreamTrackState;
+  videoTrackMuted?: boolean;
+  isStreamActive: boolean;
+  resolutionWidth: number;
+  resolutionHeight: number;
+  fps: number;
+  bitrateKbps: number;
+  rttMs: number;
+  iceCandidatesSent: number;
+  iceCandidatesReceived: number;
+  lastUpdated: number;
+}
+
+export interface HostScreenState {
+  active: boolean;
+  reason?: string;
+  resolution?: { width: number; height: number };
+  displaySurface?: string;
+  monitorName?: string;
+}
+
+export interface MonitorInfo {
+  id: string;
+  name: string;
+  width: number;
+  height: number;
+  primary: boolean;
+}
+
 export type SignalingMessageType =
   | "PAIRING_REQUEST"
   | "PAIRING_APPROVAL"
@@ -107,7 +146,9 @@ export type SignalingMessageType =
   | "WEBRTC_ANSWER"
   | "ICE_CANDIDATE"
   | "SESSION_TERMINATED"
-  | "HOST_SCREEN_STATE";
+  | "HOST_SCREEN_STATE"
+  | "REQUEST_SCREEN_SHARE"
+  | "MONITOR_LIST";
 
 export interface SignalingMessage {
   type: SignalingMessageType;
@@ -127,5 +168,6 @@ export interface NativeAgentStatus {
   os?: string;
   screenWidth?: number;
   screenHeight?: number;
+  monitors?: MonitorInfo[];
   lastPing?: number;
 }

@@ -1,7 +1,8 @@
 /**
  * WebRTC Connection & Supabase Signaling Engine for Remote Desktop
- * Handles peer-to-peer WebRTC lifecycle, ICE negotiation, RTCDataChannel,
- * dynamic bitrate management, and live connection statistics.
+ * Handles peer-to-peer WebRTC lifecycle, early ICE candidate queuing,
+ * multi-track MediaStream binding, dynamic bitrate management,
+ * live telemetry, and real-time connection diagnostics.
  */
 
 import { supabase } from "@/lib/supabase";
@@ -13,6 +14,7 @@ import type {
   RemoteDesktopMetrics,
   SignalingMessage,
   SignalingMessageType,
+  WebRTCDiagnostics,
 } from "../types";
 
 const RTC_CONFIG: RTCConfiguration = {
@@ -20,6 +22,9 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:global.stun.twilio.com:3478" },
   ],
   iceCandidatePoolSize: 4,
 };
@@ -30,19 +35,41 @@ export class WebRTCSignalingManager {
   private peerConnection: RTCPeerConnection | null = null;
   private dataChannel: RTCDataChannel | null = null;
   private realtimeChannel: RealtimeChannel | null = null;
+  private remoteMediaStream: MediaStream | null = null;
+  private videoSender: RTCRtpSender | null = null;
   private sessionId: string | null = null;
   private senderRole: "host" | "controller" = "host";
   private senderId: string = "";
+
+  // ICE candidates arriving before setRemoteDescription must be buffered
+  private earlyCandidatesQueue: RTCIceCandidateInit[] = [];
+  private iceCandidatesSent: number = 0;
+  private iceCandidatesReceived: number = 0;
+  private signalingState: "connected" | "connecting" | "disconnected" = "disconnected";
+
+  // Metrics tracking
   private statsInterval: ReturnType<typeof setInterval> | null = null;
   private prevBytes: number = 0;
   private prevTimestamp: number = 0;
+  private lastMetrics: RemoteDesktopMetrics = {
+    fps: 0,
+    rtt: 0,
+    bitrateKbps: 0,
+    packetsLost: 0,
+    quality: "good",
+    streamWidth: 0,
+    streamHeight: 0,
+  };
 
   // Callbacks
   public onRemoteStream?: (stream: MediaStream) => void;
   public onInputEvent?: (event: RemoteDesktopInputEvent) => void;
   public onMetricsUpdate?: (metrics: RemoteDesktopMetrics) => void;
+  public onDiagnosticsUpdate?: (diagnostics: WebRTCDiagnostics) => void;
   public onSignalingMessage?: (msg: SignalingMessage) => void;
   public onConnectionStateChange?: (state: RTCPeerConnectionState) => void;
+  public onIceConnectionStateChange?: (state: RTCIceConnectionState) => void;
+  public onTrackEnded?: (track: MediaStreamTrack) => void;
 
   constructor(role: "host" | "controller", senderId: string) {
     this.senderRole = role;
@@ -54,6 +81,8 @@ export class WebRTCSignalingManager {
   public async subscribeToSession(sessionId: string): Promise<void> {
     this.sessionId = sessionId.trim().toUpperCase();
     const chanName = `${CHANNEL_PREFIX}${this.sessionId}`;
+    this.signalingState = "connecting";
+    this.emitDiagnostics();
 
     // Teardown previous if active
     if (this.realtimeChannel) {
@@ -84,12 +113,18 @@ export class WebRTCSignalingManager {
 
     await this.realtimeChannel.subscribe((status) => {
       logger.info(`Remote Desktop signaling channel [${chanName}] status: ${status}`);
+      if (status === "SUBSCRIBED") {
+        this.signalingState = "connected";
+      } else if (status === "CLOSED" || status === "CHANNEL_ERROR") {
+        this.signalingState = "disconnected";
+      }
+      this.emitDiagnostics();
     });
   }
 
   public async sendSignal(type: SignalingMessageType, payload: any = {}): Promise<void> {
     if (!this.realtimeChannel || !this.sessionId) {
-      logger.warn("Cannot send signal: channel not initialized");
+      logger.warn(`Cannot send signal [${type}]: channel not initialized`);
       return;
     }
 
@@ -120,20 +155,30 @@ export class WebRTCSignalingManager {
       this.closePeerConnection();
     }
 
+    this.earlyCandidatesQueue = [];
+    this.iceCandidatesSent = 0;
+    this.iceCandidatesReceived = 0;
+
     const pc = new RTCPeerConnection(RTC_CONFIG);
     this.peerConnection = pc;
 
+    // ICE Candidate generation
     pc.onicecandidate = (event) => {
       if (event.candidate) {
+        this.iceCandidatesSent++;
         void this.sendSignal("ICE_CANDIDATE", event.candidate.toJSON());
+        this.emitDiagnostics();
       }
     };
 
+    // Connection state changes
     pc.onconnectionstatechange = () => {
       logger.info(`WebRTC Connection State: ${pc.connectionState}`);
       if (this.onConnectionStateChange) {
         this.onConnectionStateChange(pc.connectionState);
       }
+      this.emitDiagnostics();
+
       if (pc.connectionState === "connected") {
         this.startMetricsCollection();
       } else if (
@@ -145,12 +190,53 @@ export class WebRTCSignalingManager {
       }
     };
 
+    // ICE connection state changes (essential for diagnosing NAT/firewall punch failures)
+    pc.oniceconnectionstatechange = () => {
+      logger.info(`WebRTC ICE Connection State: ${pc.iceConnectionState}`);
+      if (this.onIceConnectionStateChange) {
+        this.onIceConnectionStateChange(pc.iceConnectionState);
+      }
+      this.emitDiagnostics();
+    };
+
     // Controller receives media track
     pc.ontrack = (event) => {
-      logger.info("WebRTC remote track received", event.track.kind);
-      if (this.onRemoteStream && event.streams[0]) {
-        this.onRemoteStream(event.streams[0]);
+      logger.info(`WebRTC remote track received: [kind=${event.track.kind}, id=${event.track.id}]`);
+
+      // Ensure composite MediaStream contains all tracks
+      if (event.streams && event.streams[0]) {
+        this.remoteMediaStream = event.streams[0];
+      } else {
+        if (!this.remoteMediaStream) {
+          this.remoteMediaStream = new MediaStream();
+        }
+        if (!this.remoteMediaStream.getTracks().some((t) => t.id === event.track.id)) {
+          this.remoteMediaStream.addTrack(event.track);
+        }
       }
+
+      // Track mute / unmute / ended lifecycle
+      event.track.onunmute = () => {
+        logger.info(`Remote track unmuted and streaming active: ${event.track.kind}`);
+        this.emitRemoteStream();
+        this.emitDiagnostics();
+      };
+
+      event.track.onmute = () => {
+        logger.warn(`Remote track muted: ${event.track.kind}`);
+        this.emitDiagnostics();
+      };
+
+      event.track.onended = () => {
+        logger.info(`Remote track ended: ${event.track.kind}`);
+        if (this.onTrackEnded) {
+          this.onTrackEnded(event.track);
+        }
+        this.emitDiagnostics();
+      };
+
+      this.emitRemoteStream();
+      this.emitDiagnostics();
     };
 
     // Host receives DataChannel initiated by controller or vice-versa
@@ -160,6 +246,12 @@ export class WebRTCSignalingManager {
     };
 
     return pc;
+  }
+
+  private emitRemoteStream(): void {
+    if (this.remoteMediaStream && this.onRemoteStream) {
+      this.onRemoteStream(this.remoteMediaStream);
+    }
   }
 
   // ── 3. Host: Add Screen Stream & Create Offer ─────────────────────────────
@@ -176,19 +268,8 @@ export class WebRTCSignalingManager {
     // Add screen video and audio tracks
     for (const track of stream.getTracks()) {
       const sender = pc.addTrack(track, stream);
-      // Optimize video track parameters for crisp screen sharing
       if (track.kind === "video") {
-        try {
-          const params = sender.getParameters();
-          if (!params.encodings || params.encodings.length === 0) {
-            params.encodings = [{}];
-          }
-          params.encodings[0].maxBitrate = 6_000_000; // 6 Mbps default
-          params.degradationPreference = "maintain-framerate";
-          await sender.setParameters(params);
-        } catch (e) {
-          logger.warn("Could not set initial sender parameters", e);
-        }
+        this.videoSender = sender;
       }
     }
 
@@ -198,7 +279,43 @@ export class WebRTCSignalingManager {
     });
     await pc.setLocalDescription(offer);
 
+    // Apply optimal encoding parameters after localDescription is set
+    if (this.videoSender) {
+      try {
+        const params = this.videoSender.getParameters();
+        if (!params.encodings || params.encodings.length === 0) {
+          params.encodings = [{}];
+        }
+        params.encodings[0].maxBitrate = 6_000_000; // 6 Mbps default
+        params.degradationPreference = "maintain-framerate";
+        await this.videoSender.setParameters(params);
+      } catch (e) {
+        logger.warn("Could not set initial sender parameters", e);
+      }
+    }
+
     await this.sendSignal("WEBRTC_OFFER", offer);
+    this.emitDiagnostics();
+  }
+
+  /**
+   * Replace the active video track on the Host without renegotiating WebRTC.
+   * Useful when switching monitors or display surfaces live.
+   */
+  public async hostReplaceVideoTrack(newTrack: MediaStreamTrack): Promise<boolean> {
+    if (!this.videoSender) {
+      logger.warn("Cannot replace video track: videoSender is null");
+      return false;
+    }
+    try {
+      await this.videoSender.replaceTrack(newTrack);
+      logger.info(`Host replaced video track live with: ${newTrack.label}`);
+      this.emitDiagnostics();
+      return true;
+    } catch (err) {
+      logger.error("Failed to replace video track", err);
+      return false;
+    }
   }
 
   // ── 4. Controller: Handle Offer & Create Answer ───────────────────────────
@@ -208,19 +325,19 @@ export class WebRTCSignalingManager {
 
     await pc.setRemoteDescription(new RTCSessionDescription(offerSdp));
 
+    // Drain any ICE candidates received prior to setRemoteDescription
+    await this.drainEarlyCandidates();
+
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
     await this.sendSignal("WEBRTC_ANSWER", answer);
+    this.emitDiagnostics();
   }
 
-  // ── 5. Internal Signal Router ─────────────────────────────────────────────
+  // ── 5. Internal Signal Router & Candidate Drainage ────────────────────────
 
   private async handleIncomingSignal(msg: SignalingMessage): Promise<void> {
-    if (!this.peerConnection && msg.type !== "WEBRTC_OFFER") {
-      return;
-    }
-
     try {
       switch (msg.type) {
         case "WEBRTC_OFFER":
@@ -234,21 +351,51 @@ export class WebRTCSignalingManager {
             await this.peerConnection.setRemoteDescription(
               new RTCSessionDescription(msg.payload),
             );
+            // Drain any ICE candidates that arrived before host set remote answer
+            await this.drainEarlyCandidates();
+            this.emitDiagnostics();
           }
           break;
 
         case "ICE_CANDIDATE":
-          if (this.peerConnection && msg.payload) {
+          this.iceCandidatesReceived++;
+          if (
+            this.peerConnection &&
+            this.peerConnection.remoteDescription &&
+            this.peerConnection.remoteDescription.type
+          ) {
             try {
               await this.peerConnection.addIceCandidate(new RTCIceCandidate(msg.payload));
             } catch (iceErr) {
-              logger.warn("Error adding ICE candidate", iceErr);
+              logger.warn("Error adding live ICE candidate", iceErr);
             }
+          } else {
+            // Buffer candidate until remote description is ready
+            this.earlyCandidatesQueue.push(msg.payload);
           }
+          this.emitDiagnostics();
           break;
       }
     } catch (err) {
       logger.error(`Error handling incoming WebRTC signal [${msg.type}]`, err);
+    }
+  }
+
+  private async drainEarlyCandidates(): Promise<void> {
+    if (!this.peerConnection || !this.peerConnection.remoteDescription) return;
+
+    if (this.earlyCandidatesQueue.length > 0) {
+      logger.info(`Draining ${this.earlyCandidatesQueue.length} buffered early ICE candidates`);
+      while (this.earlyCandidatesQueue.length > 0) {
+        const cand = this.earlyCandidatesQueue.shift();
+        if (cand && this.peerConnection) {
+          try {
+            await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
+          } catch (err) {
+            logger.warn("Error adding buffered ICE candidate", err);
+          }
+        }
+      }
     }
   }
 
@@ -259,10 +406,12 @@ export class WebRTCSignalingManager {
 
     channel.onopen = () => {
       logger.info(`DataChannel [${channel.label}] OPEN`);
+      this.emitDiagnostics();
     };
 
     channel.onclose = () => {
       logger.info(`DataChannel [${channel.label}] CLOSED`);
+      this.emitDiagnostics();
     };
 
     channel.onmessage = (event) => {
@@ -299,12 +448,12 @@ export class WebRTCSignalingManager {
     return false;
   }
 
-  // ── 7. Quality Presets & Dynamic Bitrate ──────────────────────────────────
+  // ── 7. Quality Presets & Dynamic Adaptive Bitrate ─────────────────────────
 
   public async setQualityPreset(preset: QualityPreset): Promise<void> {
     if (!this.peerConnection) return;
     const senders = this.peerConnection.getSenders();
-    const videoSender = senders.find((s) => s.track?.kind === "video");
+    const videoSender = senders.find((s) => s.track?.kind === "video") || this.videoSender;
     if (!videoSender) return;
 
     let maxBitrate = 5_000_000;
@@ -338,8 +487,8 @@ export class WebRTCSignalingManager {
         const stats = await this.peerConnection.getStats();
         let fps = 0;
         let rtt = 0;
-        let width = 1920;
-        let height = 1080;
+        let width = 0;
+        let height = 0;
         let currentBytes = 0;
         let packetsLost = 0;
 
@@ -380,17 +529,21 @@ export class WebRTCSignalingManager {
           quality = "good";
         }
 
+        this.lastMetrics = {
+          fps: Math.round(fps),
+          rtt: rtt || 0,
+          bitrateKbps,
+          packetsLost,
+          quality,
+          streamWidth: width,
+          streamHeight: height,
+        };
+
         if (this.onMetricsUpdate) {
-          this.onMetricsUpdate({
-            fps: Math.round(fps) || 30,
-            rtt: rtt || 24,
-            bitrateKbps,
-            packetsLost,
-            quality,
-            streamWidth: width,
-            streamHeight: height,
-          });
+          this.onMetricsUpdate(this.lastMetrics);
         }
+
+        this.emitDiagnostics();
       } catch (statsErr) {
         logger.warn("Error gathering WebRTC stats", statsErr);
       }
@@ -404,7 +557,44 @@ export class WebRTCSignalingManager {
     }
   }
 
-  // ── 9. Teardown ──────────────────────────────────────────────────────────
+  // ── 9. Diagnostics Snapshot Generator ────────────────────────────────────
+
+  public getDiagnostics(): WebRTCDiagnostics {
+    const pc = this.peerConnection;
+    const stream = this.remoteMediaStream;
+    const videoTracks = stream ? stream.getVideoTracks() : [];
+    const audioTracks = stream ? stream.getAudioTracks() : [];
+    const primaryVideoTrack = videoTracks[0];
+
+    return {
+      connectionState: pc?.connectionState || "disconnected",
+      iceConnectionState: pc?.iceConnectionState || "disconnected",
+      signalingState: this.signalingState,
+      videoTracksCount: videoTracks.length,
+      audioTracksCount: audioTracks.length,
+      hasVideoTrack: videoTracks.length > 0,
+      hasAudioTrack: audioTracks.length > 0,
+      videoTrackReadyState: primaryVideoTrack?.readyState,
+      videoTrackMuted: primaryVideoTrack?.muted,
+      isStreamActive: Boolean(stream?.active && videoTracks.some((t) => t.readyState === "live")),
+      resolutionWidth: this.lastMetrics.streamWidth,
+      resolutionHeight: this.lastMetrics.streamHeight,
+      fps: this.lastMetrics.fps,
+      bitrateKbps: this.lastMetrics.bitrateKbps,
+      rttMs: this.lastMetrics.rtt,
+      iceCandidatesSent: this.iceCandidatesSent,
+      iceCandidatesReceived: this.iceCandidatesReceived,
+      lastUpdated: Date.now(),
+    };
+  }
+
+  private emitDiagnostics(): void {
+    if (this.onDiagnosticsUpdate) {
+      this.onDiagnosticsUpdate(this.getDiagnostics());
+    }
+  }
+
+  // ── 10. Teardown ─────────────────────────────────────────────────────────
 
   public closePeerConnection(): void {
     this.stopMetricsCollection();
@@ -426,6 +616,11 @@ export class WebRTCSignalingManager {
       }
       this.peerConnection = null;
     }
+
+    this.videoSender = null;
+    this.remoteMediaStream = null;
+    this.earlyCandidatesQueue = [];
+    this.emitDiagnostics();
   }
 
   public async destroy(): Promise<void> {
@@ -441,5 +636,7 @@ export class WebRTCSignalingManager {
     }
 
     this.sessionId = null;
+    this.signalingState = "disconnected";
+    this.emitDiagnostics();
   }
 }

@@ -1,7 +1,8 @@
 /**
  * Remote Desktop Host View Component
  * Provides session initialization, pairing code & PIN generation, approval modal,
- * active streaming preview, native agent connectivity status, and emergency termination.
+ * active streaming preview, live display switching, native agent connectivity status,
+ * WebRTC diagnostics, and emergency termination.
  */
 
 import { memo, useEffect, useRef, useState } from "react";
@@ -16,18 +17,17 @@ import {
   Power,
   Play,
   Pause,
-  ExternalLink,
   Laptop,
-  CheckCircle2,
-  XCircle,
   Clock,
-  Sparkles,
   Terminal,
+  Activity,
+  RotateCcw,
+  Sparkles,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useHostRemoteDesktop } from "../stores/rd-host.store";
 import { toast } from "sonner";
-
 import { Button } from "@/components/ui/button";
 
 export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
@@ -36,9 +36,12 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
     mediaStream,
     pendingRequest,
     nativeAgent,
+    diagnostics,
     controlEnabled,
     isInitializing,
     createSession,
+    startScreenCapture,
+    switchScreen,
     approveRequest,
     rejectRequest,
     terminateSession,
@@ -52,6 +55,7 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
   const [copiedPin, setCopiedPin] = useState(false);
   const [pairingPinInput, setPairingPinInput] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const previewVideoRef = useRef<HTMLVideoElement>(null);
 
   // Initialize native agent listener on mount
@@ -61,8 +65,13 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
 
   // Bind preview stream
   useEffect(() => {
-    if (previewVideoRef.current && mediaStream) {
-      previewVideoRef.current.srcObject = mediaStream;
+    if (previewVideoRef.current) {
+      if (mediaStream) {
+        previewVideoRef.current.srcObject = mediaStream;
+        previewVideoRef.current.play().catch(() => {});
+      } else {
+        previewVideoRef.current.srcObject = null;
+      }
     }
   }, [mediaStream]);
 
@@ -99,15 +108,19 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
     }
   };
 
+  const isScreenSharingActive = Boolean(
+    mediaStream && mediaStream.getVideoTracks().some((t) => t.readyState === "live"),
+  );
+
   return (
     <div className="flex flex-col h-full w-full overflow-y-auto p-4 sm:p-6 bg-background text-foreground space-y-6 max-w-5xl mx-auto">
       {/* ── Persistent Floating Active Indicator (When Connected) ─────────── */}
       {session?.status === "connected" && (
-        <div className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-red-950/80 backdrop-blur-md border border-red-500/40 rounded-lg px-4 py-2.5 shadow-2xl text-red-200 animate-pulse">
-          <div className="flex items-center gap-2">
-            <span className="h-3 w-3 rounded-full bg-red-500" />
-            <span className="text-sm font-semibold">
-              Remote Access Active: Controlled by{" "}
+        <div className="sticky top-0 z-40 flex items-center justify-between gap-3 bg-red-950/90 backdrop-blur-md border border-red-500/50 rounded-xl px-4 py-3 shadow-2xl text-red-200">
+          <div className="flex items-center gap-2.5">
+            <span className="h-3 w-3 rounded-full bg-red-500 animate-ping" />
+            <span className="text-sm font-bold tracking-wide">
+              REMOTE CONTROL ACTIVE: Controlled by{" "}
               <span className="text-white underline">
                 {session.connectedController?.name || "Remote Controller"}
               </span>
@@ -117,15 +130,15 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => toggleControlEnabled()}
-              className="text-xs px-2.5 py-1 rounded bg-black/40 hover:bg-black/60 border border-white/20 text-white cursor-pointer transition"
+              className="text-xs px-3 py-1.5 rounded-lg bg-black/50 hover:bg-black/70 border border-white/20 text-white cursor-pointer transition font-medium"
             >
-              {controlEnabled ? "Pause Control" : "Resume Control"}
+              {controlEnabled ? "Pause Input" : "Resume Input"}
             </button>
             <button
               onClick={emergencyStop}
-              className="text-xs font-bold px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-md transition"
+              className="text-xs font-bold px-3.5 py-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white cursor-pointer shadow-lg transition active:scale-95"
             >
-              EMERGENCY STOP
+              STOP REMOTE ACCESS
             </button>
           </div>
         </div>
@@ -146,6 +159,14 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
         {session ? (
           <div className="flex items-center gap-2">
             <button
+              onClick={() => setShowDiagnostics(!showDiagnostics)}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border border-border bg-card hover:bg-muted cursor-pointer transition"
+            >
+              <Activity className="h-3.5 w-3.5 text-primary" />
+              <span>Diagnostics</span>
+            </button>
+
+            <button
               onClick={() => toggleControlEnabled()}
               className={cn(
                 "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium border cursor-pointer transition",
@@ -154,11 +175,7 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                   : "bg-emerald-500/10 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/20",
               )}
             >
-              {controlEnabled ? (
-                <Pause className="h-3.5 w-3.5" />
-              ) : (
-                <Play className="h-3.5 w-3.5" />
-              )}
+              {controlEnabled ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
               <span>{controlEnabled ? "Pause Input" : "Resume Input"}</span>
             </button>
 
@@ -182,6 +199,39 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
         )}
       </div>
 
+      {/* ── Diagnostics Strip (When Toggled) ─────────────────────────────────── */}
+      {showDiagnostics && (
+        <div className="rounded-xl border border-white/10 bg-zinc-900/90 p-4 text-xs space-y-3 animate-in fade-in">
+          <div className="flex items-center justify-between font-semibold">
+            <span className="flex items-center gap-1.5 text-emerald-400">
+              <Activity className="h-4 w-4" />
+              <span>Host WebRTC Diagnostics</span>
+            </span>
+            <span className="text-[11px] text-muted-foreground">Live Telemetry</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 font-mono text-[11px]">
+            <div className="bg-black/40 p-2 rounded border border-white/5">
+              <span className="text-white/50 block text-[10px]">WebRTC Peer</span>
+              <span className="font-bold capitalize">{diagnostics?.connectionState || "Idle"}</span>
+            </div>
+            <div className="bg-black/40 p-2 rounded border border-white/5">
+              <span className="text-white/50 block text-[10px]">ICE State</span>
+              <span className="font-bold capitalize">{diagnostics?.iceConnectionState || "Idle"}</span>
+            </div>
+            <div className="bg-black/40 p-2 rounded border border-white/5">
+              <span className="text-white/50 block text-[10px]">Signaling</span>
+              <span className="font-bold capitalize">{diagnostics?.signalingState || "Connected"}</span>
+            </div>
+            <div className="bg-black/40 p-2 rounded border border-white/5">
+              <span className="text-white/50 block text-[10px]">Screen Capture</span>
+              <span className="font-bold text-emerald-400">
+                {isScreenSharingActive ? "Active" : "Stopped"}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Native Agent Status Banner ───────────────────────────────────────── */}
       <div
         className={cn(
@@ -199,10 +249,10 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
             <div className="flex items-center gap-2 font-semibold">
               <span>
                 {nativeAgent.connected
-                  ? "Native OS Agent Active"
+                  ? "Native OS Companion Agent Active"
                   : nativeAgent.requiresAuth
                     ? "Companion Agent Detected (Pairing Required)"
-                    : "In-Browser Mode (Companion Ready)"}
+                    : "In-Browser Screen Streaming Active (Companion Ready)"}
               </span>
               <span
                 className={cn(
@@ -215,18 +265,18 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
                 )}
               >
                 {nativeAgent.connected
-                  ? "Hardware Input Enabled"
+                  ? "Hardware Input Active"
                   : nativeAgent.requiresAuth
                     ? "Authentication Required"
                     : "Companion Optional"}
               </span>
             </div>
-            <p className="text-xs opacity-90">
+            <p className="text-xs opacity-90 leading-relaxed">
               {nativeAgent.connected
-                ? `Connected to authenticated local input bridge on 127.0.0.1:48123 (${nativeAgent.os?.toUpperCase()} - ${nativeAgent.screenWidth}x${nativeAgent.screenHeight}). Outside OS windows (File Explorer, Settings, Desktop) will receive real clicks and keystrokes.`
+                ? `Connected to local input bridge on 127.0.0.1:48123 (${nativeAgent.os?.toUpperCase()} - ${nativeAgent.screenWidth}x${nativeAgent.screenHeight}). Outside OS windows (File Explorer, Settings, Desktop icons, Task Manager) will receive hardware clicks and keystrokes.`
                 : nativeAgent.requiresAuth
                   ? "The local agent is running. Enter the 6-digit Pairing PIN displayed in the terminal window to authorize hardware control."
-                  : "Screen streaming works natively in-browser! For full OS hardware clicks into outside desktop windows (e.g. File Explorer or desktop shortcuts), run 'native-agent/run-agent.bat' on this machine."}
+                  : "Desktop streaming works in-browser! For unrestricted hardware control into external Windows apps (File Explorer, Settings, Desktop shortcuts), run 'native-agent/run-agent.bat' on this machine."}
             </p>
             {nativeAgent.requiresAuth && (
               <div className="pt-2 flex items-center gap-2">
@@ -367,27 +417,63 @@ export const RemoteDesktopHostView = memo(function RemoteDesktopHostView() {
               <p>
                 Remote desktop streaming operates strictly over peer-to-peer WebRTC (DTLS-SRTP). No
                 screen images, keystrokes, or private files are stored on any server. You can sever
-                access at any time using the Emergency Stop button.
+                access at any time using the STOP REMOTE ACCESS button.
               </p>
             </div>
           </div>
 
-          {/* Right Col: Live Screen Preview Thumbnail & QR */}
+          {/* Right Col: Live Screen Preview Thumbnail & Multi-Monitor Controls */}
           <div className="space-y-6">
             <div className="rounded-xl border border-border/80 bg-card p-4 shadow-sm space-y-3">
               <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center justify-between">
                 <span>Live Stream Preview</span>
-                <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span
+                  className={cn(
+                    "h-2 w-2 rounded-full",
+                    isScreenSharingActive ? "bg-emerald-400 animate-pulse" : "bg-amber-400",
+                  )}
+                />
               </div>
 
-              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-border/50 relative">
+              <div className="aspect-video bg-black rounded-lg overflow-hidden border border-border/50 relative flex items-center justify-center">
                 <video
                   ref={previewVideoRef}
                   autoPlay
                   playsInline
                   muted
-                  className="h-full w-full object-contain pointer-events-none"
+                  className={cn(
+                    "h-full w-full object-contain pointer-events-none",
+                    !isScreenSharingActive && "hidden",
+                  )}
                 />
+
+                {!isScreenSharingActive && (
+                  <div className="text-center p-4 space-y-2 text-xs text-muted-foreground">
+                    <Monitor className="h-8 w-8 mx-auto text-muted-foreground/60" />
+                    <p>Screen sharing paused</p>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs h-7"
+                      onClick={() => startScreenCapture()}
+                    >
+                      Resume Screen Share
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              {/* Display & Monitor Switcher */}
+              <div className="flex items-center justify-between pt-1 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-xs h-8 flex-1 flex items-center gap-1.5"
+                  onClick={() => switchScreen()}
+                >
+                  <Layers className="h-3.5 w-3.5" />
+                  <span>Switch Display</span>
+                </Button>
               </div>
 
               {qrDataUrl && (

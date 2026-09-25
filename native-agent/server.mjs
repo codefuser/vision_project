@@ -2,7 +2,7 @@
  * VersoLyn Native Host Companion Agent
  * Lightweight Node.js local WebSocket server providing OS-level mouse and keyboard injection
  * for Windows, macOS, and Linux with strict Origin validation, session pairing authentication,
- * and safe Base64 clipboard transport.
+ * multi-monitor awareness, and safe Base64 clipboard transport.
  */
 
 import { WebSocketServer } from "ws";
@@ -21,6 +21,7 @@ const HOST = "127.0.0.1";
 
 let screenWidth = 1920;
 let screenHeight = 1080;
+let monitors = [];
 let winProcess = null;
 
 // ── Origin Validation Policy ──────────────────────────────────────────────────
@@ -82,6 +83,13 @@ Add-Type -AssemblyName System.Windows.Forms
 $screen = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
 Write-Output "SCREEN:$($screen.Width):$($screen.Height)"
 
+$screens = [System.Windows.Forms.Screen]::AllScreens
+$all = @()
+foreach ($s in $screens) {
+    $all += "$($s.DeviceName)|$($s.Bounds.Width)|$($s.Bounds.Height)|$($s.Primary)"
+}
+Write-Output "MONITORS:$([string]::Join(';', $all))"
+
 $csharp = @"
 using System;
 using System.Runtime.InteropServices;
@@ -108,7 +116,22 @@ Write-Output "READY"
           const parts = line.split(":");
           screenWidth = parseInt(parts[1], 10) || 1920;
           screenHeight = parseInt(parts[2], 10) || 1080;
-          console.log(`[Native Agent] Detected Windows Display: ${screenWidth}x${screenHeight}`);
+          console.log(`[Native Agent] Primary Windows Display: ${screenWidth}x${screenHeight}`);
+        } else if (line.startsWith("MONITORS:")) {
+          const rawList = line.substring(9).split(";");
+          monitors = rawList
+            .filter(Boolean)
+            .map((entry, idx) => {
+              const [name, w, h, prim] = entry.split("|");
+              return {
+                id: name || `DISPLAY_${idx + 1}`,
+                name: `Monitor ${idx + 1}${prim === "True" ? " (Primary)" : ""}`,
+                width: parseInt(w, 10) || 1920,
+                height: parseInt(h, 10) || 1080,
+                primary: prim === "True",
+              };
+            });
+          console.log(`[Native Agent] Detected ${monitors.length} Connected Display Monitor(s)`);
         } else if (line.trim() === "READY") {
           console.log("[Native Agent] Windows Win32 Input Subsystem Ready.");
         }
@@ -146,16 +169,36 @@ const VK = {
   ALT: 0x12,
   ESC: 0x1b,
   SPACE: 0x20,
+  PAGE_UP: 0x21,
+  PAGE_DOWN: 0x22,
+  END: 0x23,
+  HOME: 0x24,
   LEFT: 0x25,
   UP: 0x26,
   RIGHT: 0x27,
   DOWN: 0x28,
+  INSERT: 0x2d,
   DELETE: 0x2e,
   WIN: 0x5b,
-  C: 0x43,
-  V: 0x56,
-  A: 0x41,
+  // Function keys F1-F12 (0x70 - 0x7B)
+  F1: 0x70,
+  F2: 0x71,
+  F3: 0x72,
   F4: 0x73,
+  F5: 0x74,
+  F6: 0x75,
+  F7: 0x76,
+  F8: 0x77,
+  F9: 0x78,
+  F10: 0x79,
+  F11: 0x7a,
+  F12: 0x7b,
+  // Letters
+  A: 0x41,
+  C: 0x43,
+  D: 0x44,
+  S: 0x53,
+  V: 0x56,
 };
 
 // ── Input Execution Router ───────────────────────────────────────────────────
@@ -282,6 +325,26 @@ Start-Sleep -Milliseconds 30
 `);
       break;
 
+    case "WIN_D":
+      sendToWindowsSubsystem(`
+[WinInput]::keybd_event(${VK.WIN}, 0, 0, 0)
+[WinInput]::keybd_event(${VK.D}, 0, 0, 0)
+Start-Sleep -Milliseconds 30
+[WinInput]::keybd_event(${VK.D}, 0, 2, 0)
+[WinInput]::keybd_event(${VK.WIN}, 0, 2, 0)
+`);
+      break;
+
+    case "SAVE":
+      sendToWindowsSubsystem(`
+[WinInput]::keybd_event(${VK.CTRL}, 0, 0, 0)
+[WinInput]::keybd_event(${VK.S}, 0, 0, 0)
+Start-Sleep -Milliseconds 30
+[WinInput]::keybd_event(${VK.S}, 0, 2, 0)
+[WinInput]::keybd_event(${VK.CTRL}, 0, 2, 0)
+`);
+      break;
+
     case "ESC":
       sendToWindowsSubsystem(`
 [WinInput]::keybd_event(${VK.ESC}, 0, 0, 0)
@@ -294,7 +357,18 @@ Start-Sleep -Milliseconds 30
       sendToWindowsSubsystem(`
 [WinInput]::keybd_event(${VK.CTRL}, 0, 0, 0)
 [WinInput]::keybd_event(${VK.C}, 0, 0, 0)
+Start-Sleep -Milliseconds 30
 [WinInput]::keybd_event(${VK.C}, 0, 2, 0)
+[WinInput]::keybd_event(${VK.CTRL}, 0, 2, 0)
+`);
+      break;
+
+    case "PASTE":
+      sendToWindowsSubsystem(`
+[WinInput]::keybd_event(${VK.CTRL}, 0, 0, 0)
+[WinInput]::keybd_event(${VK.V}, 0, 0, 0)
+Start-Sleep -Milliseconds 30
+[WinInput]::keybd_event(${VK.V}, 0, 2, 0)
 [WinInput]::keybd_event(${VK.CTRL}, 0, 2, 0)
 `);
       break;
@@ -336,7 +410,18 @@ function getVirtualKeyCode(key, code) {
   if (k === "arrowright") return VK.RIGHT;
   if (k === "arrowdown") return VK.DOWN;
   if (k === "delete") return VK.DELETE;
+  if (k === "insert") return VK.INSERT;
+  if (k === "home") return VK.HOME;
+  if (k === "end") return VK.END;
+  if (k === "pageup") return VK.PAGE_UP;
+  if (k === "pagedown") return VK.PAGE_DOWN;
   if (k === "meta") return VK.WIN;
+
+  // Function keys F1 - F12
+  if (/^f([1-9]|1[0-2])$/i.test(k)) {
+    const num = parseInt(k.substring(1), 10);
+    return 0x6f + num; // F1 is 0x70, F12 is 0x7b
+  }
 
   // Single letters A-Z
   if (key.length === 1) {
@@ -410,10 +495,11 @@ wss.on("connection", (ws, req) => {
               type: "HANDSHAKE_ACK",
               authenticated: true,
               sessionToken,
-              version: "1.0.0",
+              version: "1.1.0",
               os: process.platform,
               screenWidth,
               screenHeight,
+              monitors,
             }),
           );
         } else {
@@ -421,7 +507,7 @@ wss.on("connection", (ws, req) => {
           ws.send(
             JSON.stringify({
               type: "AUTH_REQUIRED",
-              version: "1.0.0",
+              version: "1.1.0",
               os: process.platform,
               message: "Authentication required: please supply valid pairing token or PIN.",
             }),
@@ -438,10 +524,11 @@ wss.on("connection", (ws, req) => {
               type: "AUTH_SUCCESS",
               authenticated: true,
               sessionToken,
-              version: "1.0.0",
+              version: "1.1.0",
               os: process.platform,
               screenWidth,
               screenHeight,
+              monitors,
             }),
           );
         } else {

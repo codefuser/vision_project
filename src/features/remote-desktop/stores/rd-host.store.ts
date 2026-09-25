@@ -1,7 +1,8 @@
 /**
  * Remote Desktop Host Store (Zustand)
  * Manages the HOST machine's session lifecycle, screen capture via getDisplayMedia(),
- * controller connection authorization requests, WebRTC streaming, and native agent input dispatching.
+ * live multi-monitor switching via replaceTrack(), controller connection authorization,
+ * WebRTC streaming, and native agent input dispatching.
  */
 
 import { create } from "zustand";
@@ -17,6 +18,7 @@ import type {
   RemoteDesktopInputEvent,
   RemoteDesktopMetrics,
   RemoteDesktopSession,
+  WebRTCDiagnostics,
 } from "../types";
 
 function generateSessionCode(): { sessionId: string; pin: string } {
@@ -30,18 +32,55 @@ function generateSessionCode(): { sessionId: string; pin: string } {
   return { sessionId, pin };
 }
 
+/**
+ * Capture host screen with fallback for restrictive browser environments
+ */
+async function acquireDisplayMedia(): Promise<MediaStream> {
+  if (typeof navigator === "undefined" || !navigator.mediaDevices?.getDisplayMedia) {
+    throw new Error("Screen capture is not supported in this browser environment.");
+  }
+
+  try {
+    // Ideal: Monitor displaySurface preference with high framerate
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        displaySurface: "monitor",
+        frameRate: { ideal: 60, max: 60 },
+        width: { ideal: 1920, max: 3840 },
+        height: { ideal: 1080, max: 2160 },
+      },
+      audio: true,
+    });
+  } catch (firstErr: any) {
+    if (firstErr.name === "NotAllowedError") {
+      throw firstErr; // User cancelled the screen picker
+    }
+    logger.warn("Ideal displayMedia constraints failed, falling back to standard video", firstErr);
+    // Fallback: simple video capture without audio or monitor constraint
+    return await navigator.mediaDevices.getDisplayMedia({
+      video: {
+        frameRate: { ideal: 30, max: 60 },
+      },
+      audio: false,
+    });
+  }
+}
+
 interface HostState {
   session: RemoteDesktopSession | null;
   mediaStream: MediaStream | null;
   pendingRequest: ControllerConnectionRequest | null;
   nativeAgent: NativeAgentStatus;
   metrics: RemoteDesktopMetrics | null;
+  diagnostics: WebRTCDiagnostics | null;
   controlEnabled: boolean;
   isInitializing: boolean;
   virtualCursor: { u: number; v: number; visible: boolean; lastMoved: number } | null;
 
   // Actions
   createSession: (customPin?: string) => Promise<RemoteDesktopSession | null>;
+  startScreenCapture: () => Promise<MediaStream | null>;
+  switchScreen: () => Promise<void>;
   approveRequest: () => Promise<void>;
   rejectRequest: (reason?: string) => Promise<void>;
   terminateSession: (reason?: string) => Promise<void>;
@@ -60,6 +99,7 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
   pendingRequest: null,
   nativeAgent: { connected: false },
   metrics: null,
+  diagnostics: null,
   controlEnabled: true,
   isInitializing: false,
   virtualCursor: null,
@@ -75,6 +115,81 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
     nativeAgentClient.authenticate(token);
   },
 
+  startScreenCapture: async () => {
+    try {
+      const stream = await acquireDisplayMedia();
+
+      // Listen to track ending (e.g. user clicks browser "Stop sharing")
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.addEventListener("ended", () => {
+          logger.info("Host browser screen capture stopped by user");
+          set({ mediaStream: null });
+          if (signaling) {
+            void signaling.sendSignal("HOST_SCREEN_STATE", {
+              active: false,
+              reason: "Host stopped screen sharing.",
+            });
+          }
+          toast.info("Screen sharing paused. Click 'Resume Screen Share' to continue.");
+        });
+      }
+
+      set({ mediaStream: stream });
+      return stream;
+    } catch (err: any) {
+      if (err.name === "NotAllowedError") {
+        logger.info("User cancelled screen capture picker");
+        toast.info("Screen capture was not selected.");
+      } else {
+        logger.error("Screen capture error", err);
+        toast.error("Failed to capture screen: " + (err.message || "Unknown error"));
+      }
+      return null;
+    }
+  },
+
+  switchScreen: async () => {
+    try {
+      const newStream = await acquireDisplayMedia();
+      const newVideoTrack = newStream.getVideoTracks()[0];
+      if (!newVideoTrack) return;
+
+      const oldStream = get().mediaStream;
+      if (oldStream) {
+        oldStream.getTracks().forEach((t) => t.stop());
+      }
+
+      newVideoTrack.addEventListener("ended", () => {
+        logger.info("Host browser screen capture stopped by user");
+        set({ mediaStream: null });
+        if (signaling) {
+          void signaling.sendSignal("HOST_SCREEN_STATE", {
+            active: false,
+            reason: "Host stopped screen sharing.",
+          });
+        }
+        toast.info("Screen sharing paused.");
+      });
+
+      set({ mediaStream: newStream });
+
+      if (signaling) {
+        await signaling.hostReplaceVideoTrack(newVideoTrack);
+        await signaling.sendSignal("HOST_SCREEN_STATE", {
+          active: true,
+          monitorName: newVideoTrack.label,
+        });
+      }
+
+      toast.success(`Display switched: ${newVideoTrack.label || "New Screen"}`);
+    } catch (err: any) {
+      if (err.name !== "NotAllowedError") {
+        toast.error("Could not switch screen: " + (err.message || "Unknown error"));
+      }
+    }
+  },
+
   createSession: async (customPin?: string) => {
     if (get().session && get().mediaStream) {
       return get().session;
@@ -82,40 +197,15 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
 
     set({ isInitializing: true });
 
-    let stream: MediaStream;
-    try {
-      if (typeof navigator === "undefined" || !navigator.mediaDevices?.getDisplayMedia) {
-        toast.error("Screen capture is not supported in this browser environment.");
+    // Acquire screen capture
+    let stream = get().mediaStream;
+    if (!stream || !stream.getVideoTracks().some((t) => t.readyState === "live")) {
+      stream = await get().startScreenCapture();
+      if (!stream) {
         set({ isInitializing: false });
         return null;
       }
-
-      // Request entire monitor capture for full desktop streaming
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: {
-          displaySurface: "monitor",
-          frameRate: { ideal: 60, max: 60 },
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-        audio: true,
-      });
-    } catch (err: any) {
-      logger.warn("Host screen capture cancelled or failed", err);
-      toast.error(
-        err.name === "NotAllowedError"
-          ? "Screen capture permission was denied."
-          : "Failed to capture screen: " + (err.message || "Unknown error"),
-      );
-      set({ isInitializing: false });
-      return null;
     }
-
-    // Auto-teardown when the operator clicks the browser's native "Stop sharing" floating bar
-    stream.getVideoTracks()[0]?.addEventListener("ended", () => {
-      logger.info("Host browser screen capture stopped by user");
-      void get().terminateSession("Host screen sharing was stopped.");
-    });
 
     const { sessionId, pin: generatedPin } = generateSessionCode();
     const pin = (customPin || generatedPin).trim();
@@ -129,6 +219,15 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
 
     // Initialize signaling manager
     signaling = new WebRTCSignalingManager("host", hostId);
+
+    // Diagnostics & Metrics
+    signaling.onMetricsUpdate = (metrics) => {
+      set({ metrics });
+    };
+
+    signaling.onDiagnosticsUpdate = (diagnostics) => {
+      set({ diagnostics });
+    };
 
     // Subscribe to incoming controller events
     signaling.onSignalingMessage = (msg) => {
@@ -155,6 +254,10 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
       } else if (msg.type === "SESSION_TERMINATED") {
         toast.info("Controller disconnected from remote session.");
         void get().terminateSession("Controller disconnected.");
+      } else if (msg.type === "REQUEST_SCREEN_SHARE") {
+        // Controller requests host to start/resume screen share
+        toast.info("Controller requested screen share.");
+        void get().startScreenCapture();
       }
     };
 
@@ -181,10 +284,6 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
       nativeAgentClient.executeInput(inputEvent);
     };
 
-    signaling.onMetricsUpdate = (metrics) => {
-      set({ metrics });
-    };
-
     // Subscribe to Supabase channel
     await signaling.subscribeToSession(sessionId);
 
@@ -193,7 +292,6 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
 
     set({
       session: newSession,
-      mediaStream: stream,
       isInitializing: false,
     });
 
@@ -202,8 +300,17 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
   },
 
   approveRequest: async () => {
-    const { pendingRequest, session, mediaStream } = get();
-    if (!pendingRequest || !session || !mediaStream || !signaling) return;
+    let { pendingRequest, session, mediaStream } = get();
+    if (!pendingRequest || !session || !signaling) return;
+
+    // Ensure we have an active screen stream
+    if (!mediaStream || !mediaStream.getVideoTracks().some((t) => t.readyState === "live")) {
+      mediaStream = await get().startScreenCapture();
+      if (!mediaStream) {
+        toast.error("Cannot approve connection without selecting a screen to share.");
+        return;
+      }
+    }
 
     const controllerInfo: ControllerInfo = {
       id: pendingRequest.controllerId,
@@ -217,6 +324,13 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
       accepted: true,
       sessionId: session.sessionId,
       controllerId: pendingRequest.controllerId,
+    });
+
+    // Notify controller of host screen state
+    const videoTrack = mediaStream.getVideoTracks()[0];
+    await signaling.sendSignal("HOST_SCREEN_STATE", {
+      active: true,
+      monitorName: videoTrack?.label,
     });
 
     // Start WebRTC stream transmission to controller
@@ -271,6 +385,7 @@ export const useHostRemoteDesktop = create<HostState>((set, get) => ({
       mediaStream: null,
       pendingRequest: null,
       metrics: null,
+      diagnostics: null,
       virtualCursor: null,
     });
 
