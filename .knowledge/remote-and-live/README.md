@@ -116,15 +116,15 @@ A dedicated public broadcast service completely decoupled from the remote contro
 ## 5. Browser-Based Remote Desktop Control (`src/features/remote-desktop/`)
 
 VersoLyn features a secure peer-to-peer browser-based Remote Desktop system (`/remote-desktop`):
-* **Signaling & ICE Buffering**: Supabase Realtime channel `rd_session_{sessionId}` exchanges SDP offers, answers, and ICE candidates. Implements `earlyCandidatesQueue` to prevent candidates from being discarded when arriving before `setRemoteDescription()`.
+* **Signaling & TURN Traversal**: Supabase Realtime channel `rd_session_{sessionId}` exchanges SDP offers, answers, and ICE candidates with Metered OpenRelay TURN servers for symmetric NAT and firewall traversal. Implements `earlyCandidatesQueue` to prevent candidates from being discarded when arriving before `setRemoteDescription()`.
 * **Media Streaming**: WebRTC `RTCPeerConnection` with H.264/VP9 screen capture (`getDisplayMedia()`). Controller uses a composite `MediaStream` binding with `track.onunmute`, `track.onmute`, and `track.onended` listeners.
 * **Live Display Switching**: Host can switch shared screens or monitors live using `sender.replaceTrack(newTrack)` without tearing down WebRTC or renegotiating sessions.
+* **Distraction-Free Clean Viewer**: `RemoteDesktopViewer` renders an immersive full-screen edge-to-edge display (`fixed inset-0 z-50 bg-black`). Removed clutter including bottom shortcut bars (Esc, Win, Win+D, Task Mgr, etc.) and 'Control Active' badges in favor of direct mouse/keyboard pass-through with minimal auto-hiding controls (Fullscreen, Disconnect).
 * **Zero-Black-Screen State Machine**: `RemoteDesktopViewer` replaces blank screens with real-time contextual overlays:
-  - "Waiting for Host screen..." (when screen capture has not started)
-  - "Host stopped screen sharing." (with `[Request Screen Share]` trigger)
-  - "Remote video connection failed." (with `[Retry Connection]` re-negotiation trigger)
-* **Diagnostics & Telemetry**: Toggleable development diagnostics HUD tracking WebRTC peer state, ICE state, signaling channel status, video/audio track counts, video resolution (width x height), FPS, bitrate (Mbps), RTT latency, and ICE candidate counts.
-* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting normalized `(u, v)` coordinates accounting for letterboxing, pillarboxing, zoom, and fullscreen, plus mouse events, wheel scrolls, drag-and-drop, and keystrokes.
+  - "Connecting to Host Screen..." (with spinner during media negotiation)
+  - "Host Stopped Screen Sharing" (with `[Request Screen Share]` trigger)
+  - "Remote Video Connection Failed" (with `[Retry Connection]` re-negotiation trigger)
+* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting normalized `(u, v)` coordinates accounting for letterboxing, pillarboxing, and fullscreen, plus mouse events, wheel scrolls, right clicks, and direct physical keystrokes.
 * **Security & Approval**:
   * 6-digit numeric pairing PIN with automatic expiry.
   * Explicit host approval modal showing controller device details before establishing connection.

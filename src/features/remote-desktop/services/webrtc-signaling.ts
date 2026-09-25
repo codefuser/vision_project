@@ -24,7 +24,18 @@ const RTC_CONFIG: RTCConfiguration = {
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
     { urls: "stun:global.stun.twilio.com:3478" },
+    {
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turn:openrelay.metered.ca:443?transport=tcp",
+        "turns:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
   iceCandidatePoolSize: 4,
 };
@@ -359,6 +370,9 @@ export class WebRTCSignalingManager {
 
         case "ICE_CANDIDATE":
           this.iceCandidatesReceived++;
+          if (!msg.payload || !msg.payload.candidate) {
+            break;
+          }
           if (
             this.peerConnection &&
             this.peerConnection.remoteDescription &&
@@ -388,7 +402,7 @@ export class WebRTCSignalingManager {
       logger.info(`Draining ${this.earlyCandidatesQueue.length} buffered early ICE candidates`);
       while (this.earlyCandidatesQueue.length > 0) {
         const cand = this.earlyCandidatesQueue.shift();
-        if (cand && this.peerConnection) {
+        if (cand && cand.candidate && this.peerConnection) {
           try {
             await this.peerConnection.addIceCandidate(new RTCIceCandidate(cand));
           } catch (err) {
