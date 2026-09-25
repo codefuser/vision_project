@@ -46,8 +46,8 @@ export const RemoteDesktopControllerView = memo(function RemoteDesktopController
     setIsSubmitting(false);
   };
 
-  // If connected and stream received, render the 16:9 interactive remote viewer
-  if (status === "connected" && remoteStream) {
+  // Once connected, render the interactive remote viewer
+  if (status === "connected") {
     return <RemoteDesktopViewer />;
   }
 

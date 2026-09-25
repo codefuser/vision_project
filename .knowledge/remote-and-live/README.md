@@ -116,16 +116,23 @@ A dedicated public broadcast service completely decoupled from the remote contro
 ## 5. Browser-Based Remote Desktop Control (`src/features/remote-desktop/`)
 
 VersoLyn features a secure peer-to-peer browser-based Remote Desktop system (`/remote-desktop`):
-* **Signaling**: Supabase Realtime channel `vp_rd_{code}` exchanges SDP offers, answers, and ICE candidates.
-* **Media Streaming**: WebRTC `RTCPeerConnection` with H.264/VP9 screen capture (`getDisplayMedia`).
-* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting mouse movements, clicks, wheel scrolls, drag-and-drop, and keystrokes.
+* **Signaling & ICE Buffering**: Supabase Realtime channel `rd_session_{sessionId}` exchanges SDP offers, answers, and ICE candidates. Implements `earlyCandidatesQueue` to prevent candidates from being discarded when arriving before `setRemoteDescription()`.
+* **Media Streaming**: WebRTC `RTCPeerConnection` with H.264/VP9 screen capture (`getDisplayMedia()`). Controller uses a composite `MediaStream` binding with `track.onunmute`, `track.onmute`, and `track.onended` listeners.
+* **Live Display Switching**: Host can switch shared screens or monitors live using `sender.replaceTrack(newTrack)` without tearing down WebRTC or renegotiating sessions.
+* **Zero-Black-Screen State Machine**: `RemoteDesktopViewer` replaces blank screens with real-time contextual overlays:
+  - "Waiting for Host screen..." (when screen capture has not started)
+  - "Host stopped screen sharing." (with `[Request Screen Share]` trigger)
+  - "Remote video connection failed." (with `[Retry Connection]` re-negotiation trigger)
+* **Diagnostics & Telemetry**: Toggleable development diagnostics HUD tracking WebRTC peer state, ICE state, signaling channel status, video/audio track counts, video resolution (width x height), FPS, bitrate (Mbps), RTT latency, and ICE candidate counts.
+* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting normalized `(u, v)` coordinates accounting for letterboxing, pillarboxing, zoom, and fullscreen, plus mouse events, wheel scrolls, drag-and-drop, and keystrokes.
 * **Security & Approval**:
   * 6-digit numeric pairing PIN with automatic expiry.
-  * Explicit host approval modal (`HostApprovalModal`) showing controller device details before establishing connection.
-  * Controller control toggle: Host can revoke or resume controller input at any second.
+  * Explicit host approval modal showing controller device details before establishing connection.
+  * Sticky host banner: "REMOTE CONTROL ACTIVE" with "Pause Input" and "STOP REMOTE ACCESS" emergency cutoff.
 * **Native Companion Agent (`native-agent/`)**:
-  * Lightweight Node.js bridge communicating with Windows OS via Win32 `SendInput` using PowerShell.
-  * Enables hardware mouse/keyboard control across external desktop apps, File Explorer, and system windows.
+  * Lightweight Node.js bridge communicating with Windows OS via Win32 `SetCursorPos`, `mouse_event`, and `keybd_event` using PowerShell P/Invoke runner.
+  * Multi-monitor detection querying `[System.Windows.Forms.Screen]::AllScreens`.
+  * Expanded keyboard shortcuts: `Win+D` (Show Desktop), `Ctrl+S` (Save), `Ctrl+C` (Copy), `Ctrl+V` (Paste), `Alt+Tab`, `Esc`, `Task Manager`, and Function keys `F1-F12`.
   * **Security Protections**:
     - Strict WebSocket `Origin` validation restricting connections to `https://versolyn.vercel.app` and local dev hosts (`localhost`, `127.0.0.1`).
     - Pairing PIN/Token handshake requirement issuing ephemeral `sessionToken` before accepting privileged commands.
