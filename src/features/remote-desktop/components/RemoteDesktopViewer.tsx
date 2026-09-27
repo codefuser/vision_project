@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useControllerRemoteDesktop } from "../stores/rd-controller.store";
+import { useHostRemoteDesktop } from "../stores/rd-host.store";
 
 export const RemoteDesktopViewer = memo(function RemoteDesktopViewer() {
   const {
@@ -30,6 +31,9 @@ export const RemoteDesktopViewer = memo(function RemoteDesktopViewer() {
     requestScreenShare,
     disconnect,
   } = useControllerRemoteDesktop();
+
+  const hostSession = useHostRemoteDesktop((s) => s.session);
+  const isSelfLoop = Boolean(hostSession && hostSession.status === "connected");
 
   const containerRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -362,6 +366,25 @@ export const RemoteDesktopViewer = memo(function RemoteDesktopViewer() {
           </button>
         </div>
       </header>
+
+      {/* ── Self-Loop Detection Warning (Infinite Mirror Protection) ──────── */}
+      {isSelfLoop && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 bg-amber-950/95 border border-amber-500/60 text-amber-200 px-4 py-2.5 rounded-xl shadow-2xl backdrop-blur-md max-w-xl text-xs pointer-events-auto animate-in fade-in">
+          <AlertTriangle className="h-5 w-5 text-amber-400 shrink-0" />
+          <div className="space-y-0.5">
+            <div className="font-bold text-white text-xs">Self-Connection Detected (Infinite Mirror)</div>
+            <p className="text-[11px] opacity-90 leading-tight">
+              You connected to this same laptop, causing an infinite mirror tunnel. To control this laptop remotely, open VersoLyn on your <strong>other laptop</strong> and connect from there!
+            </p>
+          </div>
+          <button
+            onClick={() => disconnect()}
+            className="px-3 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 border border-amber-500/40 text-xs font-semibold transition shrink-0 cursor-pointer"
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
 
       {/* ── Interactive Screen Viewport ─────────────────────────────────────── */}
       <main
