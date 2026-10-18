@@ -29,7 +29,7 @@
     "styling_and_themes",
     "system_and_shell",
     "seo_and_branding",
-    "remote_desktop_control",
+    "church_registration_and_presence",
     "performance_and_skeletons"
   ],
   "nodes": [
@@ -346,46 +346,51 @@
       "label": "src/components/skeletons/RouteSkeletons.tsx",
       "type": "ui_component",
       "path": "src/components/skeletons/RouteSkeletons.tsx",
-      "summary": "Instant <16ms glassmorphic route and tab skeletons for Playlists, Library, Workspace, Settings, and Remote Desktop."
+      "summary": "Instant <16ms glassmorphic route and tab skeletons for Playlists, Library, Workspace, and Settings."
     },
     {
-      "id": "file:routes/remote-desktop.tsx",
-      "label": "src/routes/remote-desktop.tsx",
-      "type": "route",
-      "path": "src/routes/remote-desktop.tsx",
-      "summary": "Lazy-loaded route for Host/Controller Remote Desktop paired screen sharing and control."
-    },
-    {
-      "id": "file:features/remote-desktop/RemoteDesktopPage.tsx",
-      "label": "src/features/remote-desktop/RemoteDesktopPage.tsx",
-      "type": "component",
-      "path": "src/features/remote-desktop/RemoteDesktopPage.tsx",
-      "summary": "Top-level UI orchestrator for Host session creation, Controller PIN pairing, and interactive Remote Desktop HUD."
-    },
-    {
-      "id": "file:features/remote-desktop/remote-desktop-session.store.ts",
-      "label": "src/features/remote-desktop/remote-desktop-session.store.ts",
+      "id": "file:features/auth/auth.store.ts",
+      "label": "src/features/auth/auth.store.ts",
       "type": "store",
-      "path": "src/features/remote-desktop/remote-desktop-session.store.ts",
-      "summary": "Zustand store managing peer session states, host approval modals, latency metrics, and input toggles."
+      "path": "src/features/auth/auth.store.ts",
+      "summary": "Zustand store managing Church registration, user login, offline cached profiles, and Supabase Auth."
     },
     {
-      "id": "file:features/remote-desktop/remote-desktop-channel.ts",
-      "label": "src/features/remote-desktop/remote-desktop-channel.ts",
-      "type": "webrtc_service",
-      "path": "src/features/remote-desktop/remote-desktop-channel.ts",
-      "summary": "WebRTC P2P signaling manager over Supabase Realtime, RTCDataChannel input sync, and native companion bridge."
+      "id": "file:features/auth/services/presence.ts",
+      "label": "src/features/auth/services/presence.ts",
+      "type": "telemetry_service",
+      "path": "src/features/auth/services/presence.ts",
+      "summary": "2-minute recurring heartbeat telemetry service logging session duration, location, and church usage."
     },
     {
-      "id": "file:native-agent/agent.js",
-      "label": "native-agent/agent.js",
-      "type": "companion_agent",
-      "path": "native-agent/agent.js",
-      "summary": "Lightweight Node.js companion script using PowerShell Win32 SendInput to control the Windows desktop without heavy C++ binaries."
+      "id": "file:features/auth/components/AuthDialog.tsx",
+      "label": "src/features/auth/components/AuthDialog.tsx",
+      "type": "ui_component",
+      "path": "src/features/auth/components/AuthDialog.tsx",
+      "summary": "Tabbed glassmorphic modal for Church registration, operator login, and activity statistics."
+    },
+    {
+      "id": "file:features/auth/components/ChurchBadge.tsx",
+      "label": "src/features/auth/components/ChurchBadge.tsx",
+      "type": "ui_component",
+      "path": "src/features/auth/components/ChurchBadge.tsx",
+      "summary": "Header badge showing registered Church name and location or registration CTA."
+    },
+    {
+      "id": "file:supabase-schema.sql",
+      "label": "supabase-schema.sql",
+      "type": "schema",
+      "path": "supabase-schema.sql",
+      "summary": "SQL migration script creating churches, profiles, app_usage_logs, announcements tables and RLS."
     }
   ],
   "edges": [
     { "source": "file:routes/__root.tsx", "target": "file:components/AppShell.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/components/ChurchBadge.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/components/AuthDialog.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/auth.store.ts", "relation": "INITIALIZES" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/services/presence.ts", "relation": "INITIALIZES" },
+    { "source": "file:features/auth/auth.store.ts", "target": "file:lib/supabase.ts", "relation": "AUTHENTICATES" },
     { "source": "file:routes/project.tsx", "target": "file:workspace/ProjectionWorkspace.tsx", "relation": "RENDERS_OPERATOR" },
     { "source": "file:routes/project.tsx", "target": "file:features/projection/ProjectionWindow.tsx", "relation": "RENDERS_POPUP" },
     { "source": "file:workspace/ProjectionWorkspace.tsx", "target": "file:workspace/WorkspaceTabsPanel.tsx", "relation": "CONTAINS" },
@@ -414,10 +419,6 @@
     { "source": "file:features/live-qr/live-qr-client.store.ts", "target": "file:lib/supabase.ts", "relation": "USES_REALTIME_BROADCAST" },
     { "source": "file:lib/bible/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_VERSES" },
     { "source": "file:lib/songs/loader.ts", "target": "file:lib/supabase.ts", "relation": "FETCHES_SONGS" },
-    { "source": "file:routes/remote-desktop.tsx", "target": "file:features/remote-desktop/RemoteDesktopPage.tsx", "relation": "LAZY_LOADS" },
-    { "source": "file:features/remote-desktop/RemoteDesktopPage.tsx", "target": "file:features/remote-desktop/remote-desktop-session.store.ts", "relation": "MANAGES_SESSION" },
-    { "source": "file:features/remote-desktop/remote-desktop-session.store.ts", "target": "file:features/remote-desktop/remote-desktop-channel.ts", "relation": "DISPATCHES_WEBRTC" },
-    { "source": "file:features/remote-desktop/remote-desktop-channel.ts", "target": "file:native-agent/agent.js", "relation": "BRIDGES_NATIVE_INPUT" },
     { "source": "file:routes/playlists.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
     { "source": "file:routes/library.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
     { "source": "file:routes/project.tsx", "target": "file:components/skeletons/RouteSkeletons.tsx", "relation": "RENDERS_FALLBACK_SKELETON" },
@@ -502,17 +503,14 @@
         "public/robots.txt",
         "public/sitemap.xml"
       ],
-      "remote_desktop_control": [
-        "src/routes/remote-desktop.tsx",
-        "src/features/remote-desktop/RemoteDesktopPage.tsx",
-        "src/features/remote-desktop/stores/rd-host.store.ts",
-        "src/features/remote-desktop/stores/rd-controller.store.ts",
-        "src/features/remote-desktop/services/webrtc-signaling.ts",
-        "src/features/remote-desktop/services/native-agent-client.ts",
-        "src/features/remote-desktop/components/RemoteDesktopViewer.tsx",
-        "src/features/remote-desktop/components/RemoteDesktopHostView.tsx",
-        "src/features/remote-desktop/components/RemoteDesktopControllerView.tsx",
-        "native-agent/server.mjs"
+      "church_registration_and_presence": [
+        "src/features/auth/auth.store.ts",
+        "src/features/auth/services/presence.ts",
+        "src/features/auth/components/AuthScreen.tsx",
+        "src/features/auth/components/AuthDialog.tsx",
+        "src/features/auth/components/ChurchBadge.tsx",
+        "src/features/auth/components/AnnouncementPopup.tsx",
+        "supabase-schema.sql"
       ],
       "performance_and_skeletons": [
         "src/components/skeletons/RouteSkeletons.tsx",

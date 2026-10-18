@@ -17,7 +17,6 @@ import {
   History,
   Smartphone,
   Radio,
-  ScreenShare,
 } from "lucide-react";
 import { memo, type ReactNode, useEffect, useRef, useState } from "react";
 import { useSettings } from "@/stores/settings.store";
@@ -35,14 +34,19 @@ import { useHostRemote } from "@/features/remote/remote-host.store";
 import { RemoteControlDialog } from "@/features/remote/RemoteControlDialog";
 import { useHostLiveQr } from "@/features/live-qr/live-qr-host.store";
 import { LiveQrDialog } from "@/features/live-qr/components/LiveQrDialog";
-import { useHostRemoteDesktop } from "@/features/remote-desktop/stores/rd-host.store";
-
+import {
+  useAuthStore,
+  presenceTracker,
+  ChurchBadge,
+  AuthDialog,
+  AuthScreen,
+  AnnouncementPopup,
+} from "@/features/auth";
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
   { to: "/playlists", label: "Playlists", icon: ListVideo, shortcutId: "nav.playlists" },
   { to: "/history", label: "Service History", icon: History, shortcutId: "nav.history" },
   { to: "/project", label: "Project", icon: MonitorPlay, shortcutId: "nav.project" },
-  { to: "/remote-desktop", label: "Remote Desktop", icon: ScreenShare },
   { to: "/shortcuts", label: "Shortcuts", icon: Keyboard, shortcutId: "nav.shortcuts" },
 ] as const;
 
@@ -75,11 +79,17 @@ export function AppShell({ children }: { children: ReactNode }) {
     setDialogOpen: setLiveQrDialogOpen,
   } = useHostLiveQr();
   const isLiveQrActive = Boolean(liveQrSession && !isLiveQrExpired);
-  const rdHostSession = useHostRemoteDesktop((s) => s.session);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
+  const isAuth = Boolean(user || profile?.church_name);
+
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
     initBackupScheduler();
+    void useAuthStore.getState().init();
+    presenceTracker.init();
   }, [init]);
 
   const [isHovered, setIsHovered] = useState(false);
@@ -142,6 +152,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
     );
   };
+
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#080c16] text-white select-none">
+        <div className="flex flex-col items-center gap-3 animate-pulse">
+          <div className="h-12 w-12 rounded-2xl overflow-hidden shadow-lg shadow-blue-500/20 border border-blue-500/30">
+            <VersoLynLogo className="h-full w-full" />
+          </div>
+          <div className="text-xs font-semibold tracking-wider uppercase text-slate-400">
+            Initializing VersoLyn...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuth) {
+    return <AuthScreen />;
+  }
 
   return (
     <StartupScreen onReady={() => {}}>
@@ -299,44 +328,10 @@ export function AppShell({ children }: { children: ReactNode }) {
             </button>
             <LiveQrDialog />
 
-            {/* Remote Desktop Control button */}
-            <Link
-              to="/remote-desktop"
-              className={cn(
-                "inline-flex h-7 items-center gap-1.5 cursor-pointer rounded-md px-2.5 text-xs font-medium transition",
-                rdHostSession?.status === "connected"
-                  ? "bg-red-500/15 text-red-400 border border-red-500/30 hover:bg-red-500/25 animate-pulse"
-                  : rdHostSession
-                    ? "bg-amber-500/15 text-amber-400 border border-amber-500/30 hover:bg-amber-500/25"
-                    : pathname.startsWith("/remote-desktop")
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground",
-              )}
-              title={
-                rdHostSession?.status === "connected"
-                  ? `Remote Desktop Active (Controlled by ${rdHostSession.connectedController?.name || "Client"})`
-                  : rdHostSession
-                    ? "Remote Desktop Active - Waiting for controller"
-                    : "Remote Desktop Control (Host & Controller)"
-              }
-            >
-              <ScreenShare className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">
-                {rdHostSession?.status === "connected"
-                  ? "Desktop Controlled"
-                  : rdHostSession
-                    ? "Desktop Hosting"
-                    : "Remote Desktop"}
-              </span>
-              {rdHostSession && (
-                <span
-                  className={cn(
-                    "h-1.5 w-1.5 rounded-full",
-                    rdHostSession.status === "connected" ? "bg-red-400 animate-pulse" : "bg-amber-400",
-                  )}
-                />
-              )}
-            </Link>
+            {/* Church Profile & Registration Badge */}
+            <ChurchBadge />
+            <AuthDialog />
+            <AnnouncementPopup />
 
             <ProjectorToggleButton
               projectorOpen={projectorOpen}

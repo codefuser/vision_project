@@ -30,7 +30,6 @@ const KNOWN_ROUTE_PREFIXES = [
   "/developer-hub",
   "/remote",
   "/live",
-  "/remote-desktop",
 ];
 
 function isKnownRoute(pathname: string): boolean {

@@ -1,6 +1,22 @@
-import { supabase } from "../supabase";
+import { supabase, catalogSupabase } from "../supabase";
 import { get, set } from "idb-keyval";
 import { logger } from "@/lib/logger";
+
+let resolvedBibleClient: typeof supabase | null = null;
+async function getBibleClient(tableName: string) {
+  if (resolvedBibleClient) return resolvedBibleClient;
+  try {
+    const { error } = await supabase.from(tableName).select("book").limit(1);
+    if (!error) {
+      resolvedBibleClient = supabase;
+      return supabase;
+    }
+  } catch {
+    // Fall back to catalog
+  }
+  resolvedBibleClient = catalogSupabase;
+  return catalogSupabase;
+}
 
 export type BibleLang = "en" | "ta";
 export type BibleData = string[][][];
@@ -89,8 +105,10 @@ async function progressiveFetchBibleFromSupabase(lang: BibleLang, cacheKey: stri
     }
   };
 
+  const client = await getBibleClient(tableName);
+
   // Step A: Fast initial batch of 2,000 verses (Foundational books)
-  const { data: initialRows, error: initialErr } = await supabase
+  const { data: initialRows, error: initialErr } = await client
     .from(tableName)
     .select("book, chapter, versecount, verse")
     .order("book", { ascending: true })
@@ -120,7 +138,7 @@ async function progressiveFetchBibleFromSupabase(lang: BibleLang, cacheKey: stri
         const start = page * pageSize;
         const end = Math.min(start + pageSize - 1, total - 1);
 
-        const { data: batch, error } = await supabase
+        const { data: batch, error } = await client
           .from(tableName)
           .select("book, chapter, versecount, verse")
           .order("book", { ascending: true })
@@ -161,7 +179,8 @@ export async function ensureChapterLoaded(lang: BibleLang, book: number, chapter
 
   const tableName = lang === "en" ? "english_bible" : "tamil_bible";
   try {
-    const { data, error } = await supabase
+    const client = await getBibleClient(tableName);
+    const { data, error } = await client
       .from(tableName)
       .select("book, chapter, versecount, verse")
       .eq("book", book + 1)

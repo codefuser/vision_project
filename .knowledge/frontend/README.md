@@ -54,7 +54,10 @@ const isIsolated = isProjectorPopup || isRemote || isLive;
   * `GlobalShortcuts`: Active global keyboard listener.
   * `ShortcutsDialog`: Modal listing shortcuts (`?`).
   * `CommandPalette`: Quick jump palette (`Ctrl+K`).
-  * `AppShell`: Collapsible navigation sidebar.
+  * `AppShell`: Checks authentication state via `useAuthStore`.
+    * If `!isInitialized`: Renders full-screen sleek loader (`Initializing VersoLyn...`).
+    * If `!isAuthenticated()`: Renders dedicated full-screen `AuthScreen` (no sidebar, no header, no workspace visible).
+    * If `isAuthenticated()`: Renders full presentation workspace (`Sidebar`, `Header` with `ChurchBadge`, `AuthDialog` for profile editing, and `{children}`).
 
 ### Workspace Split Layout (`src/features/workspace/ProjectionWorkspace.tsx`)
 * **Left Panel**:

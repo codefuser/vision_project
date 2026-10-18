@@ -11,10 +11,10 @@
 
 ## Executive Summary
 
-VersoLyn is a modern, high-performance, offline-first church presentation application. Unlike traditional cloud multi-tenant web applications, VersoLyn stores user media, playlists, session events, and application settings locally on the client machine using browser IndexedDB (`Dexie.js` and `idb-keyval`). Supabase is utilized as a read-only distribution repository for public Tamil and English worship songs and Scripture, and as a signaling/broadcast transport for remote control, congregation live streaming, and remote desktop pairing.
+VersoLyn is a modern, high-performance, offline-first church presentation application. Unlike traditional cloud multi-tenant web applications, VersoLyn stores user media, playlists, session events, and application settings locally on the client machine using browser IndexedDB (`Dexie.js` and `idb-keyval`). Supabase is utilized as a read-only distribution repository for public Tamil and English worship songs and Scripture, and as a signaling/broadcast transport for mobile remote control and congregation live streaming.
 
 All confirmed vulnerabilities identified during Phase 1 have been remediated with defense-in-depth architectural controls and thoroughly regression-tested:
-* **VULN-01 (CRITICAL)**: Command Injection and Cross-Site WebSocket Hijacking in the Native Companion Agent were eliminated through strict Origin validation, an application pairing token handshake, ephemeral session tokens, and structurally invariant Base64 clipboard transport into PowerShell.
+* **VULN-01 (RETIRED / DECOMMISSIONED)**: Remote Desktop & the Native Companion Agent have been completely decommissioned and removed from the codebase, eliminating the OS input injection attack surface entirely.
 * **VULN-02 (HIGH)**: DOM-based Cross-Site Scripting in Session History print export was resolved through strict HTML entity encoding of all user-controlled variables.
 * **RISK-01 (MEDIUM)**: Enterprise HTTP security headers (`nosniff`, `SAMEORIGIN`, `strict-origin-when-cross-origin`, `Permissions-Policy`, and strict `Content-Security-Policy`) were configured in `vercel.json`.
 * **RISK-02 (LOW)**: `'unsafe-eval'` was removed from `<meta http-equiv="Content-Security-Policy">`.
@@ -27,10 +27,9 @@ All confirmed vulnerabilities identified during Phase 1 have been remediated wit
 ### VULN-01
 * **Severity**: CRITICAL
 * **Vulnerability**: Command Injection & Cross-Site WebSocket Hijacking (CSWSH) in Native Host Companion Agent
-* **Affected File**: `native-agent/server.mjs`
-* **Client Handlers**: `src/features/remote-desktop/services/native-agent-client.ts`, `src/features/remote-desktop/stores/rd-host.store.ts`, `src/features/remote-desktop/components/RemoteDesktopHostView.tsx`
-* **Status**: **FIXED**
-* **Fix**:
+* **Affected Subsystem**: Remote Desktop & Native Companion Agent (`native-agent/server.mjs`)
+* **Status**: **RETIRED & REMOVED** (Decommissioned entirely from the application; attack surface eliminated)
+* **Fix & Retirement**:
   1. **Strict WebSocket Origin Validation**: Added `verifyClient` checking incoming `Origin` against `https://versolyn.vercel.app` and local development hosts (`localhost`, `127.0.0.1`). Unauthorized origins are rejected with HTTP 403 / closed with code 1008.
   2. **Application-Level Pairing & Session Authentication**: The agent manages a persistent/configurable pairing token in `.agent-token`. On connection, the client must present the pairing token during `HANDSHAKE` or via `AUTHENTICATE`. Upon verification, the agent issues an ephemeral cryptographic `sessionToken` (`crypto.randomBytes(24)`). All subsequent `INPUT_EVENT` payloads must include the valid `sessionToken` or they are dropped immediately.
   3. **Structurally Invariant Base64 Data Transport**: `CLIPBOARD_PASTE` converts the input text to UTF-8 bytes and encodes it as Base64. A strict regex (`/^[A-Za-z0-9+/=]+$/`) validates the Base64 string before it is passed to PowerShell. Inside PowerShell, `[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(...))` decodes the string safely as data, eliminating newline breakout and quote escape attacks.
@@ -115,7 +114,7 @@ All confirmed vulnerabilities identified during Phase 1 have been remediated wit
 | **4** | **Node.js Version** | Target: `@types/node` v22.16.5; Local runtime: Node.js v24.18.0 | Active LTS environment. |
 | **5** | **Package Manager** | `npm` (`package-lock.json` lockfile v3 present; `bun.lock` also present) | Standard npm toolchain. |
 | **6** | **Supabase Integration** | `@supabase/supabase-js` v2.110.7 in `src/lib/supabase.ts` | Read-only public catalog & WebSockets for real-time broadcasts. |
-| **7** | **Authentication System** | Decentralized / Offline-First | No cloud user accounts or password tables in Supabase. Mobile Remote uses zero-knowledge SHA-256 challenge-response; Remote Desktop uses 6-digit PIN + host approval; Live QR uses ephemeral token. |
+| **7** | **Authentication System** | Decentralized / Offline-First | No cloud user accounts or password tables in Supabase. Mobile Remote uses zero-knowledge SHA-256 challenge-response; Live QR uses ephemeral token. |
 | **8** | **API Routes** | `src/lib/api/example.functions.ts` (`getGreeting` via `createServerFn`) | Single RPC-style server function. No exposed REST APIs. |
 | **9** | **Server Actions** | **Not Applicable** | TanStack Start RPC `createServerFn` used instead of Next.js Server Actions. |
 | **10** | **Middleware** | `src/start.ts` (`errorMiddleware`), `src/server.ts` (`isNotFoundRequest` route validation & SSR normalization) | Shields server against unhandled exceptions escaping React SSR. |
@@ -131,7 +130,7 @@ All confirmed vulnerabilities identified during Phase 1 have been remediated wit
 | **20** | **dangerouslySetInnerHTML** | `src/routes/__root.tsx` (JSON-LD metadata), `src/components/ui/chart.tsx` (theme CSS vars). | Verified safe: uses hardcoded constants and theme colors. |
 | **21** | **iframe Usage** | None. | No iframe elements found across the entire codebase. |
 | **22** | **Redirect Logic** | `src/routes/index.tsx` checks `settings.defaultStartupPage`. | Whitelisted internal route navigation only (`/project`, `/library`, `/playlists`). |
-| **23** | **Auth / Authorization Checks** | Remote Host checks cryptographic `sessionToken` on all command payloads and verifies `device.enabled`. Remote Desktop requires operator approval in `HostApprovalModal`. | Enforced locally before executing actions. |
+| **23** | **Auth / Authorization Checks** | Remote Host checks cryptographic `sessionToken` on all command payloads and verifies `device.enabled`. | Enforced locally before executing actions. |
 
 ---
 
@@ -167,4 +166,3 @@ Direct automated verification was performed against the live Supabase instance (
 ## Remaining Risks
 
 1. **Production Deployment Header Activation**: The HTTP security headers configured in `vercel.json` will become active on `https://versolyn.vercel.app/` once the updated repository is deployed to Vercel. Until deployment occurs, the live domain continues to serve the previous Vercel configuration without `X-Content-Type-Options` or `X-Frame-Options`.
-2. **Native Companion Agent Host Security**: The Native Companion Agent (`native-agent/server.mjs`) provides OS-level hardware input injection on Windows. Although protected by Origin checking and pairing PIN authentication, users running this optional bridge should ensure they keep their 6-digit pairing PIN private and only run the agent on trusted networks.

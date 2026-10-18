@@ -1,7 +1,23 @@
-import { supabase } from "../supabase";
+import { supabase, catalogSupabase } from "../supabase";
 import { songStem, songLower } from "./normalize";
 import { get, set } from "idb-keyval";
 import { logger } from "@/lib/logger";
+
+let resolvedSongsClient: typeof supabase | null = null;
+async function getSongsClient() {
+  if (resolvedSongsClient) return resolvedSongsClient;
+  try {
+    const { error } = await supabase.from("songs").select("id").limit(1);
+    if (!error) {
+      resolvedSongsClient = supabase;
+      return supabase;
+    }
+  } catch {
+    // Fall back to catalog
+  }
+  resolvedSongsClient = catalogSupabase;
+  return catalogSupabase;
+}
 
 export interface RawSong {
   id: number;
@@ -155,9 +171,10 @@ export async function loadSongs(): Promise<Song[]> {
  */
 async function progressiveFetchFromSupabase(): Promise<Song[]> {
   logger.info("[Songs] Loading initial fast batch of songs from Supabase…");
+  const client = await getSongsClient();
 
   // Step A: Fast initial batch of 150 songs
-  const { data: initialBatch, error: initialErr } = await supabase
+  const { data: initialBatch, error: initialErr } = await client
     .from("songs")
     .select("id, title, content, scale, updated_at")
     .order("id", { ascending: true })
@@ -171,7 +188,7 @@ async function progressiveFetchFromSupabase(): Promise<Song[]> {
   // Step B: Stream remaining dataset in background without blocking the main thread
   void (async () => {
     try {
-      const { count } = await supabase
+      const { count } = await client
         .from("songs")
         .select("*", { count: "exact", head: true });
 
@@ -187,7 +204,7 @@ async function progressiveFetchFromSupabase(): Promise<Song[]> {
 
         const start = page * pageSize;
         const end = start + pageSize - 1;
-        const { data: pageData, error } = await supabase
+        const { data: pageData, error } = await client
           .from("songs")
           .select("id, title, content, scale, updated_at")
           .range(start, end);
@@ -231,9 +248,10 @@ async function progressiveFetchFromSupabase(): Promise<Song[]> {
  */
 async function backgroundDeltaSync(): Promise<void> {
   const lastSync = await get<string>(LAST_SYNC_KEY);
+  const client = await getSongsClient();
 
   // Ask Supabase for the latest single updated_at timestamp
-  const { data: latestRows, error: checkErr } = await supabase
+  const { data: latestRows, error: checkErr } = await client
     .from("songs")
     .select("updated_at")
     .order("updated_at", { ascending: false })
@@ -253,7 +271,7 @@ async function backgroundDeltaSync(): Promise<void> {
   logger.info(`[Songs] Delta update detected (${remoteLatest} > ${lastSync}). Syncing delta…`);
 
   // Fetch ONLY changed rows since lastSync
-  let query = supabase.from("songs").select("id, title, content, scale, updated_at");
+  let query = client.from("songs").select("id, title, content, scale, updated_at");
   if (lastSync) {
     query = query.gt("updated_at", lastSync);
   }

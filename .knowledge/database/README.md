@@ -122,3 +122,14 @@ VersoLyn exports and imports full database snapshots as `.zip` files using `ffla
 * **Restore Modes**:
   * `merge`: Upserts missing folders, media, and playlists without deleting existing content.
   * `replace`: Clears local database inside a single atomic Dexie transaction (`[folders, media, blobs, playlists, settings]`) and replaces it completely with the backup archive.
+
+---
+
+## 6. Supabase Cloud Schema (`supabase-schema.sql`)
+
+VersoLyn connects to Supabase for church organization registration, user authentication, active duration telemetry, and notice broadcasts:
+* **`public.churches`**: Stores church name, city, state, country, pastor, and contact phone/email.
+* **`public.profiles`**: Tied to `auth.users(id)` with auto-trigger `on_auth_user_created` populating operator role, church relation, and `last_seen_at`.
+* **`public.app_usage_logs`**: Periodic 2-minute heartbeat logging session duration, device/browser info, city, and church organization.
+* **`public.announcements`**: Remote broadcast banners and popups for community notices and developer announcements.
+
