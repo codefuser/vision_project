@@ -113,37 +113,10 @@ A dedicated public broadcast service completely decoupled from the remote contro
 
 ---
 
-## 5. Browser-Based Remote Desktop Control (`src/features/remote-desktop/`)
-
-VersoLyn features a secure peer-to-peer browser-based Remote Desktop system (`/remote-desktop`):
-* **Signaling & TURN Traversal**: Supabase Realtime channel `rd_session_{sessionId}` exchanges SDP offers, answers, and ICE candidates with Metered OpenRelay TURN servers for symmetric NAT and firewall traversal. Implements `earlyCandidatesQueue` to prevent candidates from being discarded when arriving before `setRemoteDescription()`.
-* **Media Streaming**: WebRTC `RTCPeerConnection` with H.264/VP9 screen capture (`getDisplayMedia()`). Controller uses a composite `MediaStream` binding with `track.onunmute`, `track.onmute`, and `track.onended` listeners.
-* **Live Display Switching**: Host can switch shared screens or monitors live using `sender.replaceTrack(newTrack)` without tearing down WebRTC or renegotiating sessions.
-* **Distraction-Free Clean Viewer**: `RemoteDesktopViewer` renders an immersive full-screen edge-to-edge display (`fixed inset-0 z-50 bg-black`). Removed clutter including bottom shortcut bars (Esc, Win, Win+D, Task Mgr, etc.) and 'Control Active' badges in favor of direct mouse/keyboard pass-through with minimal auto-hiding controls (Fullscreen, Disconnect).
-* **Zero-Black-Screen State Machine**: `RemoteDesktopViewer` replaces blank screens with real-time contextual overlays:
-  - "Connecting to Host Screen..." (with spinner during media negotiation)
-  - "Host Stopped Screen Sharing" (with `[Request Screen Share]` trigger)
-  - "Remote Video Connection Failed" (with `[Retry Connection]` re-negotiation trigger)
-* **Input Synchronization**: Low-latency `RTCDataChannel` transmitting normalized `(u, v)` coordinates accounting for letterboxing, pillarboxing, and fullscreen, plus mouse events, wheel scrolls, right clicks, and direct physical keystrokes.
-* **Security & Approval**:
-  * 6-digit numeric pairing PIN with automatic expiry.
-  * Explicit host approval modal showing controller device details before establishing connection.
-  * Sticky host banner: "REMOTE CONTROL ACTIVE" with "Pause Input" and "STOP REMOTE ACCESS" emergency cutoff.
-* **Native Companion Agent (`native-agent/`)**:
-  * Lightweight Node.js bridge communicating with Windows OS via Win32 `SetCursorPos`, `mouse_event`, and `keybd_event` using PowerShell P/Invoke runner.
-  * Multi-monitor detection querying `[System.Windows.Forms.Screen]::AllScreens`.
-  * Expanded keyboard shortcuts: `Win+D` (Show Desktop), `Ctrl+S` (Save), `Ctrl+C` (Copy), `Ctrl+V` (Paste), `Alt+Tab`, `Esc`, `Task Manager`, and Function keys `F1-F12`.
-  * **Security Protections**:
-    - Strict WebSocket `Origin` validation restricting connections to `https://versolyn.vercel.app` and local dev hosts (`localhost`, `127.0.0.1`).
-    - Pairing PIN/Token handshake requirement issuing ephemeral `sessionToken` before accepting privileged commands.
-    - Base64 clipboard data transport to PowerShell with strict character validation (`/^[A-Za-z0-9+/=]+$/`), preventing command injection and quote breakout.
-
----
-
-## 6. Performance Architecture & Instant Tab Navigation
+## 5. Performance Architecture & Instant Tab Navigation
 
 To prevent UI thread freezes during tab transitions, the application employs:
-* **Route-Level Code Splitting**: All major routes (`/library`, `/playlists`, `/project`, `/settings`, `/remote-desktop`) are lazy loaded with React `Suspense` and render instant (<16ms) glassmorphic skeletons (`src/components/skeletons/RouteSkeletons.tsx`).
+* **Route-Level Code Splitting**: All major routes (`/library`, `/playlists`, `/project`, `/settings`) are lazy loaded with React `Suspense` and render instant (<16ms) glassmorphic skeletons (`src/components/skeletons/RouteSkeletons.tsx`).
 * **Internal Workspace Tab Isolation**: `WorkspaceTabsPanel.tsx` dynamically loads `LibraryPage`, `BiblePanel`, `SongsPanel`, and `TextPanel` on-demand using `React.lazy()` with `LazyKeepAlive` preservation so inactive tabs don't consume memory or block tab switching.
 * **Progressive Dataset Streaming**:
   * Songs (`src/lib/songs/loader.ts`): Immediate tier-1 batch of 150 songs unblocks search UI in ~80ms; remaining ~17,000 songs stream in the background with micro-yield thread pauses. Removed synchronous 85,000-line slide stemming loop from the main thread.

@@ -18,7 +18,6 @@ import { Route as LiveRouteImport } from './routes/live'
 import { Route as PlaylistsRouteImport } from './routes/playlists'
 import { Route as ProjectRouteImport } from './routes/project'
 import { Route as RemoteRouteImport } from './routes/remote'
-import { Route as RemoteDesktopRouteImport } from './routes/remote-desktop'
 import { Route as RoadmapRouteImport } from './routes/roadmap'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ShortcutsRouteImport } from './routes/shortcuts'
@@ -72,11 +71,6 @@ const RemoteRoute = RemoteRouteImport.update({
   path: '/remote',
   getParentRoute: () => rootRouteImport,
 } as any)
-const RemoteDesktopRoute = RemoteDesktopRouteImport.update({
-  id: '/remote-desktop',
-  path: '/remote-desktop',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const RoadmapRoute = RoadmapRouteImport.update({
   id: '/roadmap',
   path: '/roadmap',
@@ -123,7 +117,6 @@ export interface FileRoutesByFullPath {
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
-  '/remote-desktop': typeof RemoteDesktopRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
@@ -141,7 +134,6 @@ export interface FileRoutesByTo {
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
-  '/remote-desktop': typeof RemoteDesktopRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
@@ -161,7 +153,6 @@ export interface FileRoutesById {
   '/playlists': typeof PlaylistsRouteWithChildren
   '/project': typeof ProjectRoute
   '/remote': typeof RemoteRoute
-  '/remote-desktop': typeof RemoteDesktopRoute
   '/roadmap': typeof RoadmapRoute
   '/settings': typeof SettingsRoute
   '/shortcuts': typeof ShortcutsRoute
@@ -182,7 +173,6 @@ export interface FileRouteTypes {
     | '/playlists'
     | '/project'
     | '/remote'
-    | '/remote-desktop'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
@@ -200,7 +190,6 @@ export interface FileRouteTypes {
     | '/playlists'
     | '/project'
     | '/remote'
-    | '/remote-desktop'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
@@ -219,7 +208,6 @@ export interface FileRouteTypes {
     | '/playlists'
     | '/project'
     | '/remote'
-    | '/remote-desktop'
     | '/roadmap'
     | '/settings'
     | '/shortcuts'
@@ -239,7 +227,6 @@ export interface RootRouteChildren {
   PlaylistsRoute: typeof PlaylistsRouteWithChildren
   ProjectRoute: typeof ProjectRoute
   RemoteRoute: typeof RemoteRoute
-  RemoteDesktopRoute: typeof RemoteDesktopRoute
   RoadmapRoute: typeof RoadmapRoute
   SettingsRoute: typeof SettingsRoute
   ShortcutsRoute: typeof ShortcutsRoute
@@ -309,13 +296,6 @@ declare module '@tanstack/react-router' {
       path: '/remote'
       fullPath: '/remote'
       preLoaderRoute: typeof RemoteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/remote-desktop': {
-      id: '/remote-desktop'
-      path: '/remote-desktop'
-      fullPath: '/remote-desktop'
-      preLoaderRoute: typeof RemoteDesktopRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roadmap': {
@@ -405,7 +385,6 @@ const rootRouteChildren: RootRouteChildren = {
   PlaylistsRoute: PlaylistsRouteWithChildren,
   ProjectRoute: ProjectRoute,
   RemoteRoute: RemoteRoute,
-  RemoteDesktopRoute: RemoteDesktopRoute,
   RoadmapRoute: RoadmapRoute,
   SettingsRoute: SettingsRoute,
   ShortcutsRoute: ShortcutsRoute,
