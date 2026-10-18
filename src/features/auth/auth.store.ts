@@ -1,11 +1,11 @@
 import { create } from "zustand";
 import { supabase } from "@/lib/supabase";
 import { logger } from "@/lib/logger";
+import { isValidEmail } from "./services/email-validator";
 import type { RegisterChurchPayload, LoginPayload, UserProfile } from "./types";
 import type { User, Session } from "@supabase/supabase-js";
 
 const LOCAL_STORAGE_PROFILE_KEY = "versolyn_church_profile";
-const LOCAL_STORAGE_STATS_KEY = "versolyn_usage_stats";
 
 interface AuthState {
   user: User | null;
@@ -14,19 +14,25 @@ interface AuthState {
   isLoading: boolean;
   isInitialized: boolean;
   isAuthModalOpen: boolean;
-  modalTab: "register" | "login" | "profile";
+  modalTab: "register" | "login" | "verify_otp" | "profile";
   error: string | null;
+
+  // OTP Verification state
+  pendingVerificationEmail: string | null;
+  pendingRegistrationData: RegisterChurchPayload | null;
 
   // Actions
   init: () => Promise<void>;
-  openAuthModal: (tab?: "register" | "login" | "profile") => void;
+  openAuthModal: (tab?: "register" | "login" | "verify_otp" | "profile") => void;
   closeAuthModal: () => void;
-  setModalTab: (tab: "register" | "login" | "profile") => void;
-  signUpWithChurch: (payload: RegisterChurchPayload) => Promise<{ success: boolean; message: string }>;
-  signIn: (payload: LoginPayload) => Promise<{ success: boolean; message: string }>;
-  quickRegister: (payload: RegisterChurchPayload) => Promise<{ success: boolean; message: string }>;
+  setModalTab: (tab: "register" | "login" | "verify_otp" | "profile") => void;
+  signUpWithChurch: (payload: RegisterChurchPayload) => Promise<{ success: boolean; needsOtp?: boolean; message: string }>;
+  verifyEmailOtp: (token: string) => Promise<{ success: boolean; message: string }>;
+  resendVerificationCode: () => Promise<{ success: boolean; message: string }>;
+  signIn: (payload: LoginPayload) => Promise<{ success: boolean; needsOtp?: boolean; message: string }>;
   signOut: () => Promise<void>;
   updateChurchProfile: (patch: Partial<UserProfile>) => Promise<void>;
+  isAuthenticated: () => boolean;
 }
 
 function loadLocalProfile(): UserProfile | null {
@@ -61,6 +67,12 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthModalOpen: false,
   modalTab: "register",
   error: null,
+  pendingVerificationEmail: null,
+  pendingRegistrationData: null,
+
+  isAuthenticated: () => {
+    return Boolean(get().user || get().profile?.church_name);
+  },
 
   init: async () => {
     if (get().isInitialized) return;
@@ -68,11 +80,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user ?? null;
-
       let profile = loadLocalProfile();
 
       if (user) {
-        // Try fetching user profile from database
+        // Fetch profile from Supabase
         try {
           const { data: profileRow } = await supabase
             .from("profiles")
@@ -84,7 +95,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             profile = profileRow as UserProfile;
             saveLocalProfile(profile);
           } else if (user.user_metadata) {
-            // Synthesize from metadata if profile row not created yet
             profile = {
               id: user.id,
               full_name: user.user_metadata.full_name || user.email?.split("@")[0] || "Operator",
@@ -98,22 +108,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             saveLocalProfile(profile);
           }
         } catch (dbErr) {
-          logger.warn("[Auth] Could not fetch profile from table, using local/metadata:", dbErr);
+          logger.warn("[Auth] Profile fetch exception:", dbErr);
         }
       }
+
+      const hasRegistered = Boolean(user || profile?.church_name);
 
       set({
         user,
         session,
         profile,
         isInitialized: true,
+        // If not registered/logged in, immediately open gatekeeper modal
+        isAuthModalOpen: !hasRegistered,
+        modalTab: "register",
       });
 
       // Listen for auth state changes
       supabase.auth.onAuthStateChange(async (event, newSession) => {
         const newUser = newSession?.user ?? null;
         if (!newUser) {
-          set({ user: null, session: null });
           return;
         }
 
@@ -121,7 +135,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (err) {
       logger.warn("[Auth] Init error:", err);
-      set({ isInitialized: true });
+      const profile = loadLocalProfile();
+      set({
+        isInitialized: true,
+        isAuthModalOpen: !profile?.church_name,
+      });
     }
   },
 
@@ -134,6 +152,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   closeAuthModal: () => {
+    // Only allow closing if already registered or logged in
+    if (!get().isAuthenticated()) {
+      return;
+    }
     set({ isAuthModalOpen: false, error: null });
   },
 
@@ -143,20 +165,33 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signUpWithChurch: async (payload: RegisterChurchPayload) => {
     set({ isLoading: true, error: null });
-    try {
-      const password = payload.password || "VersoLyn@" + Math.random().toString(36).slice(-6);
 
+    // 1. Strict Email Format & Disposable Check
+    const emailValidation = isValidEmail(payload.email);
+    if (!emailValidation.valid) {
+      const msg = emailValidation.reason || "Invalid email address.";
+      set({ isLoading: false, error: msg });
+      return { success: false, message: msg };
+    }
+
+    if (!payload.password || payload.password.length < 6) {
+      const msg = "Password must be at least 6 characters.";
+      set({ isLoading: false, error: msg });
+      return { success: false, message: msg };
+    }
+
+    try {
       const { data, error } = await supabase.auth.signUp({
-        email: payload.email,
-        password,
+        email: payload.email.trim().toLowerCase(),
+        password: payload.password,
         options: {
           data: {
             full_name: payload.operatorName || payload.pastorName || "Media Operator",
-            church_name: payload.churchName,
-            city: payload.city,
-            state: payload.state,
-            phone: payload.phone,
-            pastor_name: payload.pastorName,
+            church_name: payload.churchName.trim(),
+            city: payload.city.trim(),
+            state: payload.state?.trim() || "Tamil Nadu",
+            phone: payload.phone?.trim() || "",
+            pastor_name: payload.pastorName?.trim() || "",
           },
         },
       });
@@ -166,64 +201,214 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return { success: false, message: error.message };
       }
 
-      const user = data.user;
-      const newProfile: UserProfile = {
-        id: user?.id || "local-" + Date.now(),
-        full_name: payload.operatorName || payload.pastorName || "Media Operator",
-        email: payload.email,
-        phone: payload.phone,
-        church_name: payload.churchName,
-        city: payload.city,
-        state: payload.state,
-        role: "operator",
-        created_at: new Date().toISOString(),
-      };
+      set({
+        pendingVerificationEmail: payload.email.trim().toLowerCase(),
+        pendingRegistrationData: payload,
+      });
 
-      // Also upsert church into churches table directly if table exists
-      try {
-        await supabase.from("churches").insert({
-          church_name: payload.churchName,
-          city: payload.city,
-          state: payload.state,
-          pastor_name: payload.pastorName,
-          contact_email: payload.email,
-          contact_phone: payload.phone,
+      // If Supabase immediately issued a session (auto-confirm is ON in Supabase project)
+      if (data.session && data.user) {
+        const newProfile: UserProfile = {
+          id: data.user.id,
+          full_name: payload.operatorName || payload.pastorName || "Media Operator",
+          email: payload.email.trim(),
+          phone: payload.phone?.trim(),
+          church_name: payload.churchName.trim(),
+          city: payload.city.trim(),
+          state: payload.state?.trim(),
+          role: "operator",
+          created_at: new Date().toISOString(),
+        };
+
+        saveLocalProfile(newProfile);
+        set({
+          user: data.user,
+          session: data.session,
+          profile: newProfile,
+          isLoading: false,
+          isAuthModalOpen: false,
+          modalTab: "profile",
         });
-      } catch (churchErr) {
-        logger.info("[Auth] Note: direct churches table insert skipped or pending migration:", churchErr);
+
+        return {
+          success: true,
+          needsOtp: false,
+          message: "Church registered and verified successfully! Welcome to VersoLyn.",
+        };
       }
 
-      saveLocalProfile(newProfile);
+      // If email confirmation is required:
       set({
-        user,
-        session: data.session,
-        profile: newProfile,
         isLoading: false,
-        modalTab: "profile",
+        modalTab: "verify_otp",
       });
 
       return {
         success: true,
-        message: data.session
-          ? "Church registered & signed in successfully!"
-          : "Registration received! Check email if confirmation is required.",
+        needsOtp: true,
+        message: `Verification code sent to ${payload.email}! Please check your inbox and enter the 6-digit code.`,
       };
     } catch (err: any) {
-      const msg = err?.message || "Registration failed. Please try again.";
+      const msg = err?.message || "Registration failed. Please check details and try again.";
       set({ isLoading: false, error: msg });
       return { success: false, message: msg };
     }
   },
 
+  verifyEmailOtp: async (token: string) => {
+    const email = get().pendingVerificationEmail;
+    if (!email) {
+      return { success: false, message: "No email pending verification. Please register again." };
+    }
+
+    set({ isLoading: true, error: null });
+
+    try {
+      // Try verifyOtp with signup type
+      let verifyRes = await supabase.auth.verifyOtp({
+        email,
+        token: token.trim(),
+        type: "signup",
+      });
+
+      // Fallback to email type if signup type is rejected
+      if (verifyRes.error) {
+        verifyRes = await supabase.auth.verifyOtp({
+          email,
+          token: token.trim(),
+          type: "email",
+        });
+      }
+
+      if (verifyRes.error) {
+        set({ isLoading: false, error: verifyRes.error.message });
+        return { success: false, message: verifyRes.error.message };
+      }
+
+      const user = verifyRes.data.user;
+      const session = verifyRes.data.session;
+      const pendingData = get().pendingRegistrationData;
+
+      const profile: UserProfile = {
+        id: user?.id || "local-" + Date.now(),
+        full_name: pendingData?.operatorName || pendingData?.pastorName || user?.user_metadata?.full_name || "Media Operator",
+        email,
+        phone: pendingData?.phone || user?.user_metadata?.phone,
+        church_name: pendingData?.churchName || user?.user_metadata?.church_name || "My Church",
+        city: pendingData?.city || user?.user_metadata?.city || "Location",
+        state: pendingData?.state || user?.user_metadata?.state,
+        role: "operator",
+        created_at: new Date().toISOString(),
+      };
+
+      saveLocalProfile(profile);
+
+      // Upsert into Supabase tables if schema is loaded
+      try {
+        await supabase.from("churches").insert({
+          church_name: profile.church_name,
+          city: profile.city,
+          state: profile.state,
+          pastor_name: pendingData?.pastorName,
+          contact_email: email,
+          contact_phone: profile.phone,
+        });
+
+        if (user?.id) {
+          await supabase.from("profiles").upsert({
+            id: user.id,
+            church_name: profile.church_name,
+            city: profile.city,
+            state: profile.state,
+            full_name: profile.full_name,
+            email,
+            phone: profile.phone,
+            role: "operator",
+            last_seen_at: new Date().toISOString(),
+          });
+        }
+      } catch (dbErr) {
+        logger.info("[Auth] Profile insert synced or pending SQL migration:", dbErr);
+      }
+
+      set({
+        user,
+        session,
+        profile,
+        isLoading: false,
+        isAuthModalOpen: false,
+        modalTab: "profile",
+        pendingVerificationEmail: null,
+        pendingRegistrationData: null,
+      });
+
+      return {
+        success: true,
+        message: `Welcome to VersoLyn, ${profile.church_name}! Your email is confirmed.`,
+      };
+    } catch (err: any) {
+      const msg = err?.message || "Invalid or expired verification code. Please try again.";
+      set({ isLoading: false, error: msg });
+      return { success: false, message: msg };
+    }
+  },
+
+  resendVerificationCode: async () => {
+    const email = get().pendingVerificationEmail;
+    if (!email) {
+      return { success: false, message: "No email address found to resend verification code." };
+    }
+
+    try {
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      });
+
+      if (error) {
+        return { success: false, message: error.message };
+      }
+
+      return { success: true, message: `New 6-digit code resent to ${email}` };
+    } catch (err: any) {
+      return { success: false, message: err?.message || "Could not resend code." };
+    }
+  },
+
   signIn: async ({ email, password }: LoginPayload) => {
     set({ isLoading: true, error: null });
+
+    const trimmedEmail = email.trim().toLowerCase();
+    const validation = isValidEmail(trimmedEmail);
+    if (!validation.valid) {
+      const msg = validation.reason || "Please enter a valid email.";
+      set({ isLoading: false, error: msg });
+      return { success: false, message: msg };
+    }
+
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
-        email,
+        email: trimmedEmail,
         password,
       });
 
       if (error) {
+        // If email is not confirmed, redirect them directly to OTP verification
+        if (error.message.toLowerCase().includes("email not confirmed")) {
+          set({
+            isLoading: false,
+            pendingVerificationEmail: trimmedEmail,
+            modalTab: "verify_otp",
+            error: "Email verification is required before signing in. We are resending a new code.",
+          });
+          void supabase.auth.resend({ type: "signup", email: trimmedEmail });
+          return {
+            success: false,
+            needsOtp: true,
+            message: "Please enter the verification code sent to your email to activate your account.",
+          };
+        }
+
         set({ isLoading: false, error: error.message });
         return { success: false, message: error.message };
       }
@@ -262,57 +447,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         session: data.session,
         profile,
         isLoading: false,
+        isAuthModalOpen: false,
         modalTab: "profile",
       });
 
-      return { success: true, message: `Welcome back, ${profile?.full_name || "Operator"}!` };
+      return {
+        success: true,
+        message: `Welcome back, ${profile?.church_name || "Operator"}!`,
+      };
     } catch (err: any) {
       const msg = err?.message || "Sign in failed. Check your email & password.";
-      set({ isLoading: false, error: msg });
-      return { success: false, message: msg };
-    }
-  },
-
-  quickRegister: async (payload: RegisterChurchPayload) => {
-    set({ isLoading: true, error: null });
-    try {
-      const profile: UserProfile = {
-        id: "local-" + Date.now(),
-        full_name: payload.operatorName || payload.pastorName || "Media Operator",
-        email: payload.email,
-        phone: payload.phone,
-        church_name: payload.churchName,
-        city: payload.city,
-        state: payload.state,
-        role: "operator",
-        created_at: new Date().toISOString(),
-      };
-
-      saveLocalProfile(profile);
-
-      // Attempt background church log to Supabase
-      try {
-        await supabase.from("churches").insert({
-          church_name: payload.churchName,
-          city: payload.city,
-          state: payload.state,
-          pastor_name: payload.pastorName,
-          contact_email: payload.email,
-          contact_phone: payload.phone,
-        });
-      } catch (err) {
-        logger.warn("[Auth] Background church logging error (pending table creation):", err);
-      }
-
-      set({
-        profile,
-        isLoading: false,
-        modalTab: "profile",
-      });
-
-      return { success: true, message: `Church "${payload.churchName}" registered locally & synced!` };
-    } catch (err: any) {
-      const msg = err?.message || "Quick registration failed.";
       set({ isLoading: false, error: msg });
       return { success: false, message: msg };
     }
@@ -324,7 +468,14 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     } catch (err) {
       logger.warn("[Auth] Sign out error:", err);
     }
-    set({ user: null, session: null, isAuthModalOpen: false });
+    saveLocalProfile(null);
+    set({
+      user: null,
+      session: null,
+      profile: null,
+      isAuthModalOpen: true,
+      modalTab: "login",
+    });
   },
 
   updateChurchProfile: async (patch: Partial<UserProfile>) => {

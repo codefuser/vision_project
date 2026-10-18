@@ -33,11 +33,18 @@ export interface RegisterChurchPayload {
   email: string;
   password?: string;
   phone?: string;
+  rememberMe?: boolean;
 }
 
 export interface LoginPayload {
   email: string;
   password: string;
+  rememberMe?: boolean;
+}
+
+export interface VerifyOtpPayload {
+  email: string;
+  token: string;
 }
 
 export interface AppUsageStats {

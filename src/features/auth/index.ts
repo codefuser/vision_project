@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./auth.store";
 export * from "./services/presence";
 export * from "./services/announcements";
+export * from "./services/email-validator";
 export * from "./components/AuthDialog";
 export * from "./components/ChurchBadge";
 export * from "./components/AnnouncementPopup";
