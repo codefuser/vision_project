@@ -41,15 +41,16 @@ function isKnownRoute(pathname: string): boolean {
   );
 }
 
-function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function ErrorComponent({ error, reset }: { error: unknown; reset: () => void }) {
   const router = useRouter();
+  const errObj = error instanceof Error ? error : new Error(String(error || "Unknown error"));
 
   return (
     <ErrorPage
       errorCode="VP-500"
       title="Something Went Wrong"
       message="The application encountered an unexpected issue. Our team has been notified. You can try again or head home."
-      error={error}
+      error={errObj}
       recoverable
       recommendedAction="retry"
       onRetry={() => {
