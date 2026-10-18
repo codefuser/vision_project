@@ -34,6 +34,13 @@ import { useHostRemote } from "@/features/remote/remote-host.store";
 import { RemoteControlDialog } from "@/features/remote/RemoteControlDialog";
 import { useHostLiveQr } from "@/features/live-qr/live-qr-host.store";
 import { LiveQrDialog } from "@/features/live-qr/components/LiveQrDialog";
+import {
+  useAuthStore,
+  presenceTracker,
+  ChurchBadge,
+  AuthDialog,
+  AnnouncementPopup,
+} from "@/features/auth";
 const PRIMARY_NAV = [
   { to: "/library", label: "Library", icon: FolderTree, shortcutId: "nav.library" },
   { to: "/playlists", label: "Playlists", icon: ListVideo, shortcutId: "nav.playlists" },
@@ -75,6 +82,8 @@ export function AppShell({ children }: { children: ReactNode }) {
     init();
     projectionEngine.bootstrap();
     initBackupScheduler();
+    void useAuthStore.getState().init();
+    presenceTracker.init();
   }, [init]);
 
   const [isHovered, setIsHovered] = useState(false);
@@ -293,6 +302,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               ) : null}
             </button>
             <LiveQrDialog />
+
+            {/* Church Profile & Registration Badge */}
+            <ChurchBadge />
+            <AuthDialog />
+            <AnnouncementPopup />
 
             <ProjectorToggleButton
               projectorOpen={projectorOpen}

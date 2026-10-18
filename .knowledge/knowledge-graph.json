@@ -29,6 +29,7 @@
     "styling_and_themes",
     "system_and_shell",
     "seo_and_branding",
+    "church_registration_and_presence",
     "performance_and_skeletons"
   ],
   "nodes": [
@@ -346,10 +347,50 @@
       "type": "ui_component",
       "path": "src/components/skeletons/RouteSkeletons.tsx",
       "summary": "Instant <16ms glassmorphic route and tab skeletons for Playlists, Library, Workspace, and Settings."
+    },
+    {
+      "id": "file:features/auth/auth.store.ts",
+      "label": "src/features/auth/auth.store.ts",
+      "type": "store",
+      "path": "src/features/auth/auth.store.ts",
+      "summary": "Zustand store managing Church registration, user login, offline cached profiles, and Supabase Auth."
+    },
+    {
+      "id": "file:features/auth/services/presence.ts",
+      "label": "src/features/auth/services/presence.ts",
+      "type": "telemetry_service",
+      "path": "src/features/auth/services/presence.ts",
+      "summary": "2-minute recurring heartbeat telemetry service logging session duration, location, and church usage."
+    },
+    {
+      "id": "file:features/auth/components/AuthDialog.tsx",
+      "label": "src/features/auth/components/AuthDialog.tsx",
+      "type": "ui_component",
+      "path": "src/features/auth/components/AuthDialog.tsx",
+      "summary": "Tabbed glassmorphic modal for Church registration, operator login, and activity statistics."
+    },
+    {
+      "id": "file:features/auth/components/ChurchBadge.tsx",
+      "label": "src/features/auth/components/ChurchBadge.tsx",
+      "type": "ui_component",
+      "path": "src/features/auth/components/ChurchBadge.tsx",
+      "summary": "Header badge showing registered Church name and location or registration CTA."
+    },
+    {
+      "id": "file:supabase-schema.sql",
+      "label": "supabase-schema.sql",
+      "type": "schema",
+      "path": "supabase-schema.sql",
+      "summary": "SQL migration script creating churches, profiles, app_usage_logs, announcements tables and RLS."
     }
   ],
   "edges": [
     { "source": "file:routes/__root.tsx", "target": "file:components/AppShell.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/components/ChurchBadge.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/components/AuthDialog.tsx", "relation": "RENDERS" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/auth.store.ts", "relation": "INITIALIZES" },
+    { "source": "file:components/AppShell.tsx", "target": "file:features/auth/services/presence.ts", "relation": "INITIALIZES" },
+    { "source": "file:features/auth/auth.store.ts", "target": "file:lib/supabase.ts", "relation": "AUTHENTICATES" },
     { "source": "file:routes/project.tsx", "target": "file:workspace/ProjectionWorkspace.tsx", "relation": "RENDERS_OPERATOR" },
     { "source": "file:routes/project.tsx", "target": "file:features/projection/ProjectionWindow.tsx", "relation": "RENDERS_POPUP" },
     { "source": "file:workspace/ProjectionWorkspace.tsx", "target": "file:workspace/WorkspaceTabsPanel.tsx", "relation": "CONTAINS" },
@@ -461,6 +502,14 @@
         "public/site.webmanifest",
         "public/robots.txt",
         "public/sitemap.xml"
+      ],
+      "church_registration_and_presence": [
+        "src/features/auth/auth.store.ts",
+        "src/features/auth/services/presence.ts",
+        "src/features/auth/components/AuthDialog.tsx",
+        "src/features/auth/components/ChurchBadge.tsx",
+        "src/features/auth/components/AnnouncementPopup.tsx",
+        "supabase-schema.sql"
       ],
       "performance_and_skeletons": [
         "src/components/skeletons/RouteSkeletons.tsx",

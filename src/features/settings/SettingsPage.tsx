@@ -10,7 +10,11 @@ import {
   X,
   Info,
   ExternalLink,
+  Church,
+  MapPin,
+  Sparkles,
 } from "lucide-react";
+import { useAuthStore } from "@/features/auth";
 import { Link } from "@tanstack/react-router";
 import { useSettings } from "@/stores/settings.store";
 import { DEFAULT_SETTINGS, type AppSettings } from "@/db/schema";
@@ -124,6 +128,8 @@ function renderControl(def: SettingDef, value: unknown, onChange: (v: unknown) =
 
 export function SettingsPage() {
   const { settings, update, load, loaded } = useSettings();
+  const churchProfile = useAuthStore((s) => s.profile);
+  const openAuthModal = useAuthStore((s) => s.openAuthModal);
   const savingRef = useRef(false);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
@@ -432,6 +438,40 @@ export function SettingsPage() {
         {/* Scrollable area */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
           <div className="mx-auto max-w-3xl px-6 py-6">
+            {/* Church Profile Card */}
+            {!search && (
+              <div className="mb-8 rounded-xl border border-blue-500/25 bg-gradient-to-r from-blue-500/10 via-indigo-500/10 to-transparent p-4 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-500/20 text-blue-500 border border-blue-500/30">
+                    <Church className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
+                      {churchProfile?.church_name || "Church Organization"}
+                      {churchProfile?.church_name && (
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      )}
+                    </h3>
+                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                      <MapPin className="h-3 w-3 text-muted-foreground/70" />
+                      {churchProfile?.city
+                        ? `${churchProfile.city}${churchProfile.state ? `, ${churchProfile.state}` : ""}`
+                        : "Register your church location for cloud sync and usage telemetry"}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => openAuthModal(churchProfile ? "profile" : "register")}
+                  className="inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white px-3.5 py-1.5 text-xs font-semibold shadow-xs transition"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {churchProfile ? "Manage Church Profile" : "Register Church"}
+                </button>
+              </div>
+            )}
+
             {/* Empty search */}
             {search && searchHits.length === 0 && (
               <div className="flex flex-col items-center gap-2 py-20">
