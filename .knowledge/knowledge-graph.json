@@ -506,6 +506,7 @@
       "church_registration_and_presence": [
         "src/features/auth/auth.store.ts",
         "src/features/auth/services/presence.ts",
+        "src/features/auth/components/AuthScreen.tsx",
         "src/features/auth/components/AuthDialog.tsx",
         "src/features/auth/components/ChurchBadge.tsx",
         "src/features/auth/components/AnnouncementPopup.tsx",

@@ -678,6 +678,7 @@ export const AuthDialog = memo(function AuthDialog() {
                   <button
                     type="button"
                     onClick={async () => {
+                      closeAuthModal();
                       await signOut();
                       toast.info("Signed out from church account");
                     }}

@@ -39,6 +39,7 @@ import {
   presenceTracker,
   ChurchBadge,
   AuthDialog,
+  AuthScreen,
   AnnouncementPopup,
 } from "@/features/auth";
 const PRIMARY_NAV = [
@@ -78,6 +79,11 @@ export function AppShell({ children }: { children: ReactNode }) {
     setDialogOpen: setLiveQrDialogOpen,
   } = useHostLiveQr();
   const isLiveQrActive = Boolean(liveQrSession && !isLiveQrExpired);
+  const isInitialized = useAuthStore((s) => s.isInitialized);
+  const user = useAuthStore((s) => s.user);
+  const profile = useAuthStore((s) => s.profile);
+  const isAuth = Boolean(user || profile?.church_name);
+
   useEffect(() => {
     init();
     projectionEngine.bootstrap();
@@ -146,6 +152,25 @@ export function AppShell({ children }: { children: ReactNode }) {
       />
     );
   };
+
+  if (!isInitialized) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-[#080c16] text-white select-none">
+        <div className="flex flex-col items-center gap-3 animate-pulse">
+          <div className="h-12 w-12 rounded-2xl overflow-hidden shadow-lg shadow-blue-500/20 border border-blue-500/30">
+            <VersoLynLogo className="h-full w-full" />
+          </div>
+          <div className="text-xs font-semibold tracking-wider uppercase text-slate-400">
+            Initializing VersoLyn...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuth) {
+    return <AuthScreen />;
+  }
 
   return (
     <StartupScreen onReady={() => {}}>

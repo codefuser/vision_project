@@ -119,9 +119,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         session,
         profile,
         isInitialized: true,
-        // If not registered/logged in, immediately open gatekeeper modal
-        isAuthModalOpen: !hasRegistered,
-        modalTab: "register",
+        isAuthModalOpen: false,
+        modalTab: hasRegistered ? "profile" : "register",
       });
 
       // Listen for auth state changes
@@ -138,7 +137,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const profile = loadLocalProfile();
       set({
         isInitialized: true,
-        isAuthModalOpen: !profile?.church_name,
+        isAuthModalOpen: false,
       });
     }
   },
